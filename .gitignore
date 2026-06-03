@@ -1,0 +1,46 @@
+# =============================================================================
+# PromptVault Lite — .gitignore
+# =============================================================================
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+target/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+.opencode/logs/
+
+# Tauri
+src-tauri/gen/
+src-tauri/icons/
+
+# Test
+coverage/
+*.lcov
+
+# Cache
+.cache/
+*.db
+*.db-journal
+*.db-wal

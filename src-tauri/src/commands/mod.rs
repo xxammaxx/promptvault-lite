@@ -1,0 +1,7 @@
+pub mod analyze;
+pub mod export;
+pub mod favorites;
+pub mod persistence;
+pub mod scan;
+
+pub use scan::AppState;
