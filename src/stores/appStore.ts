@@ -212,10 +212,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   fileTree: () => {
     const prompts = get().filteredPrompts();
 
-    // Build tree from file paths using arrays for direct child-node linking.
-    // The previous reduce-based approach created orphaned records for
-    // hierarchies deeper than 2 levels (e.g. /coding/rust/advanced/).
-    const root: FileTreeNode[] = [];
+    // Build tree from file paths using Maps for O(1) child-node lookup.
+    // Each directory level uses a Map<childName, FileTreeNode> instead of
+    // Array.find() (was O(n) per segment, now O(1)).
+    const rootMap = new Map<string, FileTreeNode>();
 
     for (const prompt of prompts) {
       // Normalize backslashes from Windows scanner output
@@ -223,14 +223,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         .replace(/\\/g, "/")
         .split("/")
         .filter(Boolean);
-      let siblings: FileTreeNode[] = root;
+      let siblingsMap: Map<string, FileTreeNode> = rootMap;
 
       for (let i = 0; i < parts.length; i++) {
         const part = parts[i];
         const isLast = i === parts.length - 1;
         const fullPath = "/" + parts.slice(0, i + 1).join("/");
 
-        let existing = siblings.find((n) => n.name === part);
+        let existing = siblingsMap.get(part);
 
         if (!existing) {
           existing = {
@@ -239,7 +239,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             is_directory: !isLast,
             children: [],
           };
-          siblings.push(existing);
+          siblingsMap.set(part, existing);
         }
 
         if (isLast) {
@@ -248,25 +248,34 @@ export const useAppStore = create<AppState>((set, get) => ({
           existing.is_favorite = prompt.is_favorite;
         }
 
-        siblings = existing.children;
+        // Build a children-map on demand for the next depth level
+        if (!existing._childrenMap) {
+          existing._childrenMap = new Map();
+        }
+        siblingsMap = existing._childrenMap;
       }
     }
 
-    // Recursively sort: directories before files, then alphabetically
-    const sortRecursive = (nodes: FileTreeNode[]): FileTreeNode[] => {
+    // Convert maps to sorted arrays: directories before files, then alphabetically
+    const mapToSortedArray = (
+      map: Map<string, FileTreeNode>,
+    ): FileTreeNode[] => {
+      const nodes: FileTreeNode[] = [];
+      for (const node of map.values()) {
+        if (node._childrenMap) {
+          node.children = mapToSortedArray(node._childrenMap);
+          delete node._childrenMap; // clean up transient map
+        }
+        nodes.push(node);
+      }
       nodes.sort((a, b) => {
         if (a.is_directory !== b.is_directory) return a.is_directory ? -1 : 1;
         return a.name.localeCompare(b.name);
       });
-      for (const n of nodes) {
-        if (n.children.length > 0) {
-          sortRecursive(n.children);
-        }
-      }
       return nodes;
     };
 
-    return sortRecursive(root);
+    return mapToSortedArray(rootMap);
   },
 
   allCategories: () => {

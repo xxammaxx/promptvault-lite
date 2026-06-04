@@ -6,6 +6,9 @@ use std::path::PathBuf;
 // JSON-Cache als Fallback für SQLite
 // =============================================================================
 
+/// Typ-Alias für den Rückgabetyp von `JsonCache::load()`
+pub type CacheData = (Vec<PromptItem>, Vec<PromptEvaluation>, Vec<PromptHygiene>);
+
 const PROMPTS_FILE: &str = "prompts.json";
 const EVALUATIONS_FILE: &str = "evaluations.json";
 const HYGIENE_FILE: &str = "hygiene.json";
@@ -53,9 +56,7 @@ impl JsonCache {
     }
 
     /// Lädt alle Daten aus den JSON-Dateien
-    pub fn load(
-        &self,
-    ) -> Result<(Vec<PromptItem>, Vec<PromptEvaluation>, Vec<PromptHygiene>), String> {
+    pub fn load(&self) -> Result<CacheData, String> {
         let prompts = self
             .read_json_file(PROMPTS_FILE)
             .unwrap_or_else(|_| Vec::new());

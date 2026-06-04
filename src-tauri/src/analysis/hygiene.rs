@@ -1,4 +1,4 @@
-use crate::models::{ArtifactCategory, DetectedArtifact, HygieneStatus, PromptHygiene};
+use crate::models::{ArtifactCategory, DetectedArtifact, PromptHygiene};
 use regex::Regex;
 
 // =============================================================================
@@ -381,12 +381,10 @@ fn detect_json_dumps(content: &str) -> Vec<DetectedArtifact> {
     for (i, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
 
-        if trimmed.starts_with('{') || trimmed.starts_with('[') {
-            if !in_json_block {
-                in_json_block = true;
-                json_start = i;
-                brace_depth = 0;
-            }
+        if (trimmed.starts_with('{') || trimmed.starts_with('[')) && !in_json_block {
+            in_json_block = true;
+            json_start = i;
+            brace_depth = 0;
         }
 
         if in_json_block {
@@ -495,7 +493,7 @@ fn detect_pii(content: &str) -> Vec<DetectedArtifact> {
         let matched = m.as_str();
         // Nur als Telefon markieren wenn es wie eine Telefonnummer aussieht
         let digit_count = matched.chars().filter(|c| c.is_ascii_digit()).count();
-        if digit_count >= 7 && digit_count <= 15 {
+        if (7..=15).contains(&digit_count) {
             artifacts.push(DetectedArtifact::new(
                 ArtifactCategory::Pii,
                 "critical".into(),
@@ -607,10 +605,7 @@ fn col_of(content: &str, pos: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn newline_count(s: &str, pos: usize) -> usize {
-        s[..pos].chars().filter(|&c| c == '\n').count() + 1
-    }
+    use crate::models::HygieneStatus;
 
     // Helper
     fn artifact_count(artifacts: &[DetectedArtifact], category: ArtifactCategory) -> usize {

@@ -129,8 +129,7 @@ pub fn evaluate_prompt(content: &str, prompt_id: &str) -> PromptEvaluation {
     let overall_score = if total_weight > 0.0 {
         ((total_weighted_score / total_weight) * 10.0)
             .round()
-            .min(100.0)
-            .max(0.0) as u8
+            .clamp(0.0, 100.0) as u8
     } else {
         0
     };
@@ -243,7 +242,7 @@ fn evaluate_context_quality(content: &str) -> EvaluationCriterion {
         r"(?i)(domäne|domain|fachbereich|branche)",
     ];
 
-    let (found, count) = count_pattern_matches(content, &context_patterns);
+    let (_found, count) = count_pattern_matches(content, &context_patterns);
 
     // Prüfe Textlänge — längere Prompts haben tendenziell mehr Kontext
     let content_length = content.len();
@@ -585,7 +584,7 @@ fn evaluate_reusability(content: &str) -> EvaluationCriterion {
         r"(?i)(issue\s+#\d+|pr\s+#\d+|bug\s+#\d+)",      // Issue-Referenzen
     ];
 
-    let (specific_found, specific_count) = count_pattern_matches(content, &specific_patterns);
+    let (_specific_found, specific_count) = count_pattern_matches(content, &specific_patterns);
 
     // Positiv-Indikatoren (generisch → gut wiederverwendbar)
     let generic_patterns = [

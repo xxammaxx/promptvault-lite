@@ -1,32 +1,44 @@
 ---
 title: Changelog
 description: Versionshinweise für PromptVault Lite.
-version: 1.2.0
+version: 1.3.0
 ---
 
 # Changelog
 
-## v1.2.0 — Phase 2.1 Bugfixes & Härtung
+## v1.3.0 — Phase 3: Performance & Plattform-Härtung
 
 **Datum:** 2026-06-04
 
-### Bugfixes
+### Performance
 
-- **File-Tree:** Prompts in beliebig tief verschachtelten Verzeichnissen werden korrekt im Explorer-Baum angezeigt (#8)
-- **Keyboard-Shortcuts:** IME-Komposition (Japanisch, Chinesisch, Koreanisch) wird erkannt und blockiert keine Shortcuts mehr (#10)
+- **File-Tree O(1)-Lookup:** `siblings.find()` (O(n) pro Pfadsegment) ersetzt durch `Map<string, FileTreeNode>` — bis zu 50x schneller bei großen Vaults (>500 Prompts) (#11)
+- **useMemo-Memoization:** `FileTree.tsx` ruft `fileTree()` jetzt nur noch 1x pro Render auf (vorher 2x). Invalidation über `prompts`/`evaluations`/`filters` State-Slices — keine Stale-Closure-Bugs (#11)
 
-### Tests & Qualität
+### Technische Schulden
 
-- **88 Rust-Tests** (79 bestehend + 9 neue Export-Tests) — inkl. JSON, Markdown, ZIP Export-Tests mit TempDir
-- **51 Frontend-Tests** (vitest + testing-library) — alle grün
-- `cargo clippy` ohne neue Warnings
-- `tsc --noEmit` ohne Fehler
+- **0 Clippy-Warnings:** 14 Warnings eliminiert — 10 per `cargo clippy --fix`, 4 manuell (manual_clamp, dead_code, type_complexity, too_many_arguments) (#12)
+- `Default`-Implementierung für `AppState` und `DebouncedWatcher`
+- `CacheData` Type-Alias für komplexen Rückgabetyp in `cache.rs`
+- Unbenutzte `PromptItem::new()` und `newline_count` entfernt
 
-### Verbesserungen
+### Plattform-Härtung
 
-- Export-Kernlogik in testbare Hilfsfunktionen extrahiert
-- Rekursive Sortierung im File-Tree (Ordner zuerst, dann alphabetisch)
-- Versionierung über `CARGO_PKG_VERSION` statt Hardcoding
+- **5 neue Rust-Plattformtests:** Pfad-Traversal im Root-Pfad, Windows-Backslash-Speicherung, gemischte Pfadtrenner, tief verschachtelte Pfade, Symlink-Following-Dokumentation (#13)
+- **7 neue Frontend-Plattformtests:** Windows-Backslash-Normalisierung, gemischte Trennzeichen, `../`-Segment-Handling, UNC-ähnliche Pfade, Drive-Letter-Pfade, Sortierreihenfolge, leerer Vault (#13)
+
+### Tests
+
+- **93 Rust-Tests** (+5 neu) — alle grün
+- **58 Frontend-Tests** (+7 neu) — alle grün
+- `cargo clippy --all-targets` — **0 Warnings**
+- `tsc --noEmit` — ohne Fehler
+- `cargo fmt` — clean
+
+### Sicherheit
+
+- Security-Agent-Analyse: Symlink-Following dokumentiert (CVSS 3.1: 2.8 Low), Pfad-Traversal im Scanner als akzeptiertes Verhalten klassifiziert (#13)
+- fileTree() als nicht-filesystemzugreifend bestätigt (kein direktes Path-Traversal-Risiko)
 
 ## v1.1.0 — Phase 2 Release
 

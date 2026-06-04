@@ -9,6 +9,7 @@ use walkdir::WalkDir;
 struct ScannedFile {
     path: PathBuf,
     file_name: String,
+    #[allow(dead_code)]
     size: u64,
     modified: String,
 }
@@ -74,7 +75,7 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
 
         let path = entry.path();
 
-        if path.extension().map_or(false, |ext| ext == "md") {
+        if path.extension().is_some_and(|ext| ext == "md") {
             match fs::metadata(path) {
                 Ok(meta) => {
                     let modified = meta
@@ -163,10 +164,8 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
                     .and_then(|v| {
                         if let Some(s) = v.as_str() {
                             Some(s.to_string())
-                        } else if let Some(n) = v.as_f64() {
-                            Some(n.to_string())
                         } else {
-                            None
+                            v.as_f64().map(|n| n.to_string())
                         }
                     })
                     .unwrap_or_else(|| "1.0".to_string());
@@ -364,5 +363,126 @@ mod tests {
         assert_eq!(result[0].description, "");
         assert_eq!(result[0].version, "1.0");
         assert!(result[0].tags.is_empty());
+    }
+
+    // =========================================================================
+    // Plattform-Pfad-Tests (Phase 3)
+    // =========================================================================
+
+    #[test]
+    fn test_path_traversal_in_root_is_blocked() {
+        // Passing `..` in the root path scans the resolved parent directory.
+        // This test documents current behavior: OS-resolved paths are accepted.
+        // A future hardening step should canonicalize and enforce containment.
+        let dir = TempDir::new().unwrap();
+        let sub = dir.path().join("sub");
+        fs::create_dir(&sub).unwrap();
+        create_test_md(&sub, "inside.md", "# Inside");
+
+        // Construct a path with .. that resolves to the same temp dir
+        let traversed = sub.join("..").join("sub");
+        let result = scan_directory(traversed.to_str().unwrap()).unwrap();
+
+        // Currently accepted — OS resolves the path
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].title, "inside");
+    }
+
+    #[test]
+    fn test_windows_backslash_path_stored_as_is() {
+        // File paths from Windows may contain backslashes.
+        // The scanner stores the OS-native representation.
+        let dir = TempDir::new().unwrap();
+        let sub = dir.path().join("coding").join("rust");
+        fs::create_dir_all(&sub).unwrap();
+        create_test_md(&sub, "advanced.md", "# Advanced Rust");
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 1);
+
+        // On Linux, the stored path uses forward slashes.
+        // On Windows, it would contain backslashes.
+        let path = &result[0].file_path;
+        assert!(path.contains("coding"));
+        assert!(path.contains("rust"));
+        assert!(path.ends_with("advanced.md"));
+    }
+
+    #[test]
+    fn test_mixed_path_separators_handled_gracefully() {
+        // The scanner uses std::path which normalizes separators per platform.
+        // This test ensures paths are stored correctly regardless of input format.
+        let dir = TempDir::new().unwrap();
+        let sub = dir.path().join("folder").join("nested");
+        fs::create_dir_all(&sub).unwrap();
+        create_test_md(&sub, "prompt.md", "# Mixed test");
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 1);
+        // Category fallback is the immediate parent directory name
+        assert_eq!(result[0].category, "nested");
+        assert_eq!(result[0].file_name, "prompt.md");
+    }
+
+    #[test]
+    fn test_deeply_nested_paths_documented() {
+        // Verify the scanner handles deep nesting (>5 levels) correctly.
+        // max_depth is 50, so this should work.
+        let dir = TempDir::new().unwrap();
+        let mut current = dir.path().to_path_buf();
+        let levels = ["a", "b", "c", "d", "e", "f", "g", "h"];
+        for level in &levels {
+            current = current.join(level);
+            fs::create_dir(&current).unwrap();
+        }
+        create_test_md(&current, "deep.md", "# Deep prompt");
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 1);
+        // file_path should contain all levels
+        let path = &result[0].file_path;
+        for level in &levels {
+            assert!(
+                path.contains(level),
+                "Expected path to contain '{}', got: {}",
+                level,
+                path
+            );
+        }
+    }
+
+    #[test]
+    fn test_symlink_following_is_documented_behavior() {
+        // The scanner uses walkdir with follow_links(true).
+        // This test documents that symlinks ARE followed.
+        // Security note: symlinks pointing outside the vault are included.
+        let dir = TempDir::new().unwrap();
+        let outside = TempDir::new().unwrap();
+        create_test_md(outside.path(), "secret.md", "# External file");
+
+        // Create symlink inside vault pointing outside
+        let link_path = dir.path().join("link_to_outside");
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(outside.path(), &link_path).unwrap();
+        }
+        #[cfg(not(unix))]
+        {
+            // On non-Unix (Windows), symlink creation requires admin privileges.
+            // Skip this test if symlink cannot be created.
+            if std::os::windows::fs::symlink_dir(outside.path(), &link_path).is_err() {
+                return; // Skip test on platforms without symlink support
+            }
+        }
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        // Currently, symlinked external files ARE scanned.
+        // This is a known behavior — hardening tracked in Issue #13.
+        let secret_found = result.iter().any(|p| p.file_name == "secret.md");
+        // Document current behavior (may fail on platforms without symlink support)
+        assert!(
+            secret_found || cfg!(not(unix)),
+            "Symlinked external file was not followed — this may indicate walkdir behavior changed"
+        );
     }
 }

@@ -8,6 +8,12 @@ pub struct AppState {
     pub watcher: Mutex<DebouncedWatcher>,
 }
 
+impl Default for AppState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AppState {
     pub fn new() -> Self {
         Self {

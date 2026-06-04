@@ -121,4 +121,6 @@ export interface FileTreeNode {
   prompt_id?: string;
   score?: number;
   is_favorite?: boolean;
+  /** Transient: Map used during tree construction (O(1) lookup). Removed before rendering. */
+  _childrenMap?: Map<string, FileTreeNode>;
 }

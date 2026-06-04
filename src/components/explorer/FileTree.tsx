@@ -1,15 +1,29 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useAppStore } from "@/stores/appStore";
 import { TreeNode } from "./TreeNode";
 
 export const FileTree: React.FC = () => {
-  const fileTree = useAppStore((s) => s.fileTree);
+  const fileTreeFn = useAppStore((s) => s.fileTree);
+  // Subscribe to state slices that invalidate the file tree.
+  // filteredPrompts() inside fileTree() depends on prompts, evaluations,
+  // hygiene (for hygieneStatus filter), and filters.
+  const prompts = useAppStore((s) => s.prompts);
+  const evaluations = useAppStore((s) => s.evaluations);
+  const hygiene = useAppStore((s) => s.hygiene);
+  const filters = useAppStore((s) => s.filters);
   const expandedFolders = useAppStore((s) => s.expandedFolders);
   const selectedPromptId = useAppStore((s) => s.selectedPromptId);
   const toggleFolder = useAppStore((s) => s.toggleFolder);
   const selectPrompt = useAppStore((s) => s.selectPrompt);
 
-  if (fileTree().length === 0) {
+  // Single computation per render — fileTree() is called exactly once.
+  const tree = useMemo(
+    () => fileTreeFn(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [prompts, evaluations, hygiene, filters],
+  );
+
+  if (tree.length === 0) {
     return (
       <div className="empty-state">
         <p>Keine Prompts gefunden.</p>
@@ -20,7 +34,7 @@ export const FileTree: React.FC = () => {
 
   return (
     <div className="file-tree">
-      {fileTree().map((node) => (
+      {tree.map((node) => (
         <TreeNode
           key={node.path}
           node={node}

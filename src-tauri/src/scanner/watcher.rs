@@ -21,6 +21,12 @@ pub struct DebouncedWatcher {
     watched_path: Option<PathBuf>,
 }
 
+impl Default for DebouncedWatcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DebouncedWatcher {
     pub fn new() -> Self {
         Self {
@@ -54,7 +60,7 @@ impl DebouncedWatcher {
                     let is_md = event
                         .paths
                         .iter()
-                        .any(|p| p.extension().map_or(false, |ext| ext == "md"));
+                        .any(|p| p.extension().is_some_and(|ext| ext == "md"));
                     if !is_md {
                         return;
                     }
