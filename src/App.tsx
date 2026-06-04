@@ -31,7 +31,7 @@ function App() {
   // Cleanup watcher on component unmount
   useEffect(() => {
     return () => {
-      cleanupWatcher();
+      void cleanupWatcher();
     };
   }, [cleanupWatcher]);
 
@@ -96,7 +96,9 @@ function App() {
           )}
           <button
             className="btn btn-primary"
-            onClick={handleSelectFolder}
+            onClick={() => {
+              void handleSelectFolder();
+            }}
             disabled={isLoading || !isTauri}
             title={`Ordner öffnen (${modLabel}+O)`}
           >
@@ -106,7 +108,9 @@ function App() {
             <>
               <button
                 className="btn"
-                onClick={handleAnalyzeAll}
+                onClick={() => {
+                  void handleAnalyzeAll();
+                }}
                 disabled={isAnalyzing}
                 title={`Alle analysieren (${modLabel}+Shift+A)`}
               >
@@ -114,7 +118,9 @@ function App() {
               </button>
               <button
                 className="btn"
-                onClick={() => setShowExportDialog(true)}
+                onClick={() => {
+                  setShowExportDialog(true);
+                }}
                 title={`Exportieren (${modLabel}+E)`}
               >
                 📦 Exportieren
@@ -156,7 +162,11 @@ function App() {
 
       {/* Export Dialog */}
       {showExportDialog && (
-        <ExportDialog onClose={() => setShowExportDialog(false)} />
+        <ExportDialog
+          onClose={() => {
+            setShowExportDialog(false);
+          }}
+        />
       )}
     </div>
   );

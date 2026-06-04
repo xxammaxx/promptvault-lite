@@ -97,20 +97,36 @@ export const ActionBar: React.FC = () => {
     <div className="action-bar">
       <button
         className="btn"
-        onClick={() => toggleFavorite(prompt.id)}
+        onClick={() => {
+          toggleFavorite(prompt.id);
+        }}
         title={prompt.is_favorite ? "Favorit entfernen" : "Favorit"}
       >
         {prompt.is_favorite ? "⭐" : "☆"}
       </button>
-      <button className="btn" onClick={handleCopy} title="Inhalt kopieren">
+      <button
+        className="btn"
+        onClick={() => {
+          void handleCopy();
+        }}
+        title="Inhalt kopieren"
+      >
         📋 Kopieren
       </button>
-      <button className="btn" onClick={handleOpenFile} title="Datei öffnen">
+      <button
+        className="btn"
+        onClick={() => {
+          void handleOpenFile();
+        }}
+        title="Datei öffnen"
+      >
         📂 Öffnen
       </button>
       <button
         className="btn btn-primary"
-        onClick={() => analyzeSelected()}
+        onClick={() => {
+          void analyzeSelected();
+        }}
         disabled={isAnalyzing}
         title="Neu analysieren"
       >

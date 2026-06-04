@@ -19,7 +19,7 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({ searchRef }) => {
         <span>Explorer</span>
         <button
           className="btn btn-icon"
-          onClick={() => setShowFilters(!showFilters)}
+          onClick={() => { setShowFilters(!showFilters); }}
           title="Filter"
         >
           {showFilters ? "✕" : "⚙"}
@@ -28,7 +28,7 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({ searchRef }) => {
 
       <SearchBar ref={searchRef} />
 
-      {showFilters && <FilterPanel onClose={() => setShowFilters(false)} />}
+      {showFilters && <FilterPanel onClose={() => { setShowFilters(false); }} />}
 
       <div className="panel-content">
         {isLoading ? (

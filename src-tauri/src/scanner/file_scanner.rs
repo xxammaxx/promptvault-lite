@@ -35,6 +35,17 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
         return Err(format!("Pfad ist kein Verzeichnis: {}", dir_path));
     }
 
+    // Canonicalize root for symlink containment checks
+    let canonical_root = match std::fs::canonicalize(root) {
+        Ok(cr) => cr,
+        Err(e) => {
+            return Err(format!(
+                "Konnte kanonischen Pfad nicht auflösen: {}: {}",
+                dir_path, e
+            ));
+        }
+    };
+
     let mut scanned_files: Vec<ScannedFile> = Vec::new();
     let mut errors: Vec<String> = Vec::new();
 
@@ -75,8 +86,30 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
 
         let path = entry.path();
 
-        if path.extension().is_some_and(|ext| ext == "md") {
-            match fs::metadata(path) {
+        // Symlink-Containment: canonicalize and verify file is within vault root
+        let canonical_file = match std::fs::canonicalize(path) {
+            Ok(cf) => cf,
+            Err(e) => {
+                log::warn!(
+                    "Konnte kanonischen Pfad nicht auflösen für '{}': {}",
+                    path.display(),
+                    e
+                );
+                continue;
+            }
+        };
+
+        if !canonical_file.starts_with(&canonical_root) {
+            log::warn!(
+                "Symlink außerhalb des Vaults übersprungen: {}",
+                path.display()
+            );
+            continue;
+        }
+
+        // Use canonical_file for all subsequent operations (TOCTOU-safe after containment check)
+        if canonical_file.extension().is_some_and(|ext| ext == "md") {
+            match fs::metadata(&canonical_file) {
                 Ok(meta) => {
                     let modified = meta
                         .modified()
@@ -93,8 +126,8 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
                         .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
 
                     scanned_files.push(ScannedFile {
-                        path: path.to_path_buf(),
-                        file_name: path
+                        path: canonical_file.clone(),
+                        file_name: canonical_file
                             .file_name()
                             .unwrap_or_default()
                             .to_string_lossy()
@@ -452,10 +485,8 @@ mod tests {
     }
 
     #[test]
-    fn test_symlink_following_is_documented_behavior() {
-        // The scanner uses walkdir with follow_links(true).
-        // This test documents that symlinks ARE followed.
-        // Security note: symlinks pointing outside the vault are included.
+    fn test_symlink_outside_vault_not_scanned() {
+        // Phase 4: Symlink-Containment — external symlinks are blocked
         let dir = TempDir::new().unwrap();
         let outside = TempDir::new().unwrap();
         create_test_md(outside.path(), "secret.md", "# External file");
@@ -468,21 +499,117 @@ mod tests {
         }
         #[cfg(not(unix))]
         {
-            // On non-Unix (Windows), symlink creation requires admin privileges.
-            // Skip this test if symlink cannot be created.
             if std::os::windows::fs::symlink_dir(outside.path(), &link_path).is_err() {
-                return; // Skip test on platforms without symlink support
+                return;
             }
         }
 
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
-        // Currently, symlinked external files ARE scanned.
-        // This is a known behavior — hardening tracked in Issue #13.
+        // External file MUST NOT be scanned (containment enforcement)
         let secret_found = result.iter().any(|p| p.file_name == "secret.md");
-        // Document current behavior (may fail on platforms without symlink support)
         assert!(
-            secret_found || cfg!(not(unix)),
-            "Symlinked external file was not followed — this may indicate walkdir behavior changed"
+            !secret_found,
+            "Externer Symlink wurde gescannt — Containment sollte dies blockieren"
+        );
+    }
+
+    #[test]
+    fn test_symlink_inside_vault_is_scanned() {
+        // Legitimate internal symlinks within the vault are allowed
+        let dir = TempDir::new().unwrap();
+        let sub = dir.path().join("subdir");
+        fs::create_dir(&sub).unwrap();
+
+        let prompt_path = sub.join("internal.md");
+        create_test_md(&sub, "internal.md", "# Internal prompt");
+
+        // Create symlink inside vault pointing to another file inside vault
+        let link_path = dir.path().join("link_to_internal");
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(&prompt_path, &link_path).unwrap();
+        }
+        #[cfg(not(unix))]
+        {
+            if std::os::windows::fs::symlink_file(&prompt_path, &link_path).is_err() {
+                return;
+            }
+        }
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        // Internal symlink should be scanned
+        assert!(
+            result.iter().any(|p| p.file_name == "internal.md"),
+            "Interner Symlink sollte gescannt werden"
+        );
+    }
+
+    #[test]
+    fn test_symlink_loop_detected() {
+        // Symlink cycle A→B→A inside vault is detected via symlink_depth()
+        let dir = TempDir::new().unwrap();
+        let sub_a = dir.path().join("cycle_a");
+        let sub_b = dir.path().join("cycle_b");
+        fs::create_dir(&sub_a).unwrap();
+        fs::create_dir(&sub_b).unwrap();
+
+        create_test_md(&sub_a, "prompt_a.md", "# Prompt A");
+
+        // Create cycle: A/link → B, B/link → A
+        let link_a_to_b = sub_a.join("link_to_b");
+        let link_b_to_a = sub_b.join("link_to_a");
+
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(&sub_b, &link_a_to_b).unwrap();
+            std::os::unix::fs::symlink(&sub_a, &link_b_to_a).unwrap();
+        }
+        #[cfg(not(unix))]
+        {
+            if std::os::windows::fs::symlink_dir(&sub_b, &link_a_to_b).is_err()
+                || std::os::windows::fs::symlink_dir(&sub_a, &link_b_to_a).is_err()
+            {
+                return;
+            }
+        }
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        // The scan must complete without infinite loop / stack overflow.
+        // prompt_a.md should be found (not in the cycle chain).
+        assert!(
+            result.iter().any(|p| p.file_name == "prompt_a.md"),
+            "Datei außerhalb des Symlink-Zyklus sollte gescannt werden"
+        );
+    }
+
+    #[test]
+    fn test_symlink_directory_outside_vault_not_traversed() {
+        // Symlinked directory pointing outside the vault — traversal must be blocked.
+        let dir = TempDir::new().unwrap();
+        let outside = TempDir::new().unwrap();
+        let outside_sub = outside.path().join("secrets");
+        fs::create_dir(&outside_sub).unwrap();
+        create_test_md(&outside_sub, "secret.md", "# External secret");
+
+        // Create symlink inside vault pointing to outside directory
+        let link_path = dir.path().join("link_to_outside_dir");
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(&outside_sub, &link_path).unwrap();
+        }
+        #[cfg(not(unix))]
+        {
+            if std::os::windows::fs::symlink_dir(&outside_sub, &link_path).is_err() {
+                return;
+            }
+        }
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        // External directory contents must NOT appear in results
+        let secret_found = result.iter().any(|p| p.file_name == "secret.md");
+        assert!(
+            !secret_found,
+            "Externes Verzeichnis via Symlink wurde traversiert — Containment sollte blockieren"
         );
     }
 }

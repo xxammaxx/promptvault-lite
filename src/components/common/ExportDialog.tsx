@@ -62,7 +62,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ onClose }) => {
     document.addEventListener("keydown", handleKeyDown);
     // Auto-focus first interactive element
     dialogRef.current?.querySelector<HTMLElement>("input, button")?.focus();
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    return () => { document.removeEventListener("keydown", handleKeyDown); };
   }, [isExporting, onClose]);
 
   return (
@@ -101,7 +101,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ onClose }) => {
                   name="exportFormat"
                   value={opt.value}
                   checked={exportFormat === opt.value}
-                  onChange={() => setExportFormat(opt.value)}
+                  onChange={() => { setExportFormat(opt.value); }}
                 />
                 <div className="export-format-info">
                   <span className="export-format-label">{opt.label}</span>
@@ -117,7 +117,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ onClose }) => {
               <input
                 type="checkbox"
                 checked={favoritesOnly}
-                onChange={(e) => setFavoritesOnly(e.target.checked)}
+                onChange={(e) => { setFavoritesOnly(e.target.checked); }}
                 disabled={isExporting}
               />
               Nur Favoriten exportieren

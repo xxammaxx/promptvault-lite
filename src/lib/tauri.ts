@@ -105,6 +105,7 @@ export async function loadCache(): Promise<PromptItem[]> {
 }
 
 export async function saveCache(prompts: PromptItem[]): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
   return invoke<void>("save_cache", { prompts });
 }
 

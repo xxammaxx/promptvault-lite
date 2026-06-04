@@ -22,7 +22,7 @@ export const SearchBar = React.forwardRef<HTMLInputElement, object>(
     const debouncedSearch = useCallback(
       (val: string) => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        timeoutRef.current = setTimeout(() => setFilters({ search: val }), 300);
+        timeoutRef.current = setTimeout(() => { setFilters({ search: val }); }, 300);
       },
       [setFilters],
     );

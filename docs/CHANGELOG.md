@@ -1,10 +1,39 @@
 ---
 title: Changelog
 description: Versionshinweise für PromptVault Lite.
-version: 1.3.0
+version: 1.4.0
 ---
 
 # Changelog
+
+## v1.4.0 — Phase 4: Security-Härtung & Developer Experience
+
+**Datum:** 2026-06-04
+
+### Security
+
+- **Symlink-Containment:** `scan_directory()` canonicalisiert Root-Pfad und jede gescannte Datei. Externe Symlinks außerhalb des Vault-Roots werden nicht mehr gescannt und mit `log::warn!` protokolliert. CVSS 2.8 Finding aus Phase 3 adressiert (#14)
+
+### Frontend
+
+- **TreeNode React.memo:** Kind-TreeNodes leiten `isExpanded`/`isSelected` jetzt aus dem zustand-Store ab (kein Prop-Drilling mehr). `React.memo` mit Custom-Comparator verhindert unnötige Re-Renders von Kindknoten (#15)
+- **Pfad-Sanitization:** `".."`- und `"."`-Segmente werden aus `fileTree()` gefiltert. Absolute Pfade werden relativ zum Vault-Root dargestellt (#16)
+
+### Testing
+
+- **Store-Unit-Tests:** 22 Tests für `fileTree()` und `filteredPrompts()` im neuen `appStore.test.ts` (#18)
+- **Command-Fehlerfall-Tests:** 14 Rust-Integrationstests in `command_errors.rs` für alle Tauri Commands (scan, analyze, export, favorites, persistence, watcher) (#19)
+
+### Developer Experience
+
+- **ESLint Strict Mode:** `.eslintrc.json` mit `@typescript-eslint/strict-type-checked` + `react-hooks/recommended`. 0 Errors, 0 Warnings (#20)
+- **Pre-commit Hook:** Natives `.git/hooks/pre-commit` Shell-Skript prüft `cargo fmt`, `cargo clippy` und `tsc --noEmit` vor jedem Commit (#21)
+
+### Test Summary (Phase 4 Final)
+
+- Rust: 95 lib tests + 14 integration tests = 109 total (0 failures, 0 clippy warnings)
+- Frontend: 84 tests (0 failures)
+- ESLint: 0 errors, 0 warnings
 
 ## v1.3.0 — Phase 3: Performance & Plattform-Härtung
 
@@ -40,7 +69,7 @@ version: 1.3.0
 - Security-Agent-Analyse: Symlink-Following dokumentiert (CVSS 3.1: 2.8 Low), Pfad-Traversal im Scanner als akzeptiertes Verhalten klassifiziert (#13)
 - fileTree() als nicht-filesystemzugreifend bestätigt (kein direktes Path-Traversal-Risiko)
 
-## v1.1.0 — Phase 2 Release
+## v1.2.0 — Phase 2.1 Bugfixes & Härtung
 
 **Datum:** 2026-06-03
 

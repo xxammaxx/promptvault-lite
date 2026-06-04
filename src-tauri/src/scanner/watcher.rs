@@ -143,6 +143,10 @@ impl DebouncedWatcher {
         Ok(())
     }
 
+    pub fn watched_path(&self) -> Option<&PathBuf> {
+        self.watched_path.as_ref()
+    }
+
     pub fn stop_watching(&mut self) {
         self.watcher = None;
         self.watched_path = None;

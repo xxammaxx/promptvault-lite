@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useCallback } from "react";
 import { useAppStore } from "@/stores/appStore";
 import { TreeNode } from "./TreeNode";
 
@@ -15,6 +15,16 @@ export const FileTree: React.FC = () => {
   const selectedPromptId = useAppStore((s) => s.selectedPromptId);
   const toggleFolder = useAppStore((s) => s.toggleFolder);
   const selectPrompt = useAppStore((s) => s.selectPrompt);
+
+  // Stabilize callbacks for React.memo in child TreeNodes
+  const handleToggle = useCallback(
+    (path: string) => { toggleFolder(path); },
+    [toggleFolder],
+  );
+  const handleSelect = useCallback(
+    (promptId: string) => { selectPrompt(promptId); },
+    [selectPrompt],
+  );
 
   // Single computation per render — fileTree() is called exactly once.
   const tree = useMemo(
@@ -43,8 +53,8 @@ export const FileTree: React.FC = () => {
           isSelected={
             node.prompt_id !== undefined && node.prompt_id === selectedPromptId
           }
-          onToggle={toggleFolder}
-          onSelect={selectPrompt}
+          onToggle={handleToggle}
+          onSelect={handleSelect}
         />
       ))}
     </div>

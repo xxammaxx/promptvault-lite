@@ -11,7 +11,7 @@ use tauri::Emitter;
 
 /// Baut den JSON-Export-String aus Prompt-Daten und Analyse-Scores.
 /// Kernlogik — ohne Datei-I/O für Testbarkeit.
-fn build_json_export_string(
+pub fn build_json_export_string(
     selected: &[PromptItem],
     eval_map: &std::collections::HashMap<&str, &PromptEvaluation>,
     hygiene_map: &std::collections::HashMap<&str, &PromptHygiene>,
@@ -139,7 +139,7 @@ pub fn export_json(
 
 /// Baut den Markdown-Export-String aus Prompt-Daten und Analyse-Scores.
 /// Kernlogik — ohne Datei-I/O für Testbarkeit.
-fn build_markdown_export_string(
+pub fn build_markdown_export_string(
     selected: &[PromptItem],
     eval_map: &std::collections::HashMap<&str, &PromptEvaluation>,
     hygiene_map: &std::collections::HashMap<&str, &PromptHygiene>,

@@ -86,7 +86,8 @@ describe("FileTree — Path Normalisierung & Plattform-Pfade", () => {
     expect(names).toEqual(["coding", "writing"]);
 
     // coding should have "rust"
-    const codingChildren = promptsChildren.find((c) => c.name === "coding")!;
+    const codingChildren = promptsChildren.find((c) => c.name === "coding");
+    if (!codingChildren) throw new Error("Expected coding directory");
     expect(codingChildren.children).toHaveLength(1);
     expect(codingChildren.children[0].name).toBe("rust");
 
@@ -118,28 +119,105 @@ describe("FileTree — Path Normalisierung & Plattform-Pfade", () => {
   });
 
   // ===========================================================================
-  // AC-3: Pfad-Traversal-Segmente (../) werden als Tree-Knoten dargestellt
+  // AC-3: Pfad-Traversal-Segmente (../) werden AUS dem Tree gefiltert
   // ===========================================================================
 
-  it("stellt ../ Segmente als Tree-Knoten dar (kein Filesystem-Traversal)", () => {
+  it("filtert ../ Segmente aus dem File-Tree", () => {
     useAppStore.setState({
       prompts: [makePrompt("p1", "vault/../../../etc/passwd.md")],
     });
 
     const tree = useAppStore.getState().fileTree();
 
-    // The fileTree builds nodes for each segment, including ".." segments.
-    // This is safe because fileTree() does no filesystem access — it only
-    // builds an in-memory UI tree. However, ".." as a visible folder name
-    // is confusing; future hardening should either reject or label such paths.
     const paths = collectPaths(tree);
-
-    // Verify the tree structure contains the expected segments
+    // ".." segments must NOT appear in the tree after sanitization
+    expect(paths.some((p) => p.includes(".."))).toBe(false);
+    // The remaining valid segments should still be present
     expect(tree[0].name).toBe("vault");
-    // All path segments, including "..", become directory nodes — current behavior
     expect(tree.length).toBeGreaterThan(0);
-    // Traversal creates nested ".." directories
-    expect(paths.some((p) => p.includes(".."))).toBe(true);
+  });
+
+  // ===========================================================================
+  // AC-3b: "."-Segmente werden aus dem Tree gefiltert
+  // ===========================================================================
+
+  it("filtert . Segmente aus dem File-Tree", () => {
+    useAppStore.setState({
+      prompts: [makePrompt("p1", "vault/./sub/./prompt.md")],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+
+    // "." segments must not appear as tree nodes
+    expect(tree[0].name).toBe("vault");
+    expect(tree[0].children[0].name).toBe("sub");
+    expect(tree[0].children[0].children[0].name).toBe("prompt.md");
+    expect(tree[0].children[0].children[0].prompt_id).toBe("p1");
+  });
+
+  // ===========================================================================
+  // AC-3c: Leere Pfade nach Sanitization werden ignoriert
+  // ===========================================================================
+
+  it("ignoriert Pfade die nach Sanitization leer sind", () => {
+    useAppStore.setState({
+      prompts: [makePrompt("p1", "../.."), makePrompt("p2", "vault/valid.md")],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+
+    // Only the valid path should appear in the tree
+    expect(tree[0].name).toBe("vault");
+    expect(tree[0].children[0].name).toBe("valid.md");
+    // Tree should NOT crash or contain empty entries
+    expect(tree).toHaveLength(1);
+  });
+
+  // ===========================================================================
+  // AC-3d: Absolute Pfade werden relativ zum Vault-Root dargestellt
+  // ===========================================================================
+
+  it("stellt absolute Pfade relativ zum Vault-Root dar", () => {
+    useAppStore.setState({
+      currentFolderPath: "/home/user/vault",
+      prompts: [makePrompt("p1", "/home/user/vault/prompts/test.md")],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+
+    // Path should appear relative to vault root
+    expect(tree[0].name).toBe("prompts");
+    expect(tree[0].children[0].name).toBe("test.md");
+    expect(tree[0].children[0].prompt_id).toBe("p1");
+  });
+
+  it("lässt Pfade unverändert wenn kein Vault-Root gesetzt ist", () => {
+    useAppStore.setState({
+      currentFolderPath: null,
+      prompts: [makePrompt("p1", "/absolute/path/prompt.md")],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+
+    // With no root, path is shown as-is
+    expect(tree[0].name).toBe("absolute");
+    expect(tree[0].children[0].name).toBe("path");
+    expect(tree[0].children[0].children[0].name).toBe("prompt.md");
+  });
+
+  it("relativisiert nur Pfade die am Pfad-Prefix-Grenze matchen", () => {
+    // /home/user/vault should NOT match /home/user/vault-evil/prompt.md
+    useAppStore.setState({
+      currentFolderPath: "/home/user/vault",
+      prompts: [makePrompt("p1", "/home/user/vault-evil/prompts/evil.md")],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+
+    // Path should NOT be relativized — vault ≠ vault-evil
+    expect(tree[0].name).toBe("home");
+    expect(tree[0].children[0].name).toBe("user");
+    expect(tree[0].children[0].children[0].name).toBe("vault-evil");
   });
 
   // ===========================================================================

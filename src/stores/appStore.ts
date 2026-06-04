@@ -102,35 +102,45 @@ export const useAppStore = create<AppState>((set, get) => ({
   _watcherUnlisten: null,
 
   // Actions
-  setPrompts: (prompts) => set({ prompts }),
+  setPrompts: (prompts) => {
+    set({ prompts });
+  },
 
-  selectPrompt: (id) => set({ selectedPromptId: id }),
+  selectPrompt: (id) => {
+    set({ selectedPromptId: id });
+  },
 
-  setEvaluation: (promptId, evaluation) =>
+  setEvaluation: (promptId, evaluation) => {
     set((state) => ({
       evaluations: { ...state.evaluations, [promptId]: evaluation },
-    })),
+    }));
+  },
 
-  setHygiene: (promptId, hygiene) =>
+  setHygiene: (promptId, hygiene) => {
     set((state) => ({
       hygiene: { ...state.hygiene, [promptId]: hygiene },
-    })),
+    }));
+  },
 
-  toggleFavorite: (promptId) =>
+  toggleFavorite: (promptId) => {
     set((state) => ({
       prompts: state.prompts.map((p) =>
         p.id === promptId ? { ...p, is_favorite: !p.is_favorite } : p,
       ),
-    })),
+    }));
+  },
 
-  setFilters: (partial) =>
+  setFilters: (partial) => {
     set((state) => ({
       filters: { ...state.filters, ...partial },
-    })),
+    }));
+  },
 
-  resetFilters: () => set({ filters: { ...defaultFilters } }),
+  resetFilters: () => {
+    set({ filters: { ...defaultFilters } });
+  },
 
-  toggleFolder: (path) =>
+  toggleFolder: (path) => {
     set((state) => {
       const next = new Set(state.expandedFolders);
       if (next.has(path)) {
@@ -139,12 +149,19 @@ export const useAppStore = create<AppState>((set, get) => ({
         next.add(path);
       }
       return { expandedFolders: next };
-    }),
+    });
+  },
 
-  setLoading: (loading) => set({ isLoading: loading }),
-  setError: (error) => set({ error }),
+  setLoading: (loading) => {
+    set({ isLoading: loading });
+  },
+  setError: (error) => {
+    set({ error });
+  },
 
-  clearWatcherNotification: () => set({ watcherNotification: null }),
+  clearWatcherNotification: () => {
+    set({ watcherNotification: null });
+  },
 
   cleanupWatcher: async () => {
     const state = get();
@@ -173,6 +190,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (filters.category && p.category !== filters.category) return false;
       if (filters.hygieneStatus) {
         const h = get().hygiene[p.id];
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!h || h.status !== filters.hygieneStatus) return false;
       }
       if (filters.tags.length > 0) {
@@ -200,12 +218,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedEvaluation: () => {
     const { selectedPromptId, evaluations } = get();
     if (!selectedPromptId) return null;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     return evaluations[selectedPromptId] || null;
   },
 
   selectedHygiene: () => {
     const { selectedPromptId, hygiene } = get();
     if (!selectedPromptId) return null;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     return hygiene[selectedPromptId] || null;
   },
 
@@ -219,10 +239,36 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     for (const prompt of prompts) {
       // Normalize backslashes from Windows scanner output
-      const parts = prompt.file_path
-        .replace(/\\/g, "/")
+      let normalized = prompt.file_path.replace(/\\/g, "/");
+
+      // Relativize absolute paths against the vault root (S4.3 AC-3)
+      const root = get().currentFolderPath;
+      if (root && normalized.startsWith("/")) {
+        const normalizedRoot = root.replace(/\\/g, "/");
+        // Ensure we match at a path boundary: /vault should match /vault/file.md
+        // but NOT /vault-evil/file.md
+        if (
+          normalized === normalizedRoot ||
+          normalized.startsWith(normalizedRoot + "/")
+        ) {
+          normalized = normalized.slice(normalizedRoot.length);
+          if (normalized.startsWith("/")) {
+            normalized = normalized.slice(1);
+          }
+        }
+      }
+
+      // Sanitize: remove ".." and "." segments (S4.3 AC-1, AC-2)
+      const parts = normalized
         .split("/")
+        .filter((p) => p !== ".." && p !== ".")
         .filter(Boolean);
+
+      // Skip prompts whose paths become empty after sanitization
+      if (parts.length === 0) {
+        console.warn(`Pfad nach Sanitization leer: ${prompt.file_path}`);
+        continue;
+      }
       let siblingsMap: Map<string, FileTreeNode> = rootMap;
 
       for (let i = 0; i < parts.length; i++) {
@@ -244,6 +290,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
         if (isLast) {
           existing.prompt_id = prompt.id;
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           existing.score = get().evaluations[prompt.id]?.overall_score;
           existing.is_favorite = prompt.is_favorite;
         }

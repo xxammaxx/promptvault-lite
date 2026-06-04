@@ -50,7 +50,9 @@ export const AnalysisPanel: React.FC = () => {
             <p>Noch nicht analysiert.</p>
             <button
               className="btn btn-primary"
-              onClick={() => analyzeSelected()}
+              onClick={() => {
+                void analyzeSelected();
+              }}
             >
               Jetzt analysieren
             </button>

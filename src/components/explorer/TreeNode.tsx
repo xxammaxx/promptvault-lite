@@ -1,24 +1,45 @@
-import React from "react";
+import React, { useCallback } from "react";
+import { useAppStore } from "@/stores/appStore";
 import type { FileTreeNode } from "@/types";
 
 interface TreeNodeProps {
   node: FileTreeNode;
   depth: number;
-  isExpanded: boolean;
-  isSelected: boolean;
+  /** Root nodes receive isExpanded from parent; children derive from store. */
+  isExpanded?: boolean;
+  /** Root nodes receive isSelected from parent; children derive from store. */
+  isSelected?: boolean;
   onToggle: (path: string) => void;
   onSelect: (promptId: string) => void;
 }
 
-export const TreeNode: React.FC<TreeNodeProps> = ({
+const TreeNodeComponent: React.FC<TreeNodeProps> = ({
   node,
   depth,
-  isExpanded,
-  isSelected,
+  isExpanded: propExpanded,
+  isSelected: propSelected,
   onToggle,
   onSelect,
 }) => {
+  // Children derive state from the zustand store (prevents prop-drilling).
+  const storeExpanded = useAppStore((s) => s.expandedFolders.has(node.path));
+  const storeSelected = useAppStore((s) =>
+    node.prompt_id !== undefined
+      ? s.selectedPromptId === node.prompt_id
+      : false,
+  );
+
+  const isExpanded = propExpanded ?? storeExpanded;
+  const isSelected = propSelected ?? storeSelected;
+
   const paddingLeft = 8 + depth * 16;
+
+  const handleToggle = useCallback(() => {
+    onToggle(node.path);
+  }, [onToggle, node.path]);
+  const handleSelect = useCallback(() => {
+    if (node.prompt_id) onSelect(node.prompt_id);
+  }, [onSelect, node.prompt_id]);
 
   if (node.is_directory) {
     return (
@@ -26,10 +47,12 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
         <div
           className="tree-node tree-folder"
           style={{ paddingLeft }}
-          onClick={() => onToggle(node.path)}
+          onClick={handleToggle}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && onToggle(node.path)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleToggle();
+          }}
         >
           <span className="tree-chevron">{isExpanded ? "▼" : "▶"}</span>
           <span className="tree-icon">📁</span>
@@ -37,12 +60,10 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
         </div>
         {isExpanded &&
           node.children.map((child) => (
-            <TreeNode
+            <MemoizedTreeNode
               key={child.path}
               node={child}
               depth={depth + 1}
-              isExpanded={isExpanded}
-              isSelected={isSelected}
               onToggle={onToggle}
               onSelect={onSelect}
             />
@@ -64,12 +85,12 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
     <div
       className={`tree-node tree-file ${isSelected ? "tree-selected" : ""}`}
       style={{ paddingLeft }}
-      onClick={() => node.prompt_id && onSelect(node.prompt_id)}
+      onClick={handleSelect}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) =>
-        e.key === "Enter" && node.prompt_id && onSelect(node.prompt_id)
-      }
+      onKeyDown={(e) => {
+        if (e.key === "Enter") handleSelect();
+      }}
     >
       <span className="tree-chevron-placeholder" />
       <span className="tree-icon">{node.is_favorite ? "⭐" : "📄"}</span>
@@ -80,3 +101,18 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
     </div>
   );
 };
+
+// Custom comparator: only re-render when meaningful props change.
+// isExpanded/isSelected omitted — they are derived from the store inside
+// the component, so zustand handles their updates independently.
+const arePropsEqual = (prev: TreeNodeProps, next: TreeNodeProps): boolean =>
+  prev.node === next.node &&
+  prev.depth === next.depth &&
+  prev.isExpanded === next.isExpanded &&
+  prev.isSelected === next.isSelected &&
+  prev.onToggle === next.onToggle &&
+  prev.onSelect === next.onSelect;
+
+const MemoizedTreeNode = React.memo(TreeNodeComponent, arePropsEqual);
+
+export { MemoizedTreeNode as TreeNode };
