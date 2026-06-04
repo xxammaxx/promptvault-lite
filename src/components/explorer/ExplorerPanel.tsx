@@ -4,7 +4,11 @@ import { FileTree } from "./FileTree";
 import { FilterPanel } from "./FilterPanel";
 import { useAppStore } from "@/stores/appStore";
 
-export const ExplorerPanel: React.FC = () => {
+interface ExplorerPanelProps {
+  searchRef?: React.RefObject<HTMLInputElement>;
+}
+
+export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({ searchRef }) => {
   const [showFilters, setShowFilters] = useState(false);
   const isLoading = useAppStore((s) => s.isLoading);
   const prompts = useAppStore((s) => s.prompts);
@@ -22,7 +26,7 @@ export const ExplorerPanel: React.FC = () => {
         </button>
       </div>
 
-      <SearchBar />
+      <SearchBar ref={searchRef} />
 
       {showFilters && <FilterPanel onClose={() => setShowFilters(false)} />}
 

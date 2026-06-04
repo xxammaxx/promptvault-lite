@@ -31,6 +31,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::scan::scan_directory,
+            commands::scan::start_file_watcher,
+            commands::scan::stop_file_watcher,
             commands::analyze::evaluate_prompt,
             commands::analyze::analyze_hygiene,
             commands::analyze::analyze_all,

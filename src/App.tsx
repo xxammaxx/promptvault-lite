@@ -1,17 +1,39 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useAppStore } from "./stores/appStore";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { ExplorerPanel } from "./components/explorer/ExplorerPanel";
 import { DetailsPanel } from "./components/details/DetailsPanel";
 import { AnalysisPanel } from "./components/analysis/AnalysisPanel";
+import { ExportDialog } from "./components/common/ExportDialog";
 import "./App.css";
 
 function App() {
-  const { scanFolder, analyzeAll, isLoading, isAnalyzing, error, prompts } =
-    useAppStore();
+  const {
+    scanFolder,
+    analyzeAll,
+    isLoading,
+    isAnalyzing,
+    error,
+    prompts,
+    watcherNotification,
+    cleanupWatcher,
+  } = useAppStore();
   const [folderPath, setFolderPath] = useState<string | null>(null);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const isTauri =
     typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+
+  const isMac = navigator.platform.toUpperCase().includes("MAC");
+  const modLabel = isMac ? "Cmd" : "Strg";
+
+  // Cleanup watcher on component unmount
+  useEffect(() => {
+    return () => {
+      cleanupWatcher();
+    };
+  }, [cleanupWatcher]);
 
   const handleSelectFolder = useCallback(async () => {
     if (!isTauri) return;
@@ -37,6 +59,28 @@ function App() {
     await analyzeAll();
   }, [analyzeAll]);
 
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onOpenFolder: isLoading || !isTauri ? undefined : handleSelectFolder,
+    onFocusSearch: () => {
+      searchInputRef.current?.focus();
+    },
+    onAnalyzeAll:
+      isAnalyzing || isLoading || prompts.length === 0
+        ? undefined
+        : handleAnalyzeAll,
+    onEscape: () => {
+      useAppStore.getState().resetFilters();
+      searchInputRef.current?.blur();
+    },
+    onExport:
+      isLoading || isAnalyzing || prompts.length === 0
+        ? undefined
+        : () => {
+            setShowExportDialog(true);
+          },
+  });
+
   const filteredCount = useAppStore((s) => s.filteredPrompts)().length;
 
   return (
@@ -47,24 +91,35 @@ function App() {
         <div className="toolbar-actions">
           {folderPath && (
             <span className="folder-path" title={folderPath}>
-              📁 {folderPath.split("/").pop() || folderPath}
+              📁 {folderPath.split(/[/\\]/).pop() || folderPath}
             </span>
           )}
           <button
             className="btn btn-primary"
             onClick={handleSelectFolder}
             disabled={isLoading || !isTauri}
+            title={`Ordner öffnen (${modLabel}+O)`}
           >
             {isLoading ? "⏳ Scanne..." : "📂 Ordner öffnen"}
           </button>
           {prompts.length > 0 && (
-            <button
-              className="btn"
-              onClick={handleAnalyzeAll}
-              disabled={isAnalyzing}
-            >
-              {isAnalyzing ? "⏳ Analysiere..." : "🔄 Alle analysieren"}
-            </button>
+            <>
+              <button
+                className="btn"
+                onClick={handleAnalyzeAll}
+                disabled={isAnalyzing}
+                title={`Alle analysieren (${modLabel}+Shift+A)`}
+              >
+                {isAnalyzing ? "⏳ Analysiere..." : "🔄 Alle analysieren"}
+              </button>
+              <button
+                className="btn"
+                onClick={() => setShowExportDialog(true)}
+                title={`Exportieren (${modLabel}+E)`}
+              >
+                📦 Exportieren
+              </button>
+            </>
           )}
           {error && <span className="error-message">{error}</span>}
         </div>
@@ -72,7 +127,7 @@ function App() {
 
       {/* Drei-Spalten-Layout */}
       <main className="app-layout">
-        <ExplorerPanel />
+        <ExplorerPanel searchRef={searchInputRef} />
         <DetailsPanel />
         <AnalysisPanel />
       </main>
@@ -85,9 +140,24 @@ function App() {
             : "Bereit"}
           {isLoading && " — Scanne..."}
           {isAnalyzing && " — Analysiere..."}
+          {watcherNotification && (
+            <span
+              style={{
+                marginLeft: "1em",
+                color: "var(--color-accent, #4fc3f7)",
+              }}
+            >
+              {watcherNotification}
+            </span>
+          )}
         </span>
         <span>PromptVault Lite v1.0.0</span>
       </footer>
+
+      {/* Export Dialog */}
+      {showExportDialog && (
+        <ExportDialog onClose={() => setShowExportDialog(false)} />
+      )}
     </div>
   );
 }

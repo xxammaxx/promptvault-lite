@@ -80,6 +80,17 @@ export interface AnalysisReport {
 
 // --- Filter Types ---
 
+// --- Export Types ---
+
+export type ExportFormat = "json" | "markdown" | "zip";
+
+export interface ExportProgressPayload {
+  current: number;
+  total: number;
+}
+
+// --- Filter Types ---
+
 export interface PromptFilters {
   search: string;
   category: string | null;

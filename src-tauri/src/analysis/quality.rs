@@ -864,3 +864,101 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod edge_tests {
+    use super::*;
+
+    #[test]
+    fn test_empty_prompt() {
+        let eval = evaluate_prompt("", "test-empty");
+        assert_eq!(eval.overall_score, 0);
+        // Should not panic
+    }
+
+    #[test]
+    fn test_null_bytes_in_prompt() {
+        let content = "Hello\0World\0Test\n\nSome prompt content";
+        let eval = evaluate_prompt(content, "test-null");
+        // Should not panic, should produce a valid evaluation
+        assert!(!eval.criteria.is_empty());
+    }
+
+    #[test]
+    fn test_only_special_chars() {
+        let content = "!@#$%^&*()_+-=[]{}|;':\",./<>?";
+        let eval = evaluate_prompt(content, "test-special");
+        assert!(!eval.criteria.is_empty());
+    }
+
+    #[test]
+    fn test_unicode_umlauts() {
+        let content = "# Überprüfung der Änderungen\n\nDas ist ein Test mit Ümläuten und ß.";
+        let eval = evaluate_prompt(content, "test-umlaut");
+        assert!(!eval.criteria.is_empty());
+    }
+
+    #[test]
+    fn test_emoji_in_prompt() {
+        let content = "# 🚀 Schnelle Prompt-Engine 🎯\n\nTest mit Emojis: 😀 🔥 ✅ ❌";
+        let eval = evaluate_prompt(content, "test-emoji");
+        assert!(!eval.criteria.is_empty());
+    }
+
+    #[test]
+    fn test_rtl_text() {
+        let content = "# نص عربي\n\nهذا اختبار للنص العربي";
+        let eval = evaluate_prompt(content, "test-rtl");
+        assert!(!eval.criteria.is_empty());
+    }
+
+    #[test]
+    fn test_cjk_text() {
+        let content = "# 日本語プロンプト\n\nこれはテストです。漢字も含まれています。";
+        let eval = evaluate_prompt(content, "test-cjk");
+        assert!(!eval.criteria.is_empty());
+    }
+
+    #[test]
+    fn test_large_prompt() {
+        // Generate a ~100KB prompt
+        let base = "# Large Prompt\n\n";
+        let repeated =
+            "This is a test paragraph with enough content to simulate a real prompt. ".repeat(1500);
+        let content = format!("{}{}", base, repeated);
+        assert!(content.len() > 100_000);
+
+        let start = std::time::Instant::now();
+        let eval = evaluate_prompt(&content, "test-large");
+        let duration = start.elapsed();
+
+        assert!(!eval.criteria.is_empty());
+        assert!(
+            duration.as_secs() < 5,
+            "Large prompt took too long: {:?}",
+            duration
+        );
+    }
+
+    #[test]
+    #[cfg_attr(debug_assertions, ignore)]
+    fn test_many_prompts_analysis() {
+        // Generate 100 prompts and analyze them
+        let mut prompts = Vec::new();
+        for i in 0..100 {
+            let content = format!(
+                "---\ntitle: \"Prompt {}\"\ndescription: \"Test {}\"\ncategory: \"test\"\ntags: [\"test\", \"perf\"]\n---\n\n# Prompt {}\n\nThis is test content for prompt {}. It has multiple paragraphs.\n\n## Section\n\nMore content here with some keywords and structure.\n\n```rust\nfn main() {{\n    println!(\"Hello\");\n}}\n```",
+                i, i, i, i
+            );
+            prompts.push(content);
+        }
+
+        let start = std::time::Instant::now();
+        for (i, content) in prompts.iter().enumerate() {
+            let eval = evaluate_prompt(content, &format!("perf-{}", i));
+            assert!(!eval.criteria.is_empty());
+        }
+        let duration = start.elapsed();
+        println!("100 prompts analyzed in {:?}", duration);
+    }
+}

@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicoverbruggen/tauri-docs/refs/heads/dev/src/tauri-2.json",
   "productName": "PromptVault Lite",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "identifier": "dev.promptvault.lite",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -30,6 +30,14 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png"]
+    "icon": [
+      "icons/32x32.png",
+      "icons/64x64.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ]
   }
 }

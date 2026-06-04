@@ -59,22 +59,43 @@ export async function getFavorites(): Promise<string[]> {
 export async function exportJson(
   promptIds: string[],
   exportPath: string,
-): Promise<void> {
-  return invoke<void>("export_json", { promptIds, exportPath });
+  evaluations: PromptEvaluation[],
+  hygiene: PromptHygiene[],
+): Promise<string> {
+  return invoke<string>("export_json", {
+    promptIds,
+    exportPath,
+    evaluations,
+    hygiene,
+  });
 }
 
 export async function exportMarkdown(
   promptIds: string[],
   exportPath: string,
-): Promise<void> {
-  return invoke<void>("export_markdown", { promptIds, exportPath });
+  evaluations: PromptEvaluation[],
+  hygiene: PromptHygiene[],
+): Promise<string> {
+  return invoke<string>("export_markdown", {
+    promptIds,
+    exportPath,
+    evaluations,
+    hygiene,
+  });
 }
 
 export async function exportZip(
   promptIds: string[],
   exportPath: string,
-): Promise<void> {
-  return invoke<void>("export_zip", { promptIds, exportPath });
+  evaluations: PromptEvaluation[],
+  hygiene: PromptHygiene[],
+): Promise<string> {
+  return invoke<string>("export_zip", {
+    promptIds,
+    exportPath,
+    evaluations,
+    hygiene,
+  });
 }
 
 // --- Persistenz ---
@@ -85,4 +106,14 @@ export async function loadCache(): Promise<PromptItem[]> {
 
 export async function saveCache(prompts: PromptItem[]): Promise<void> {
   return invoke<void>("save_cache", { prompts });
+}
+
+// --- File Watcher ---
+
+export async function startFileWatcher(path: string): Promise<void> {
+  await invoke("start_file_watcher", { path });
+}
+
+export async function stopFileWatcher(): Promise<void> {
+  await invoke("stop_file_watcher");
 }

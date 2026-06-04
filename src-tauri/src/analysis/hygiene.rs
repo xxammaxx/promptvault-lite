@@ -812,4 +812,29 @@ mod tests {
             assert!(!format!("{:?}", category).is_empty());
         }
     }
+
+    #[test]
+    fn test_empty_content_hygiene() {
+        let hygiene = analyze_hygiene("", "empty");
+        // Empty content should be clean (no artifacts to find)
+        assert!(hygiene.artifacts.is_empty());
+        assert_eq!(hygiene.hygiene_score, 100);
+    }
+
+    #[test]
+    fn test_binary_like_content() {
+        let content = "PK\x03\x04\x14\x00\x00\x00\x08\x00";
+        let hygiene = analyze_hygiene(content, "binary");
+        // Should not panic – verify analysis completed
+        assert_eq!(hygiene.prompt_id, "binary");
+    }
+
+    #[test]
+    fn test_unicode_artifacts() {
+        // Prompt with secrets-like patterns in unicode context
+        let content = "API_KEY=abc123\npassword = \"übergeheim\"\nToken: eyJhbGciOiJIUzI1NiJ9";
+        let hygiene = analyze_hygiene(content, "unicode-secrets");
+        assert!(!hygiene.artifacts.is_empty());
+        assert!(hygiene.hygiene_score < 100);
+    }
 }

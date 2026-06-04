@@ -147,4 +147,36 @@ mod tests {
         assert!(!result.has_frontmatter);
         assert_eq!(result.content, input);
     }
+
+    #[test]
+    fn test_unicode_frontmatter() {
+        let md = "---\ntitle: \"Überprüfung der Änderungen\"\ndescription: \"🚀 Emoji Test 🎯\"\ncategory: \"Test\"\n---\n\n# Content";
+        let result = parse_frontmatter(md);
+        assert!(result.has_frontmatter);
+        assert_eq!(result.metadata["title"], "Überprüfung der Änderungen");
+    }
+
+    #[test]
+    fn test_minimal_frontmatter() {
+        let md = "---\ntitle: Test\n---\n\nContent";
+        let result = parse_frontmatter(md);
+        assert!(result.has_frontmatter);
+        assert_eq!(result.metadata["title"], "Test");
+    }
+
+    #[test]
+    fn test_no_frontmatter() {
+        let md = "# Just a heading\n\nSome content without frontmatter.";
+        let result = parse_frontmatter(md);
+        // Should handle gracefully, returning defaults
+        assert!(!result.has_frontmatter);
+    }
+
+    #[test]
+    fn test_malformed_frontmatter() {
+        let md = "---\ntitle: \"unclosed quote\n---\n\nContent";
+        let result = parse_frontmatter(md);
+        // Should not panic — malformed YAML returns default with no frontmatter
+        assert!(!result.has_frontmatter);
+    }
 }

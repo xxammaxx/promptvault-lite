@@ -6,7 +6,25 @@ import type {
   PromptFilters,
   FileTreeNode,
 } from "@/types";
-import { scanDirectory, evaluatePrompt, analyzeHygiene } from "@/lib/tauri";
+import {
+  scanDirectory,
+  evaluatePrompt,
+  analyzeHygiene,
+  startFileWatcher,
+  stopFileWatcher,
+} from "@/lib/tauri";
+import { listen } from "@tauri-apps/api/event";
+import type { UnlistenFn } from "@tauri-apps/api/event";
+
+// --- Watcher Event Types ---
+
+interface ChangedPayload {
+  added: string[];
+  modified: string[];
+  removed: string[];
+}
+
+// --- Store Interface ---
 
 interface AppState {
   // Data
@@ -22,6 +40,11 @@ interface AppState {
   filters: PromptFilters;
   expandedFolders: Set<string>;
 
+  // Watcher
+  currentFolderPath: string | null;
+  watcherNotification: string | null;
+  _watcherUnlisten: UnlistenFn | null;
+
   // Actions
   setPrompts: (prompts: PromptItem[]) => void;
   selectPrompt: (id: string | null) => void;
@@ -33,6 +56,8 @@ interface AppState {
   toggleFolder: (path: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  clearWatcherNotification: () => void;
+  cleanupWatcher: () => Promise<void>;
 
   // Derived
   filteredPrompts: () => PromptItem[];
@@ -70,6 +95,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   error: null,
   filters: { ...defaultFilters },
   expandedFolders: new Set<string>(),
+
+  // Watcher state
+  currentFolderPath: null,
+  watcherNotification: null,
+  _watcherUnlisten: null,
 
   // Actions
   setPrompts: (prompts) => set({ prompts }),
@@ -113,6 +143,27 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setLoading: (loading) => set({ isLoading: loading }),
   setError: (error) => set({ error }),
+
+  clearWatcherNotification: () => set({ watcherNotification: null }),
+
+  cleanupWatcher: async () => {
+    const state = get();
+    // Remove old event listener
+    if (state._watcherUnlisten) {
+      state._watcherUnlisten();
+    }
+    // Stop backend watcher
+    try {
+      await stopFileWatcher();
+    } catch (err) {
+      console.error("Fehler beim Stoppen des Watchers:", err);
+    }
+    set({
+      _watcherUnlisten: null,
+      currentFolderPath: null,
+      watcherNotification: null,
+    });
+  },
 
   // Derived data
   filteredPrompts: () => {
@@ -161,44 +212,61 @@ export const useAppStore = create<AppState>((set, get) => ({
   fileTree: () => {
     const prompts = get().filteredPrompts();
 
-    // Build tree from file paths
-    const root: Record<string, FileTreeNode> = {};
+    // Build tree from file paths using arrays for direct child-node linking.
+    // The previous reduce-based approach created orphaned records for
+    // hierarchies deeper than 2 levels (e.g. /coding/rust/advanced/).
+    const root: FileTreeNode[] = [];
 
     for (const prompt of prompts) {
-      const parts = prompt.file_path.split("/").filter(Boolean);
-      let current = root;
+      // Normalize backslashes from Windows scanner output
+      const parts = prompt.file_path
+        .replace(/\\/g, "/")
+        .split("/")
+        .filter(Boolean);
+      let siblings: FileTreeNode[] = root;
 
       for (let i = 0; i < parts.length; i++) {
         const part = parts[i];
         const isLast = i === parts.length - 1;
         const fullPath = "/" + parts.slice(0, i + 1).join("/");
 
-        if (!current[part]) {
-          current[part] = {
+        let existing = siblings.find((n) => n.name === part);
+
+        if (!existing) {
+          existing = {
             name: part,
             path: fullPath,
             is_directory: !isLast,
             children: [],
-            ...(isLast
-              ? {
-                  prompt_id: prompt.id,
-                  score: get().evaluations[prompt.id]?.overall_score,
-                  is_favorite: prompt.is_favorite,
-                }
-              : {}),
           };
+          siblings.push(existing);
         }
-        current = current[part].children.reduce(
-          (acc, child) => ({ ...acc, [child.name]: child }),
-          {} as Record<string, FileTreeNode>,
-        );
+
+        if (isLast) {
+          existing.prompt_id = prompt.id;
+          existing.score = get().evaluations[prompt.id]?.overall_score;
+          existing.is_favorite = prompt.is_favorite;
+        }
+
+        siblings = existing.children;
       }
     }
 
-    return Object.values(root).sort((a, b) => {
-      if (a.is_directory !== b.is_directory) return a.is_directory ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    });
+    // Recursively sort: directories before files, then alphabetically
+    const sortRecursive = (nodes: FileTreeNode[]): FileTreeNode[] => {
+      nodes.sort((a, b) => {
+        if (a.is_directory !== b.is_directory) return a.is_directory ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+      for (const n of nodes) {
+        if (n.children.length > 0) {
+          sortRecursive(n.children);
+        }
+      }
+      return nodes;
+    };
+
+    return sortRecursive(root);
   },
 
   allCategories: () => {
@@ -213,10 +281,56 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Async actions
   scanFolder: async (path: string) => {
+    // Clean up old watcher before starting a new one
+    const oldUnlisten = get()._watcherUnlisten;
+    if (oldUnlisten) {
+      oldUnlisten();
+    }
+
     set({ isLoading: true, error: null });
     try {
       const prompts = await scanDirectory(path);
-      set({ prompts, isLoading: false });
+
+      // Start the file watcher
+      await startFileWatcher(path);
+
+      // Set up event listener for watcher:changed
+      const unlisten = await listen<ChangedPayload>(
+        "watcher:changed",
+        (event) => {
+          const { added, modified, removed } = event.payload;
+          const count = added.length + modified.length + removed.length;
+          if (count > 0) {
+            set({
+              watcherNotification: `Dateisystem-Änderung erkannt (${count} Datei(en)) – aktualisiere...`,
+            });
+
+            // Auto-clear notification after 3 seconds
+            setTimeout(() => {
+              set({ watcherNotification: null });
+            }, 3000);
+
+            // Re-scan the current folder
+            const folderPath = get().currentFolderPath;
+            if (folderPath) {
+              scanDirectory(folderPath)
+                .then((updatedPrompts) => {
+                  set({ prompts: updatedPrompts });
+                })
+                .catch((err) => {
+                  console.error("Re-scan fehlgeschlagen:", err);
+                });
+            }
+          }
+        },
+      );
+
+      set({
+        prompts,
+        isLoading: false,
+        currentFolderPath: path,
+        _watcherUnlisten: unlisten,
+      });
     } catch (err) {
       set({ error: String(err), isLoading: false });
     }
