@@ -1,10 +1,37 @@
 ---
 title: Changelog
 description: Versionshinweise für PromptVault Lite.
-version: 1.4.0
+version: 1.5.0
 ---
 
 # Changelog
+
+## v1.5.0 — Phase 5: Feature Completion & Developer Experience
+
+**Datum:** 2026-06-05
+
+### Features
+
+- **Favoriten-Backend:** `toggle_favorite(prompt_id)` toggled Favoriten-Status via SQLite. `get_favorites()` gibt alle favorisierten Prompt-IDs zurück. Persistenz über Neustarts via `Database::set_favorite()`. ADR-006: Database als separates `tauri::State`. (#24)
+- **Score-Filter:** `filteredPrompts()` wertet `evaluations` für `minScore`/`maxScore`-Filter aus. Prompt ohne Evaluation → Score = 0. Nur aktiv wenn Filter nicht Default (0–100). ADR-007: reines Frontend-Feature. (#23)
+- **Favoriten-UI:** Button in Detailansicht mit optimistischem UI-Update, Revert bei Backend-Fehler, ARIA-Attribute (`aria-label`, `aria-pressed`). FileTree zeigt ★-Indikator mit `favorite-indicator` CSS-Klasse. (#25)
+
+### Backend
+
+- **Database-Mutex:** `Database.conn` von `rusqlite::Connection` auf `Mutex<Connection>` umgestellt. Ermöglicht `Send + Sync` für `tauri::State<Database>`. Eigene `lock_conn()`-Hilfsfunktion.
+- **ADR-008:** Integrationstests in `command_errors.rs` verwenden `Database::new_in_memory()` und rufen `_impl`-Hilfsfunktionen direkt auf.
+- **Neue Rust-Tests:** 5 Integrationstests für Favoriten (unknown_id, set, unset, empty, returns_favorites).
+
+### Frontend
+
+- **Search-Filter umstrukturiert:** `return`-Early-Exit entfernt — andere Filter (Score, Favoriten) werden jetzt bei aktivem Search-Filter mitgeprüft.
+- **toggleFavorite Store-Action async:** Optimistisches UI-Update mit Revert bei `Err`. Import von `@/lib/tauri` `toggleFavorite`.
+
+### Test Summary
+
+- Rust: 96 lib + 17 integration = 113 total (0 failures, 0 clippy warnings)
+- Frontend: 93 tests (0 failures)
+- ESLint: 0 errors, 0 warnings
 
 ## v1.4.0 — Phase 4: Security-Härtung & Developer Experience
 

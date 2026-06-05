@@ -315,4 +315,34 @@ describe("FileTree — Path Normalisierung & Plattform-Pfade", () => {
     const tree = useAppStore.getState().fileTree();
     expect(tree).toHaveLength(0);
   });
+
+  // ===========================================================================
+  // T5.10 — Favoriten-Indikator ★
+  // ===========================================================================
+
+  it("zeigt ★-Indikator (tree-icon + favorite-indicator) für favorisierte Prompts", () => {
+    useAppStore.setState({
+      prompts: [
+        makePrompt("p1", "vault/favorite.md", true),
+        makePrompt("p2", "vault/normal.md", false),
+      ],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+    expect(tree).toHaveLength(1);
+    expect(tree[0].name).toBe("vault");
+
+    const children = tree[0].children;
+    expect(children).toHaveLength(2);
+
+    // The favorite file should have is_favorite = true
+    const favFile = children.find((c) => c.prompt_id === "p1");
+    expect(favFile).toBeDefined();
+    if (favFile) expect(favFile.is_favorite).toBe(true);
+
+    // The normal file should have is_favorite = false
+    const normalFile = children.find((c) => c.prompt_id === "p2");
+    expect(normalFile).toBeDefined();
+    if (normalFile) expect(normalFile.is_favorite).toBe(false);
+  });
 });

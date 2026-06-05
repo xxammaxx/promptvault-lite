@@ -3,16 +3,24 @@ use crate::models::{
 };
 use rusqlite::{params, Connection, Result as SqlResult};
 use std::path::Path;
+use std::sync::Mutex;
 
 // =============================================================================
 // SQLite-Datenbank für PromptVault Lite
 // =============================================================================
 
 pub struct Database {
-    conn: Connection,
+    conn: Mutex<Connection>,
 }
 
 impl Database {
+    /// Hilfsfunktion: Lockt die Connection für lesende/schreibende Zugriffe.
+    fn lock_conn(&self) -> Result<std::sync::MutexGuard<'_, Connection>, String> {
+        self.conn
+            .lock()
+            .map_err(|e| format!("Datenbank-Lock-Fehler: {}", e))
+    }
+
     /// Öffnet oder erstellt die SQLite-Datenbank
     pub fn new(db_path: &str) -> Result<Self, String> {
         let conn = Connection::open(Path::new(db_path))
@@ -26,7 +34,9 @@ impl Database {
         )
         .map_err(|e| format!("PRAGMA Fehler: {}", e))?;
 
-        let db = Self { conn };
+        let db = Self {
+            conn: Mutex::new(conn),
+        };
         db.run_migrations()?;
 
         Ok(db)
@@ -37,7 +47,9 @@ impl Database {
         let conn = Connection::open_in_memory()
             .map_err(|e| format!("Konnte In-Memory DB nicht öffnen: {}", e))?;
 
-        let db = Self { conn };
+        let db = Self {
+            conn: Mutex::new(conn),
+        };
         db.run_migrations()?;
 
         Ok(db)
@@ -46,7 +58,7 @@ impl Database {
     // --- Migrationen ---
 
     fn run_migrations(&self) -> Result<(), String> {
-        self.conn
+        self.lock_conn()?
             .execute_batch(
                 "CREATE TABLE IF NOT EXISTS prompts (
                     id TEXT PRIMARY KEY,
@@ -127,8 +139,8 @@ impl Database {
 
     /// Speichert eine Liste von Prompts (ersetzt existierende mit gleichem file_path)
     pub fn save_prompts(&self, prompts: &[PromptItem]) -> Result<(), String> {
-        let tx = self
-            .conn
+        let conn = self.lock_conn()?;
+        let tx = conn
             .unchecked_transaction()
             .map_err(|e| format!("Transaction error: {}", e))?;
 
@@ -178,8 +190,8 @@ impl Database {
 
     /// Lädt alle Prompts aus der Datenbank
     pub fn load_prompts(&self) -> Result<Vec<PromptItem>, String> {
-        let mut stmt = self
-            .conn
+        let conn = self.lock_conn()?;
+        let mut stmt = conn
             .prepare(
                 "SELECT id, file_path, file_name, title, description, category, version, tags, content, raw_frontmatter, created_at, updated_at, is_favorite
                  FROM prompts
@@ -221,8 +233,8 @@ impl Database {
 
     /// Lädt einen einzelnen Prompt anhand der ID
     pub fn get_prompt(&self, id: &str) -> Result<Option<PromptItem>, String> {
-        let mut stmt = self
-            .conn
+        let conn = self.lock_conn()?;
+        let mut stmt = conn
             .prepare(
                 "SELECT id, file_path, file_name, title, description, category, version, tags, content, raw_frontmatter, created_at, updated_at, is_favorite
                  FROM prompts WHERE id = ?1",
@@ -264,7 +276,7 @@ impl Database {
 
     /// Setzt den Favoriten-Status eines Prompts
     pub fn set_favorite(&self, prompt_id: &str, is_favorite: bool) -> Result<(), String> {
-        self.conn
+        self.lock_conn()?
             .execute(
                 "UPDATE prompts SET is_favorite = ?1 WHERE id = ?2",
                 params![is_favorite as i32, prompt_id],
@@ -275,7 +287,7 @@ impl Database {
 
     /// Löscht alle Prompts (für Re-Scan)
     pub fn clear_prompts(&self) -> Result<(), String> {
-        self.conn
+        self.lock_conn()?
             .execute_batch(
                 "DELETE FROM hygiene;
                  DELETE FROM evaluations;
@@ -295,7 +307,7 @@ impl Database {
         let recs_json =
             serde_json::to_string(&evaluation.recommendations).unwrap_or_else(|_| "[]".to_string());
 
-        self.conn
+        self.lock_conn()?
             .execute(
                 "INSERT OR REPLACE INTO evaluations (id, prompt_id, overall_score, criteria, missing_sections, recommendations, evaluated_at)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
@@ -314,8 +326,8 @@ impl Database {
     }
 
     pub fn load_evaluation(&self, prompt_id: &str) -> Result<Option<PromptEvaluation>, String> {
-        let mut stmt = self
-            .conn
+        let conn = self.lock_conn()?;
+        let mut stmt = conn
             .prepare(
                 "SELECT id, prompt_id, overall_score, criteria, missing_sections, recommendations, evaluated_at
                  FROM evaluations WHERE prompt_id = ?1",
@@ -359,7 +371,7 @@ impl Database {
         let artifacts_json =
             serde_json::to_string(&hygiene.artifacts).unwrap_or_else(|_| "[]".to_string());
 
-        self.conn
+        self.lock_conn()?
             .execute(
                 "INSERT OR REPLACE INTO hygiene (id, prompt_id, hygiene_score, status, artifacts, analyzed_at)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
@@ -377,8 +389,8 @@ impl Database {
     }
 
     pub fn load_hygiene(&self, prompt_id: &str) -> Result<Option<PromptHygiene>, String> {
-        let mut stmt = self
-            .conn
+        let conn = self.lock_conn()?;
+        let mut stmt = conn
             .prepare(
                 "SELECT id, prompt_id, hygiene_score, status, artifacts, analyzed_at
                  FROM hygiene WHERE prompt_id = ?1",
@@ -432,8 +444,8 @@ impl Database {
             .collect::<Vec<_>>()
             .join(" ");
 
-        let mut stmt = self
-            .conn
+        let conn = self.lock_conn()?;
+        let mut stmt = conn
             .prepare(
                 "SELECT p.id, p.file_path, p.file_name, p.title, p.description, p.category,
                         p.version, p.tags, p.content, p.raw_frontmatter, p.created_at,

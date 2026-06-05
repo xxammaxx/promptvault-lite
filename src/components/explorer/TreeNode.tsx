@@ -93,7 +93,12 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
       }}
     >
       <span className="tree-chevron-placeholder" />
-      <span className="tree-icon">{node.is_favorite ? "⭐" : "📄"}</span>
+      <span
+        className={`tree-icon ${node.is_favorite ? "favorite-indicator" : ""}`}
+        {...(node.is_favorite ? { "aria-label": "Favorit", role: "img" } : {})}
+      >
+        {node.is_favorite ? "⭐" : "📄"}
+      </span>
       <span className="tree-name">{node.name.replace(".md", "")}</span>
       {node.score !== undefined && (
         <span className={`tree-score ${scoreColor}`}>{node.score}</span>

@@ -262,6 +262,9 @@ body {
   font-size: 13px;
   flex-shrink: 0;
 }
+.favorite-indicator {
+  color: #f5a623;
+}
 .tree-name {
   flex: 1;
   overflow: hidden;
