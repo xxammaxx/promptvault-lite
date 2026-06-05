@@ -1,10 +1,7 @@
 use crate::models::DetectedArtifact;
 
 /// Generiert Verbesserungsvorschläge basierend auf erkannten Artefakten
-pub fn generate_recommendations(
-    _missing_sections: &[String],
-    artifacts: &[DetectedArtifact],
-) -> Vec<String> {
+pub fn generate_recommendations(artifacts: &[DetectedArtifact]) -> Vec<String> {
     let mut recommendations: Vec<String> = Vec::new();
 
     for artifact in artifacts {

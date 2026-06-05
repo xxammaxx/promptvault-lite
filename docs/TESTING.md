@@ -40,12 +40,17 @@ Die meisten Tests liegen direkt in den Modulen als `#[cfg(test)]`-Einheiten:
 - Hygieneanalyse: `src-tauri/src/analysis/hygiene.rs`
 - JSON-Cache: `src-tauri/src/database/cache.rs`
 - SQLite: `src-tauri/src/database/sqlite.rs`
+- Integration: `src-tauri/tests/command_errors.rs`
 
 ### Frontend
 
-- Vitest ist im Projekt eingerichtet.
-- Derzeit sind noch keine Frontend-Testdateien im Repo eingecheckt.
-- Übliche Pfade sind z. B. `src/**/*.test.tsx` oder `src/**/*.spec.tsx`.
+- **94 Frontend-Tests in 5 Test-Dateien** (Vitest + @testing-library/react + jsdom).
+- Übliche Pfade sind `src/**/*.test.tsx` oder `src/**/*.spec.tsx`. Konkret vorhanden:
+  - `src/stores/__tests__/appStore.test.ts`
+  - `src/components/explorer/__tests__/FileTree.test.tsx`
+  - `src/components/explorer/__tests__/FilterPanel.test.tsx`
+  - `src/components/explorer/__tests__/TreeNode.test.tsx`
+  - `src/components/analysis/__tests__/AnalysisPanel.test.tsx`
 
 ## Neue Tests schreiben
 

@@ -50,10 +50,6 @@ export async function toggleFavorite(promptId: string): Promise<boolean> {
   return invoke<boolean>("toggle_favorite", { promptId });
 }
 
-export async function getFavorites(): Promise<string[]> {
-  return invoke<string[]>("get_favorites");
-}
-
 // --- Export ---
 
 export async function exportJson(
@@ -96,17 +92,6 @@ export async function exportZip(
     evaluations,
     hygiene,
   });
-}
-
-// --- Persistenz ---
-
-export async function loadCache(): Promise<PromptItem[]> {
-  return invoke<PromptItem[]>("load_cache");
-}
-
-export async function saveCache(prompts: PromptItem[]): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-  return invoke<void>("save_cache", { prompts });
 }
 
 // --- File Watcher ---

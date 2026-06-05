@@ -59,5 +59,5 @@ pnpm tauri build
 - **`pnpm` oder `cargo` nicht gefunden**: Prüfe, ob die Werkzeuge im PATH sind.
 - **App startet nicht**: Führe `pnpm install` erneut aus.
 - **Scan findet keine Dateien**: Der Scanner verarbeitet nur `.md`-Dateien.
-- **Export/Favoriten melden „Nicht implementiert“**: Diese Tauri-Commands sind im aktuellen Stand noch Platzhalter.
+- **Export/Favoriten scheinen zu hängen**: Der Vorgang läuft lokal im Rust-Backend; bei großen Prompt-Mengen (>>100) kann der erste Aufruf mehrere Sekunden dauern. Status wird in der Toolbar als ⏳-Symbol angezeigt.
 - **Build-Probleme auf Linux/macOS/Windows**: Prüfe die plattformspezifischen Native-Build-Voraussetzungen für Rust/Tauri.

@@ -10,6 +10,7 @@ import {
   scanDirectory,
   evaluatePrompt,
   analyzeHygiene,
+  analyzeAll as tauriAnalyzeAll,
   startFileWatcher,
   stopFileWatcher,
   toggleFavorite as tauriToggleFavorite,
@@ -442,30 +443,17 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     set({ isAnalyzing: true });
     try {
-      const batchSize = 10;
-      for (let i = 0; i < prompts.length; i += batchSize) {
-        const batch = prompts.slice(i, i + batchSize);
-        const results = await Promise.all(
-          batch.map(async (p) => {
-            const [evaluation, hygiene] = await Promise.all([
-              evaluatePrompt(p.id, p.content),
-              analyzeHygiene(p.id, p.content),
-            ]);
-            return { id: p.id, evaluation, hygiene };
-          }),
-        );
+      const report = await tauriAnalyzeAll(prompts);
 
-        set((state) => {
-          const evals = { ...state.evaluations };
-          const hyg = { ...state.hygiene };
-          for (const r of results) {
-            evals[r.id] = r.evaluation;
-            hyg[r.id] = r.hygiene;
-          }
-          return { evaluations: evals, hygiene: hyg };
-        });
-      }
-      set({ isAnalyzing: false });
+      set((state) => {
+        const evals = { ...state.evaluations };
+        const hyg = { ...state.hygiene };
+        for (let i = 0; i < prompts.length; i++) {
+          evals[prompts[i].id] = report.evaluations[i];
+          hyg[prompts[i].id] = report.hygiene[i];
+        }
+        return { evaluations: evals, hygiene: hyg, isAnalyzing: false };
+      });
     } catch (err) {
       set({ error: String(err), isAnalyzing: false });
     }

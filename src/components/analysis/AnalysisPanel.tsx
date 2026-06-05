@@ -129,9 +129,15 @@ export const AnalysisPanel: React.FC = () => {
                   >
                     <span className="artifact-category">{a.category}</span>
                     <span className="artifact-severity">
-                      {a.severity === "critical" && "🔴"}
-                      {a.severity === "warning" && "⚠️"}
-                      {a.severity === "info" && "ℹ️"}
+                      {a.severity === "critical" && (
+                        <span aria-hidden="true">🔴</span>
+                      )}
+                      {a.severity === "warning" && (
+                        <span aria-hidden="true">⚠️</span>
+                      )}
+                      {a.severity === "info" && (
+                        <span aria-hidden="true">ℹ️</span>
+                      )}
                     </span>
                     <span className="artifact-match">{a.match}</span>
                     {a.replacement_suggestion && (

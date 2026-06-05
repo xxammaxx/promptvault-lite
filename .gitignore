@@ -29,7 +29,9 @@ Thumbs.db
 
 # Logs
 *.log
-.opencode/logs/
+
+# OpenCode Session-Workspace (Sub-Installation mit eigenem node_modules)
+.opencode/
 
 # Tauri
 src-tauri/gen/

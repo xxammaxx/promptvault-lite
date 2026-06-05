@@ -29,7 +29,7 @@ version: 1.5.0
 
 ### Test Summary
 
-- Rust: 96 lib + 17 integration = 113 total (0 failures, 0 clippy warnings)
+- Rust: 96 lib (1 ignored) + 17 integration = 113 total (0 failures, 0 clippy warnings)
 - Frontend: 93 tests (0 failures)
 - ESLint: 0 errors, 0 warnings
 

@@ -31,7 +31,9 @@ export const FilterPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <label>Kategorie</label>
         <select
           value={filters.category || ""}
-          onChange={(e) => { setFilters({ category: e.target.value || null }); }}
+          onChange={(e) => {
+            setFilters({ category: e.target.value || null });
+          }}
         >
           <option value="">Alle</option>
           {allCategories().map((cat) => (
@@ -44,15 +46,36 @@ export const FilterPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
       {/* Score-Bereich */}
       <div className="filter-group">
-        <label>
+        <label htmlFor="filter-min-score">
           Score: {filters.minScore}–{filters.maxScore}
         </label>
         <input
+          id="filter-min-score"
           type="range"
           min={0}
           max={100}
           value={filters.minScore}
-          onChange={(e) => { setFilters({ minScore: Number(e.target.value) }); }}
+          aria-label="Minimaler Score"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={filters.minScore}
+          onChange={(e) => {
+            setFilters({ minScore: Number(e.target.value) });
+          }}
+        />
+        <input
+          id="filter-max-score"
+          type="range"
+          min={0}
+          max={100}
+          value={filters.maxScore}
+          aria-label="Maximaler Score"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={filters.maxScore}
+          onChange={(e) => {
+            setFilters({ maxScore: Number(e.target.value) });
+          }}
         />
       </div>
 
@@ -64,12 +87,12 @@ export const FilterPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <button
               key={opt.value}
               className={`chip ${filters.hygieneStatus === opt.value ? "chip-active" : ""}`}
-              onClick={() =>
-                { setFilters({
+              onClick={() => {
+                setFilters({
                   hygieneStatus:
                     filters.hygieneStatus === opt.value ? null : opt.value,
-                }); }
-              }
+                });
+              }}
             >
               {opt.label}
             </button>
@@ -106,7 +129,9 @@ export const FilterPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <input
             type="checkbox"
             checked={filters.favoritesOnly}
-            onChange={(e) => { setFilters({ favoritesOnly: e.target.checked }); }}
+            onChange={(e) => {
+              setFilters({ favoritesOnly: e.target.checked });
+            }}
           />
           Nur Favoriten
         </label>

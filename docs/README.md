@@ -34,7 +34,7 @@ pnpm tauri dev
 
 ## Screenshots
 
-> Platzhalter: Screenshots der fertigen Oberfläche werden hier ergänzt.
+> Screenshots folgen — siehe Issue #27 für die geplante README-Überarbeitung mit aktuellem Bildmaterial.
 
 ## Tech Stack
 

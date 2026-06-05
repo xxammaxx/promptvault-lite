@@ -50,6 +50,8 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
           onClick={handleToggle}
           role="button"
           tabIndex={0}
+          aria-expanded={isExpanded}
+          aria-label={`Ordner ${node.name}${isExpanded ? " (geöffnet)" : " (geschlossen)"}`}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleToggle();
           }}

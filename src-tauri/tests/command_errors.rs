@@ -193,7 +193,7 @@ fn test_toggle_favorite_sets_favorite() {
     let db = Database::new_in_memory().expect("In-Memory DB sollte erstellt werden");
     let prompt = make_prompt("p1", "/test/p1.md", "# Test");
 
-    db.save_prompts(&[prompt.clone()])
+    db.save_prompts(std::slice::from_ref(&prompt))
         .expect("Prompt sollte gespeichert werden");
 
     let result = favorites::toggle_favorite_impl("p1", &db);

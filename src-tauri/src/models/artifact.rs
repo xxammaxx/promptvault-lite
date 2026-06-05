@@ -28,22 +28,6 @@ pub enum ArtifactCategory {
     Secret,
 }
 
-impl ArtifactCategory {
-    pub fn default_severity(&self) -> &str {
-        match self {
-            Self::Secret | Self::Pii => "critical",
-            Self::ProjectArtifact | Self::RepoReference | Self::FilePath => "warning",
-            Self::IssueReference
-            | Self::TestReport
-            | Self::LogLine
-            | Self::Stacktrace
-            | Self::BuildOutput
-            | Self::JsonDump
-            | Self::CodeDump => "info",
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DetectedArtifact {
     pub id: String,

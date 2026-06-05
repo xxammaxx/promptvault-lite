@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "@/stores/appStore";
 import { exportJson, exportMarkdown, exportZip } from "@/lib/tauri";
 import type { ExportFormat, ExportProgressPayload } from "@/types";
@@ -61,7 +62,6 @@ export function useExport(): UseExportReturn {
         const hyg = Object.values(hygiene);
 
         // Listen for progress events from the Tauri backend
-        const { listen } = await import("@tauri-apps/api/event");
         const unlisten = await listen<ExportProgressPayload>(
           "export:progress",
           (event) => {

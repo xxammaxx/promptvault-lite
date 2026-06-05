@@ -38,7 +38,7 @@ version: 1.0.0
 
 - Nutze das Suchfeld im Explorer für Textsuche.
 - Filter sind für Kategorie, Hygiene-Status, Tags und Favoriten vorhanden.
-- Der Score-Regler ist im UI sichtbar; die aktuelle Filterlogik berücksichtigt den Score-Bereich noch nicht vollständig.
+- Der Score-Bereich (min–max) wird per Doppel-Slider im FilterPanel eingestellt; beide Werte werden in der Filterlogik (`appStore.filteredPrompts`) berücksichtigt.
 
 ## Analyse von Prompts
 
@@ -63,12 +63,17 @@ version: 1.0.0
 
 ## Export
 
-- Export-Commands sind im Backend angelegt.
-- Im aktuellen Stand geben sie jedoch noch `Nicht implementiert` zurück.
-- Die Export-UI ist daher noch nicht produktiv nutzbar.
+- Export-Commands sind im Backend vollständig implementiert (`export_json`, `export_markdown`, `export_zip`).
+- Über den **Exportieren**-Button in der Toolbar wählst du Format (JSON/Markdown/ZIP) und optional „Nur Favoriten".
+- Fortschritt wird in der Export-Dialog-Progressbar angezeigt.
 
 ## Tastaturkürzel
 
 - **Enter** auf einem fokussierten Ordner: Auf-/Zuklappen
 - **Enter** auf einer fokussierten Datei: Prompt auswählen
-- Weitere globale Tastaturkürzel sind derzeit nicht implementiert
+- Weitere globale Tastaturkürzel:
+  - **Strg/Cmd + O** — Ordner öffnen
+  - **Strg/Cmd + F** — Suchfeld fokussieren
+  - **Strg/Cmd + Shift + A** — Alle Prompts analysieren
+  - **Strg/Cmd + E** — Export-Dialog öffnen
+  - **Esc** — Filter zurücksetzen / Suchfeld verlassen

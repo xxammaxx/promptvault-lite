@@ -99,18 +99,32 @@ describe("FilterPanel", () => {
     render(<FilterPanel onClose={mockOnClose} />);
 
     expect(screen.getByText(/Score: 0–100/)).toBeInTheDocument();
-    const slider = screen.getByRole("slider");
-    expect(slider).toBeInTheDocument();
-    expect(slider).toHaveAttribute("min", "0");
-    expect(slider).toHaveAttribute("max", "100");
-    expect(slider).toHaveValue("0");
+    const sliders = screen.getAllByRole("slider");
+    expect(sliders).toHaveLength(2);
+    expect(sliders[0]).toHaveAttribute("min", "0");
+    expect(sliders[0]).toHaveAttribute("max", "100");
+    expect(sliders[0]).toHaveValue("0");
+    expect(sliders[0]).toHaveAttribute("aria-label", "Minimaler Score");
+    expect(sliders[1]).toHaveAttribute("aria-label", "Maximaler Score");
+    expect(sliders[1]).toHaveValue("100");
   });
 
   it("calls setFilters with minScore on slider change", () => {
     render(<FilterPanel onClose={mockOnClose} />);
 
-    fireEvent.change(screen.getByRole("slider"), { target: { value: "50" } });
+    fireEvent.change(screen.getAllByRole("slider")[0], {
+      target: { value: "50" },
+    });
     expect(mockSetFilters).toHaveBeenCalledWith({ minScore: 50 });
+  });
+
+  it("calls setFilters with maxScore on second slider change", () => {
+    render(<FilterPanel onClose={mockOnClose} />);
+
+    fireEvent.change(screen.getAllByRole("slider")[1], {
+      target: { value: "80" },
+    });
+    expect(mockSetFilters).toHaveBeenCalledWith({ maxScore: 80 });
   });
 
   // --- Hygiene chips ---

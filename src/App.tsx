@@ -157,7 +157,7 @@ function App() {
             </span>
           )}
         </span>
-        <span>PromptVault Lite v1.0.0</span>
+        <span>PromptVault Lite v{__APP_VERSION__}</span>
       </footer>
 
       {/* Export Dialog */}
