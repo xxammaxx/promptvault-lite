@@ -12,6 +12,7 @@ import {
   analyzeHygiene,
   startFileWatcher,
   stopFileWatcher,
+  toggleFavorite as tauriToggleFavorite,
 } from "@/lib/tauri";
 import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
@@ -50,7 +51,7 @@ interface AppState {
   selectPrompt: (id: string | null) => void;
   setEvaluation: (promptId: string, evaluation: PromptEvaluation) => void;
   setHygiene: (promptId: string, hygiene: PromptHygiene) => void;
-  toggleFavorite: (promptId: string) => void;
+  toggleFavorite: (promptId: string) => Promise<void>;
   setFilters: (filters: Partial<PromptFilters>) => void;
   resetFilters: () => void;
   toggleFolder: (path: string) => void;
@@ -122,12 +123,27 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
   },
 
-  toggleFavorite: (promptId) => {
+  toggleFavorite: async (promptId) => {
+    // Optimistisches UI-Update
+    const prevPrompts = get().prompts;
     set((state) => ({
       prompts: state.prompts.map((p) =>
         p.id === promptId ? { ...p, is_favorite: !p.is_favorite } : p,
       ),
     }));
+
+    try {
+      const newState = await tauriToggleFavorite(promptId);
+      // Backend bestätigt — State korrigieren falls nötig
+      set((state) => ({
+        prompts: state.prompts.map((p) =>
+          p.id === promptId ? { ...p, is_favorite: newState } : p,
+        ),
+      }));
+    } catch (err) {
+      // Revert bei Fehler
+      set({ prompts: prevPrompts, error: String(err) });
+    }
   },
 
   setFilters: (partial) => {
@@ -184,7 +200,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Derived data
   filteredPrompts: () => {
-    const { prompts, filters } = get();
+    const { prompts, filters, evaluations } = get();
     return prompts.filter((p) => {
       if (filters.favoritesOnly && !p.is_favorite) return false;
       if (filters.category && p.category !== filters.category) return false;
@@ -198,12 +214,20 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       if (filters.search) {
         const q = filters.search.toLowerCase();
-        return (
-          p.title.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q) ||
-          p.tags.some((t) => t.toLowerCase().includes(q)) ||
-          p.content.toLowerCase().includes(q)
-        );
+        if (
+          !p.title.toLowerCase().includes(q) &&
+          !p.category.toLowerCase().includes(q) &&
+          !p.tags.some((t) => t.toLowerCase().includes(q)) &&
+          !p.content.toLowerCase().includes(q)
+        ) {
+          return false;
+        }
+      }
+      // Score-Filter (ADR-007): nur aktiv wenn nicht Default (minScore=0, maxScore=100)
+      if (filters.minScore > 0 || filters.maxScore < 100) {
+        const score: number =
+          p.id in evaluations ? evaluations[p.id].overall_score : 0;
+        if (score < filters.minScore || score > filters.maxScore) return false;
       }
       return true;
     });

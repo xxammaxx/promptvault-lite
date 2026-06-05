@@ -1,6 +1,18 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useAppStore } from "@/stores/appStore";
 import type { PromptItem, PromptEvaluation, PromptHygiene } from "@/types";
+
+// Mock tauri toggleFavorite for T5.10 tests
+vi.mock("@/lib/tauri", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/tauri")>("@/lib/tauri");
+  return {
+    ...actual,
+    toggleFavorite: vi.fn(),
+  };
+});
+
+import { toggleFavorite as tauriToggleFavorite } from "@/lib/tauri";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -438,9 +450,9 @@ describe("filteredPrompts()", () => {
     expect(result.map((p) => p.id)).toEqual(["p3"]);
   });
 
-  it("score-filter (minScore/maxScore) werden aktuell nicht in filteredPrompts geprüft", () => {
-    // Note: filteredPrompts() does not access evaluations for score filtering.
-    // This test documents current behavior — all prompts pass regardless of scores.
+  it("filtert korrekt nach minScore/maxScore", () => {
+    // Prompts: p1=Score 50, p2=Score 90, p3=Score 30
+    // Default filter (0-100) should pass all
     useAppStore.setState({
       prompts: [p1, p2, p3],
       evaluations: {
@@ -459,8 +471,174 @@ describe("filteredPrompts()", () => {
       },
     });
 
+    const resultDefault = useAppStore.getState().filteredPrompts();
+    // All prompts pass with default filter (0-100)
+    expect(resultDefault).toHaveLength(3);
+
+    // minScore=70 filters out p1 (50) and p3 (30), only p2 (90) remains
+    useAppStore.getState().setFilters({ minScore: 70, maxScore: 100 });
+    const resultMin = useAppStore.getState().filteredPrompts();
+    expect(resultMin.map((p) => p.id)).toEqual(["p2"]);
+
+    // maxScore=30 only keeps p3 (30)
+    useAppStore.getState().setFilters({ minScore: 0, maxScore: 30 });
+    const resultMax = useAppStore.getState().filteredPrompts();
+    expect(resultMax.map((p) => p.id)).toEqual(["p3"]);
+  });
+
+  it("Score-Filter: Prompt ohne Evaluation wird mit Score=0 behandelt", () => {
+    useAppStore.setState({
+      prompts: [p1, p2], // p1 has evaluation (50), p2 has none
+      evaluations: {
+        p1: makeEvaluation("p1", 50),
+      },
+      filters: {
+        search: "",
+        category: null,
+        minScore: 10,
+        maxScore: 100,
+        hygieneStatus: null,
+        tags: [],
+        favoritesOnly: false,
+      },
+    });
+
     const result = useAppStore.getState().filteredPrompts();
-    // All prompts are returned because score filtering is not implemented
+    // p2 has no evaluation → Score=0 → filtered out by minScore=10
+    expect(result.map((p) => p.id)).toEqual(["p1"]);
+  });
+
+  it("Score-Filter: Default (0-100) lässt alle durch", () => {
+    useAppStore.setState({
+      prompts: [p1, p2, p3],
+      evaluations: {
+        p1: makeEvaluation("p1", 0),
+        p2: makeEvaluation("p2", 50),
+        p3: makeEvaluation("p3", 100),
+      },
+      filters: {
+        search: "",
+        category: null,
+        minScore: 0,
+        maxScore: 100,
+        hygieneStatus: null,
+        tags: [],
+        favoritesOnly: false,
+      },
+    });
+
+    const result = useAppStore.getState().filteredPrompts();
     expect(result).toHaveLength(3);
+  });
+
+  it("Score-Filter: kombiniert mit Search-Filter", () => {
+    useAppStore.setState({
+      prompts: [p1, p2, p3], // p1=React Guide, p2=Python Utils, p3=Advanced TypeScript
+      evaluations: {
+        p1: makeEvaluation("p1", 50), // Low score
+        p2: makeEvaluation("p2", 90), // High score, but search won't match
+        p3: makeEvaluation("p3", 30), // Low score
+      },
+      filters: {
+        search: "type", // Only p3 matches "type" in tags
+        category: null,
+        minScore: 0,
+        maxScore: 100,
+        hygieneStatus: null,
+        tags: [],
+        favoritesOnly: false,
+      },
+    });
+
+    // With no score filter, p3 would match search
+    const resultNoScore = useAppStore.getState().filteredPrompts();
+    expect(resultNoScore.map((p) => p.id)).toEqual(["p3"]);
+
+    // With minScore=50, p3 (score 30) is filtered out even though search matches
+    useAppStore.getState().setFilters({ search: "type", minScore: 50 });
+    const resultWithScore = useAppStore.getState().filteredPrompts();
+    expect(resultWithScore).toHaveLength(0);
+  });
+
+  it("Score-Filter: minScore > maxScore ergibt leeres Ergebnis", () => {
+    useAppStore.setState({
+      prompts: [p1],
+      evaluations: {
+        p1: makeEvaluation("p1", 50),
+      },
+      filters: {
+        search: "",
+        category: null,
+        minScore: 70,
+        maxScore: 30,
+        hygieneStatus: null,
+        tags: [],
+        favoritesOnly: false,
+      },
+    });
+
+    const result = useAppStore.getState().filteredPrompts();
+    // No prompt can satisfy min=70 AND max=30 → empty
+    expect(result).toHaveLength(0);
+  });
+});
+
+// =============================================================================
+// T5.10 — toggleFavorite Store-Action Tests
+// =============================================================================
+
+describe("toggleFavorite (async, Backend)", () => {
+  beforeEach(() => {
+    resetStore();
+    vi.clearAllMocks();
+    useAppStore.setState({
+      prompts: [makePrompt("p1", "/test/p1.md", { is_favorite: false })],
+    });
+  });
+
+  it("optimistisches UI-Update toggled is_favorite sofort", async () => {
+    const mockToggle = vi.mocked(tauriToggleFavorite);
+    // Make the backend call resolve successfully
+    mockToggle.mockResolvedValue(true);
+
+    await useAppStore.getState().toggleFavorite("p1");
+
+    // State should reflect the backend response (true)
+    const prompts = useAppStore.getState().prompts;
+    expect(prompts[0].is_favorite).toBe(true);
+  });
+
+  it("revertiert State bei Backend-Fehler mit Error-String", async () => {
+    const mockToggle = vi.mocked(tauriToggleFavorite);
+    mockToggle.mockRejectedValue(new Error("Backend nicht erreichbar"));
+
+    // p1 starts as NOT favorite
+    expect(useAppStore.getState().prompts[0].is_favorite).toBe(false);
+
+    await useAppStore.getState().toggleFavorite("p1");
+
+    // State should be reverted to original (not favorite)
+    const prompts = useAppStore.getState().prompts;
+    expect(prompts[0].is_favorite).toBe(false);
+
+    // Error should be set
+    const err = useAppStore.getState().error;
+    expect(err).toContain("Backend nicht erreichbar");
+  });
+
+  it("synchronisiert State mit Backend-Antwort", async () => {
+    const mockToggle = vi.mocked(tauriToggleFavorite);
+    // Backend returns false (successfully unfavorited)
+    mockToggle.mockResolvedValue(false);
+
+    // Start as favorite
+    useAppStore.setState({
+      prompts: [makePrompt("p1", "/test/p1.md", { is_favorite: true })],
+    });
+
+    await useAppStore.getState().toggleFavorite("p1");
+
+    const prompts = useAppStore.getState().prompts;
+    expect(prompts[0].is_favorite).toBe(false);
   });
 });

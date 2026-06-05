@@ -5,6 +5,7 @@ pub mod models;
 pub mod parser;
 pub mod scanner;
 
+use crate::database::Database;
 use commands::AppState;
 use tauri::Manager;
 
@@ -20,6 +21,20 @@ pub fn run() {
         .manage(AppState::new())
         .setup(|app| {
             log::info!("PromptVault Lite gestartet");
+
+            // ADR-006: Database als separates tauri::State registrieren
+            let db_path = app
+                .path()
+                .app_data_dir()
+                .map_err(|e| format!("App-Datenverzeichnis nicht verfügbar: {}", e))?
+                .join("promptvault.db");
+            let database = Database::new(
+                db_path
+                    .to_str()
+                    .ok_or_else(|| "Ungültiger Pfad für Datenbank".to_string())?,
+            )
+            .map_err(|e| format!("Datenbank konnte nicht initialisiert werden: {}", e))?;
+            app.manage(database);
 
             #[cfg(debug_assertions)]
             {

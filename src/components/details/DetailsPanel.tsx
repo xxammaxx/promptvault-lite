@@ -98,9 +98,15 @@ export const ActionBar: React.FC = () => {
       <button
         className="btn"
         onClick={() => {
-          toggleFavorite(prompt.id);
+          void toggleFavorite(prompt.id);
         }}
-        title={prompt.is_favorite ? "Favorit entfernen" : "Favorit"}
+        aria-label={
+          prompt.is_favorite ? "Favorit entfernen" : "Als Favorit markieren"
+        }
+        aria-pressed={prompt.is_favorite}
+        title={
+          prompt.is_favorite ? "Favorit entfernen" : "Als Favorit markieren"
+        }
       >
         {prompt.is_favorite ? "⭐" : "☆"}
       </button>

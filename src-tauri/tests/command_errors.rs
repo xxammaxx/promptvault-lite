@@ -9,6 +9,7 @@ use promptvault_lite_lib::commands::analyze;
 use promptvault_lite_lib::commands::export;
 use promptvault_lite_lib::commands::favorites;
 use promptvault_lite_lib::commands::scan;
+use promptvault_lite_lib::database::Database;
 use promptvault_lite_lib::models::PromptItem;
 use promptvault_lite_lib::scanner::file_scanner;
 use promptvault_lite_lib::scanner::DebouncedWatcher;
@@ -130,7 +131,7 @@ fn test_analyze_all_empty_prompts() {
 }
 
 // =============================================================================
-// T4.10 — export + favorites Fehlerfall-Tests
+// T4.10 — Export Fehlerfall-Tests
 // =============================================================================
 
 #[test]
@@ -167,30 +168,110 @@ fn test_export_json_empty_prompt_list() {
     assert!(prompts.is_empty());
 }
 
+// =============================================================================
+// T5.4 — Favoriten-Integrationstests (ADR-008: in-memory DB, direkter Aufruf)
+// =============================================================================
+
 #[test]
-fn test_toggle_favorite_not_implemented() {
-    let result = favorites::toggle_favorite("any-id".to_string());
+fn test_toggle_favorite_unknown_id() {
+    let db = Database::new_in_memory().expect("In-Memory DB sollte erstellt werden");
+    let result = favorites::toggle_favorite_impl("nonexistent", &db);
     assert!(
         result.is_err(),
-        "toggle_favorite sollte aktuell Err zurückgeben (nicht implementiert)"
+        "toggle_favorite mit unbekannter ID muss Err zurückgeben"
     );
     let err = result.unwrap_err();
     assert!(
-        err.contains("Nicht implementiert") || err.contains("implementiert"),
-        "Fehlermeldung: {}",
+        err.contains("Prompt not found"),
+        "Fehlermeldung muss 'Prompt not found' enthalten: {}",
         err
     );
 }
 
 #[test]
-fn test_get_favorites_empty_database() {
-    let result = favorites::get_favorites();
+fn test_toggle_favorite_sets_favorite() {
+    let db = Database::new_in_memory().expect("In-Memory DB sollte erstellt werden");
+    let prompt = make_prompt("p1", "/test/p1.md", "# Test");
+
+    db.save_prompts(&[prompt.clone()])
+        .expect("Prompt sollte gespeichert werden");
+
+    let result = favorites::toggle_favorite_impl("p1", &db);
     assert!(
         result.is_ok(),
-        "get_favorites() sollte immer Ok zurückgeben"
+        "toggle_favorite sollte bei existierendem Prompt Ok zurückgeben"
+    );
+    assert!(result.unwrap(), "new_state sollte true sein (favorisiert)");
+
+    let updated = db
+        .get_prompt("p1")
+        .expect("get_prompt sollte funktionieren")
+        .expect("Prompt sollte existieren");
+    assert!(
+        updated.is_favorite,
+        "Prompt sollte nach toggle_favorite favorisiert sein"
+    );
+}
+
+#[test]
+fn test_toggle_favorite_unsets_favorite() {
+    let db = Database::new_in_memory().expect("In-Memory DB sollte erstellt werden");
+    let mut prompt = make_prompt("p1", "/test/p1.md", "# Test");
+    prompt.is_favorite = true;
+
+    db.save_prompts(&[prompt])
+        .expect("Prompt sollte gespeichert werden");
+
+    let result = favorites::toggle_favorite_impl("p1", &db);
+    assert!(
+        result.is_ok(),
+        "toggle_favorite sollte bei favorisiertem Prompt Ok zurückgeben"
+    );
+    assert!(
+        !result.unwrap(),
+        "new_state sollte false sein (nicht favorisiert)"
+    );
+
+    let updated = db
+        .get_prompt("p1")
+        .expect("get_prompt sollte funktionieren")
+        .expect("Prompt sollte existieren");
+    assert!(
+        !updated.is_favorite,
+        "Prompt sollte nach toggle_favorite nicht favorisiert sein"
+    );
+}
+
+#[test]
+fn test_get_favorites_empty() {
+    let db = Database::new_in_memory().expect("In-Memory DB sollte erstellt werden");
+    let result = favorites::get_favorites_impl(&db);
+    assert!(
+        result.is_ok(),
+        "get_favorites sollte bei leerer DB Ok zurückgeben"
     );
     let favorites = result.unwrap();
     assert!(favorites.is_empty(), "Leere DB → leere Favoritenliste");
+}
+
+#[test]
+fn test_get_favorites_returns_favorites() {
+    let db = Database::new_in_memory().expect("In-Memory DB sollte erstellt werden");
+    let mut prompt1 = make_prompt("p1", "/test/p1.md", "# Test 1");
+    prompt1.is_favorite = true;
+    let prompt2 = make_prompt("p2", "/test/p2.md", "# Test 2");
+
+    db.save_prompts(&[prompt1, prompt2])
+        .expect("Prompts sollten gespeichert werden");
+
+    let result = favorites::get_favorites_impl(&db);
+    assert!(result.is_ok());
+    let favorites = result.unwrap();
+    assert_eq!(
+        favorites,
+        vec!["p1".to_string()],
+        "Nur p1 sollte favorisiert sein"
+    );
 }
 
 // =============================================================================
