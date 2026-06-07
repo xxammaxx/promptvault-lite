@@ -1,0 +1,103 @@
+name: Context Engineering Task
+description: Projekt-Standard, Agent-Regeln, Security-Gates, CI oder Dokumentations-Task
+title: "chore: "
+labels: ["context-engineering", "meta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Context-Engineering-Task
+        Diese Tasks dienen der Projekt-Härtung: Standards, Regeln, Infrastruktur, Dokumentation.
+        Sie folgen dem gleichen evidenzbasierten Workflow wie Feature-Tasks.
+
+  - type: input
+    id: goal
+    attributes:
+      label: Ziel
+      description: Was soll erreicht werden?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Kontext
+      description: Warum ist diese Aufgabe wichtig?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Kategorie
+      options:
+        - Agenten-Regeln (AGENTS.md, CLAUDE.md)
+        - Templates (Issue, PR, Context Manifest)
+        - Security-Gates
+        - CI/Workflows
+        - Dokumentation
+        - Tooling/Konfiguration
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: textarea
+    id: in-scope
+    attributes:
+      label: In Scope
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of Scope
+      value: "- Keine Produktfeatures\n- Keine Datenbankänderungen\n- Keine Architekturänderungen ohne ADR"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Akzeptanzkriterien
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verifikation
+      description: Wie wird die Korrektheit geprüft?
+      placeholder: "- Datei existiert am erwarteten Pfad\n- Format validiert gegen Schema\n- ..."
+
+  - type: textarea
+    id: security-privacy
+    attributes:
+      label: Security-/Privacy-Impact
+      description: Hat diese Aufgabe Security- oder Privacy-Auswirkungen?
+      placeholder: "- Keine (reine Dokumentation)\n- Verbessert Security durch neue Gates\n- ..."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: gates
+    attributes:
+      label: Pflicht-Gates
+      options:
+        - label: Context Manifest wird erstellt
+          required: true
+        - label: Evidence Log wird erstellt
+          required: true
+        - label: Bestehende Tests werden nicht verändert
+          required: true
+
+  - type: textarea
+    id: definition-of-done
+    attributes:
+      label: Definition of Done
+      value: |
+        - [ ] Alle Akzeptanzkriterien erfüllt
+        - [ ] Dateien am erwarteten Pfad vorhanden
+        - [ ] Tests unverändert bestanden
+        - [ ] Keine Regression
+        - [ ] Issue-End-Kommentar geschrieben

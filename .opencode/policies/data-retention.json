@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "description": "Datenaufbewahrungsrichtlinien — DSGVO-konform",
+  "retention_periods": {
+    "session_logs": {
+      "duration_days": 30,
+      "location": ".opencode/logs/sessions/",
+      "reason": "Debugging und kurzfristige Nachvollziehbarkeit"
+    },
+    "audit_logs": {
+      "duration_days": 3650,
+      "location": ".opencode/logs/audit/",
+      "reason": "DSGVO-Compliance: 10 Jahre Aufbewahrung für Audit-Trail"
+    },
+    "evidence_cache": {
+      "duration_days": 7,
+      "location": ".opencode/memory/evidence-cache.json",
+      "reason": "Zwischenspeicher für laufende Evidence-Sammlung"
+    }
+  },
+  "data_classification": {
+    "pii": "Nicht speichern — sofort löschen",
+    "secrets": "Nicht speichern — sofort löschen",
+    "production_data": "Nicht in Tests oder Logs verwenden",
+    "test_data": "Als synthetisch kennzeichnen (test@example.com etc.)"
+  }
+}

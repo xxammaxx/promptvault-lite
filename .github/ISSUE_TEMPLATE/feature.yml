@@ -1,0 +1,114 @@
+name: Feature Request
+description: Neues Feature oder Verbesserung vorschlagen
+title: "feat: "
+labels: ["enhancement", "needs-spec"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature-Vorschlag
+        Bitte fülle alle Felder aus. Ein Feature ohne Akzeptanzkriterien und Verification Contract wird nicht implementiert.
+
+  - type: input
+    id: goal
+    attributes:
+      label: Ziel
+      description: Was soll erreicht werden? Ein Satz.
+      placeholder: "z.B. Export von Analyse-Ergebnissen als CSV"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Kontext
+      description: Warum ist dieses Feature wichtig? Welches Problem löst es?
+      placeholder: "Beschreibe den Use Case..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: in-scope
+    attributes:
+      label: In Scope
+      description: Was gehört zur Umsetzung?
+      placeholder: "- CSV-Export-Engine\n- UI-Dialog für Formatauswahl\n- ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of Scope
+      description: Was gehört explizit NICHT zur Umsetzung?
+      placeholder: "- PDF-Export\n- Cloud-Upload\n- ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Akzeptanzkriterien
+      description: Was muss erfüllt sein, damit das Feature als "done" gilt?
+      placeholder: "- [ ] CSV-Datei wird korrekt geschrieben\n- [ ] UI-Dialog ist barrierefrei (ARIA)\n- [ ] ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification-contract
+    attributes:
+      label: Verification Contract
+      description: Welche Tests beweisen die Korrektheit?
+      placeholder: "- Unit Test: CSV-Format validieren\n- Integration Test: Export mit 1000 Prompts\n- ..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: red-tests
+    attributes:
+      label: Red Tests (vor Implementierung)
+      description: Welche Tests müssen VOR der Implementierung fehlschlagen?
+      placeholder: "- test_csv_export_format: erwartet leere Ausgabe → schlägt fehl\n- ..."
+
+  - type: textarea
+    id: relevant-files
+    attributes:
+      label: Relevante Dateien / Module
+      description: Welche Dateien sind betroffen?
+      placeholder: "- src-tauri/src/commands/export.rs\n- src/components/ExportDialog.tsx\n- ..."
+
+  - type: textarea
+    id: security-privacy
+    attributes:
+      label: Security-/Privacy-Risiken
+      description: Gibt es Sicherheits- oder Datenschutzbedenken?
+      placeholder: "- Keine, da Export nur lokal\n- Path-Traversal muss geprüft werden\n- ..."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: gates
+    attributes:
+      label: Pflicht-Gates
+      options:
+        - label: Context Manifest wird erstellt
+          required: true
+        - label: Evidence Log wird erstellt
+          required: true
+        - label: Spec-Driven-Development-Workflow wird befolgt
+          required: true
+
+  - type: textarea
+    id: definition-of-done
+    attributes:
+      label: Definition of Done
+      description: "Was muss alles erfüllt sein? (Wird automatisch ergänzt)"
+      value: |
+        - [ ] Alle Akzeptanzkriterien erfüllt
+        - [ ] Red Tests grün
+        - [ ] Tests bestehen (`pnpm test`, `cargo test`)
+        - [ ] CI grün (oder Abweichung dokumentiert)
+        - [ ] Dokumentation aktualisiert
+        - [ ] Code-Review bestanden
+        - [ ] Human Approval (wo nötig)
+        - [ ] Issue-End-Kommentar geschrieben

@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "description": "MCP-Tool-Trust-Tiers — abgestufte Zugriffsrechte für KI-Agenten",
+  "tiers": {
+    "tier_0_readonly": {
+      "tools": ["github_mcp_search", "github_mcp_read", "brave_search", "context7"],
+      "restrictions": "Nur lesender Zugriff. Keine Schreiboperationen.",
+      "auto_approve": true
+    },
+    "tier_1_sandboxed": {
+      "tools": ["playwright", "docker", "sqlite_project_local"],
+      "restrictions": "Sandboxed Ausführung. Nur projekt-lokale Ressourcen.",
+      "auto_approve": true
+    },
+    "tier_2_trusted_human_gate": {
+      "tools": ["filesystem_external", "postgresql_readonly"],
+      "restrictions": "Erfordert explizite Human Approval vor jeder Nutzung.",
+      "auto_approve": false
+    }
+  }
+}

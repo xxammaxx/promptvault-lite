@@ -1,0 +1,106 @@
+name: Bug Report
+description: Fehler melden
+title: "fix: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug Report
+        Bitte fülle alle Felder aus. Je mehr Details, desto schneller die Behebung.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung
+      description: Was ist passiert? Was wurde erwartet?
+      placeholder: "Kurze, präzise Beschreibung des Fehlers..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduktion
+      description: Schritt-für-Schritt-Anleitung
+      placeholder: |
+        1. App starten
+        2. Vault-Ordner öffnen mit ...
+        3. Auf "Analysieren" klicken
+        4. Fehler: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten
+      description: Was sollte stattdessen passieren?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Tatsächliches Verhalten
+      description: Was ist tatsächlich passiert? Fehlermeldung? Stacktrace?
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Welche App-Version? (Siehe Statusleiste)
+      placeholder: "z.B. 1.5.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Plattform
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Alle
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Stacktrace
+      description: Vollständige Fehlermeldung oder Log-Auszug
+      render: shell
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Akzeptanzkriterien (für Fix)
+      placeholder: "- [ ] Fehler tritt nicht mehr auf\n- [ ] Regression-Test verhindert Rückkehr\n- [ ] ..."
+
+  - type: textarea
+    id: relevant-files
+    attributes:
+      label: Relevante Dateien / Module
+      placeholder: "- src-tauri/src/commands/analyze.rs\n- src/components/...\n- ..."
+
+  - type: textarea
+    id: security-privacy
+    attributes:
+      label: Security-/Privacy-Impact
+      placeholder: "- Keine sensitiven Daten betroffen\n- ..."
+
+  - type: checkboxes
+    id: gates
+    attributes:
+      label: Pflicht-Gates
+      options:
+        - label: Context Manifest wird erstellt
+          required: true
+        - label: Evidence Log wird erstellt
+          required: true
+        - label: Regression-Test wird hinzugefügt
+          required: true

@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "description": "Evidence-Gates für KI-Agenten — keine Behauptung ohne Beleg",
+  "gates": {
+    "severity_claim": {
+      "required_evidence": ["cvss_vector", "poc_reproduction", "log_evidence"],
+      "human_approval_required": true
+    },
+    "architecture_decision": {
+      "required_evidence": ["adr_document", "alternatives_evaluated", "tradeoffs_documented"],
+      "human_approval_required": true
+    },
+    "compliance_judgment": {
+      "required_evidence": ["data_flow_diagram", "consent_verified", "retention_enforced"],
+      "human_approval_required": true
+    },
+    "bug_fix": {
+      "required_evidence": ["failing_test_before", "passing_test_after", "regression_test_added"],
+      "human_approval_required": false
+    },
+    "feature_complete": {
+      "required_evidence": ["acceptance_criteria_met", "test_coverage_maintained", "context_manifest"],
+      "human_approval_required": false
+    },
+    "migration_ready": {
+      "required_evidence": ["rollback_tested", "data_integrity_verified", "backup_confirmed"],
+      "human_approval_required": true
+    }
+  }
+}
