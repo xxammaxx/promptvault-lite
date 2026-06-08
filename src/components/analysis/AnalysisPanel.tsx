@@ -4,6 +4,58 @@ import { useAppStore } from "@/stores/appStore";
 const scoreColor = (score: number) =>
   score >= 70 ? "score-high" : score >= 40 ? "score-medium" : "score-low";
 
+const scoreColorHex = (score: number) => {
+  if (score >= 70) return "var(--color-success)";
+  if (score >= 40) return "var(--color-warning)";
+  return "var(--color-danger)";
+};
+
+/** SVG circular score gauge */
+const CircularScore: React.FC<{ score: number; size?: number }> = ({
+  score,
+  size = 90,
+}) => {
+  const radius = (size - 8) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const color = scoreColorHex(score);
+
+  return (
+    <div className="circular-score" style={{ width: size, height: size }}>
+      <svg viewBox={`0 0 ${size} ${size}`} className="circular-score-svg">
+        {/* Background circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="var(--color-border)"
+          strokeWidth="6"
+        />
+        {/* Score arc */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          style={{
+            stroke: color,
+            transition: "stroke-dashoffset 0.6s ease, stroke 0.3s ease",
+          }}
+        />
+      </svg>
+      <span className={`circular-score-value ${scoreColor(score)}`}>
+        {score}
+      </span>
+    </div>
+  );
+};
+
 export const AnalysisPanel: React.FC = () => {
   const prompt = useAppStore((s) => s.selectedPrompt)();
   const evaluation = useAppStore((s) => s.selectedEvaluation)();
@@ -70,11 +122,9 @@ export const AnalysisPanel: React.FC = () => {
         {evaluation && (
           <div className="analysis-section">
             <h3>Qualitätsanalyse</h3>
-            <div
-              className={`score-big ${scoreColor(evaluation.overall_score)}`}
-            >
-              {evaluation.overall_score}
-              <span className="score-unit">/100</span>
+            <div className="score-display">
+              <CircularScore score={evaluation.overall_score} />
+              <span className="score-label">Gesamtwertung</span>
             </div>
 
             <div className="criteria-list">
@@ -85,7 +135,7 @@ export const AnalysisPanel: React.FC = () => {
                     <span
                       className={`criterion-score ${scoreColor(c.score * 10)}`}
                     >
-                      {c.score}/10
+                      {c.score}/{c.max_score}
                     </span>
                   </div>
                   <div className="score-bar-track">
@@ -111,12 +161,7 @@ export const AnalysisPanel: React.FC = () => {
                 {hygiene.status === "warning" && "⚠️ Warnung"}
                 {hygiene.status === "critical" && "🔴 Kritisch"}
               </span>
-              <span
-                className={`score-big ${scoreColor(hygiene.hygiene_score)}`}
-              >
-                {hygiene.hygiene_score}
-                <span className="score-unit">/100</span>
-              </span>
+              <CircularScore score={hygiene.hygiene_score} size={80} />
             </div>
 
             {hygiene.artifacts.length > 0 && (

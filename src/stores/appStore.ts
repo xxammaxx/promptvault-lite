@@ -18,6 +18,83 @@ import {
 import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 
+// --- Theme Types ---
+
+export type Theme = "light" | "dark" | "auto";
+
+const THEME_KEY = "promptvault.theme";
+export const THEME_CYCLE: Record<Theme, Theme> = {
+  light: "dark",
+  dark: "auto",
+  auto: "light",
+};
+
+export function resolveTheme(theme: Theme): "light" | "dark" {
+  if (theme === "auto") {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-color-scheme: dark)").matches
+    ) {
+      return "dark";
+    }
+    return "light";
+  }
+  return theme;
+}
+
+function getThemeFromStorage(): Theme {
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === "light" || stored === "dark" || stored === "auto") {
+      return stored;
+    }
+  } catch {
+    // localStorage not available
+  }
+  return "dark"; // Default: dark mode
+}
+
+function saveThemeToStorage(theme: Theme): void {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    // silent fail
+  }
+}
+
+// --- Layout Persistenz ---
+
+const EXPLORER_WIDTH_KEY = "promptvault.layout.explorerWidth";
+const MIN_EXPLORER_WIDTH = 240;
+const MAX_EXPLORER_WIDTH = 600;
+const DEFAULT_EXPLORER_WIDTH = 360;
+
+function getExplorerWidthFromStorage(): number {
+  try {
+    const stored = localStorage.getItem(EXPLORER_WIDTH_KEY);
+    if (stored !== null) {
+      const parsed = Number(stored);
+      if (
+        Number.isFinite(parsed) &&
+        parsed >= MIN_EXPLORER_WIDTH &&
+        parsed <= MAX_EXPLORER_WIDTH
+      ) {
+        return parsed;
+      }
+    }
+  } catch {
+    // localStorage nicht verfügbar (Private Browsing etc.)
+  }
+  return DEFAULT_EXPLORER_WIDTH;
+}
+
+function saveExplorerWidthToStorage(width: number): void {
+  try {
+    localStorage.setItem(EXPLORER_WIDTH_KEY, String(width));
+  } catch {
+    // silent fail
+  }
+}
 // --- Watcher Event Types ---
 
 interface ChangedPayload {
@@ -41,6 +118,7 @@ interface AppState {
   error: string | null;
   filters: PromptFilters;
   expandedFolders: Set<string>;
+  theme: Theme;
 
   // Watcher
   currentFolderPath: string | null;
@@ -56,6 +134,7 @@ interface AppState {
   setFilters: (filters: Partial<PromptFilters>) => void;
   resetFilters: () => void;
   toggleFolder: (path: string) => void;
+  toggleTheme: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearWatcherNotification: () => void;
@@ -97,6 +176,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   error: null,
   filters: { ...defaultFilters },
   expandedFolders: new Set<string>(),
+  theme: getThemeFromStorage(),
 
   // Watcher state
   currentFolderPath: null,
@@ -166,6 +246,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         next.add(path);
       }
       return { expandedFolders: next };
+    });
+  },
+
+  toggleTheme: () => {
+    set((state) => {
+      const next = THEME_CYCLE[state.theme];
+      saveThemeToStorage(next);
+      return { theme: next };
     });
   },
 
