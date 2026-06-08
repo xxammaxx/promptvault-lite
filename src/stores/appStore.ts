@@ -18,6 +18,40 @@ import {
 import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 
+// --- Layout Persistenz ---
+
+const EXPLORER_WIDTH_KEY = "promptvault.layout.explorerWidth";
+const MIN_EXPLORER_WIDTH = 240;
+const MAX_EXPLORER_WIDTH = 600;
+const DEFAULT_EXPLORER_WIDTH = 360;
+
+function getExplorerWidthFromStorage(): number {
+  try {
+    const stored = localStorage.getItem(EXPLORER_WIDTH_KEY);
+    if (stored !== null) {
+      const parsed = Number(stored);
+      if (
+        Number.isFinite(parsed) &&
+        parsed >= MIN_EXPLORER_WIDTH &&
+        parsed <= MAX_EXPLORER_WIDTH
+      ) {
+        return parsed;
+      }
+    }
+  } catch {
+    // localStorage nicht verfügbar (Private Browsing etc.)
+  }
+  return DEFAULT_EXPLORER_WIDTH;
+}
+
+function saveExplorerWidthToStorage(width: number): void {
+  try {
+    localStorage.setItem(EXPLORER_WIDTH_KEY, String(width));
+  } catch {
+    // silent fail
+  }
+}
+
 // --- Watcher Event Types ---
 
 interface ChangedPayload {
@@ -42,6 +76,9 @@ interface AppState {
   filters: PromptFilters;
   expandedFolders: Set<string>;
 
+  // Layout
+  explorerWidth: number;
+
   // Watcher
   currentFolderPath: string | null;
   watcherNotification: string | null;
@@ -60,6 +97,9 @@ interface AppState {
   setError: (error: string | null) => void;
   clearWatcherNotification: () => void;
   cleanupWatcher: () => Promise<void>;
+
+  // Layout actions
+  setExplorerWidth: (width: number) => void;
 
   // Derived
   filteredPrompts: () => PromptItem[];
@@ -97,6 +137,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   error: null,
   filters: { ...defaultFilters },
   expandedFolders: new Set<string>(),
+
+  // Layout state
+  explorerWidth: getExplorerWidthFromStorage(),
 
   // Watcher state
   currentFolderPath: null,
@@ -197,6 +240,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       currentFolderPath: null,
       watcherNotification: null,
     });
+  },
+
+  // Layout actions
+  setExplorerWidth: (width) => {
+    // Guard against NaN, Infinity, and other non-finite values
+    if (!Number.isFinite(width)) return;
+
+    const clamped = Math.min(
+      MAX_EXPLORER_WIDTH,
+      Math.max(MIN_EXPLORER_WIDTH, Math.round(width)),
+    );
+    saveExplorerWidthToStorage(clamped);
+    set({ explorerWidth: clamped });
   },
 
   // Derived data
