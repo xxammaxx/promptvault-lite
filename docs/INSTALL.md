@@ -21,7 +21,7 @@ pnpm install
 Danach kannst du die App im Entwicklungsmodus starten:
 
 ```bash
-pnpm tauri dev
+pnpm start
 ```
 
 Für einen Produktionsbuild:
@@ -36,7 +36,7 @@ pnpm tauri build
 2. Stelle sicher, dass die nativen Build-Abhängigkeiten für deine Distribution vorhanden sind.
 3. Klone das Projekt und wechsle in das Verzeichnis.
 4. Führe `pnpm install` aus.
-5. Starte mit `pnpm tauri dev`.
+5. Starte mit `pnpm start`.
 
 ## Windows
 
@@ -44,7 +44,7 @@ pnpm tauri build
 2. Stelle die nativen Build-Tools bereit, die Rust/Tauri auf Windows benötigt.
 3. Öffne ein Terminal im Projektordner.
 4. Führe `pnpm install` aus.
-5. Starte mit `pnpm tauri dev`.
+5. Starte mit `pnpm start`.
 
 ## macOS
 
@@ -52,7 +52,7 @@ pnpm tauri build
 2. Stelle die Xcode-/Command-Line-Tools bereit, falls dein System sie noch nicht hat.
 3. Öffne ein Terminal im Projektordner.
 4. Führe `pnpm install` aus.
-5. Starte mit `pnpm tauri dev`.
+5. Starte mit `pnpm start`.
 
 ## Troubleshooting
 
