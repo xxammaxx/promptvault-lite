@@ -5,7 +5,9 @@
   "description": "Lokales Prompt-Management-System mit Qualitäts- und Hygieneanalyse",
   "type": "module",
   "scripts": {
+    "start": "tauri dev",
     "dev": "vite",
+    "web": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",

@@ -138,7 +138,7 @@ flowchart LR
 git clone https://github.com/xxammaxx/promptvault-lite.git
 cd PromptVault_Lite
 pnpm install
-pnpm tauri dev
+pnpm start
 ```
 
 ### Detaillierte Installation
@@ -146,19 +146,17 @@ pnpm tauri dev
 #### Linux
 
 - Installiere die für Tauri benötigten Systempakete, einschließlich WebKitGTK (`libwebkit2gtk`) und der üblichen Build-Tools.
-- Danach `pnpm install` und `pnpm tauri dev` ausführen.
+- Danach `pnpm install` und `pnpm start` ausführen.
 
 #### Windows
 
 - Installiere die für Tauri erforderlichen nativen Build-/WebView-Komponenten.
-- Danach `pnpm install` und `pnpm tauri dev` ausführen.
-- TODO: projektspezifische Paketliste prüfen.
+- Danach `pnpm install` und `pnpm start` ausführen.
 
 #### macOS
 
 - Installiere die für Tauri erforderlichen nativen Build-/WebView-Komponenten.
-- Danach `pnpm install` und `pnpm tauri dev` ausführen.
-- TODO: projektspezifische Paketliste prüfen.
+- Danach `pnpm install` und `pnpm start` ausführen.
 
 ## 🚀 Nutzung
 
@@ -212,18 +210,18 @@ Hinweis: Es gibt keine `.env`- oder `.env.example`-Datei; die App ist selbst ent
 git clone https://github.com/xxammaxx/promptvault-lite.git
 cd PromptVault_Lite
 pnpm install
-pnpm tauri dev
+pnpm start
 ```
 
 Weitere nützliche Befehle:
 
 ```bash
-pnpm dev
-pnpm build
-pnpm lint
-pnpm format
-pnpm test
-pnpm test:watch
+pnpm web          # Nur Frontend (ohne Tauri)
+pnpm dev          # Alias für web
+pnpm build        # Frontend-Produktions-Build
+pnpm lint         # ESLint-Prüfung
+pnpm format       # Prettier-Formatierung
+pnpm test         # Tests ausführen
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 

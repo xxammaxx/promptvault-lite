@@ -23,7 +23,7 @@ PromptVault Lite ist ein lokales Desktop-Tool zum Einlesen, Durchsuchen und Bewe
 
 ```bash
 pnpm install
-pnpm tauri dev
+pnpm start
 ```
 
 1. Starte die App.
