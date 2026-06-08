@@ -257,6 +257,47 @@ Jede abgeschlossene Aufgabe MUSS:
 
 ---
 
-> **Letzte Aktualisierung:** 2026-06-07  
-> **Gültig ab:** Commit `chore/context-engineering-standard`  
+<!-- BEGIN GITHUB_AI_GOVERNANCE -->
+
+# GitHub-KI-Governance
+
+Dieses Repository arbeitet verbindlich nach folgendem Workflow:
+
+Issue → Spec → Verification Contract → Red Tests → Agent-Code → CI/Security Gates → Sandbox Preview → Reviewer-Agent → Human Approval → Evidence-Kommentar → Merge.
+
+## Harte Regeln für Agenten
+
+1. GitHub ist die einzige Source of Truth.
+2. Keine Arbeit ohne Issue-Kontext.
+3. Keine Implementierung ohne Acceptance Criteria.
+4. Keine Architekturänderung ohne ADR.
+5. Kein direkter Push auf main.
+6. Jede Änderung erfolgt über Branch + Pull Request.
+7. Jeder PR braucht Tests, Evidence und Rollback-Hinweise.
+8. Security-, Datenschutz- und Compliance-Regeln haben Vorrang.
+9. Merge nur nach grünen Checks und Human Approval.
+10. Jeder Agentenlauf endet mit einem Evidence-Kommentar.
+
+## Kontext-Regeln
+
+- Lade nur relevante Dateien.
+- Behandle Kontext als knappe Ressource.
+- Trenne Cold, Warm und Hot Context.
+- Komprimiere Tool-Rohdaten, aber niemals Fehlerlogs oder Security-Findings.
+- Kennzeichne Aussagen als Tatsache, Annahme, Hypothese oder Vendor-Claim.
+
+## Referenzen
+
+- [AI Handbuch](./docs/AI_HANDBUCH.md) — vollständiger Governance-Standard
+- [AI Workflow](./docs/AI_WORKFLOW.md) — Workflow-Phasen im Detail
+- [Evidence Standard](./docs/EVIDENCE_STANDARD.md) — verbindliches Evidence-Format
+- [Security Gates](./docs/SECURITY_GATES.md) — Sicherheitsregeln
+- [Context Engineering Standard](./docs/CONTEXT_ENGINEERING_STANDARD.md) — Kontext-Management
+- [ADR-001](./docs/adr/ADR-001-ai-governance.md) — Architekturentscheidung
+<!-- END GITHUB_AI_GOVERNANCE -->
+
+---
+
+> **Letzte Aktualisierung:** 2026-06-08  
+> **Gültig ab:** Commit `chore/github-ai-governance`  
 > **Review-Zyklus:** Jährlich oder nach signifikanten Projektänderungen

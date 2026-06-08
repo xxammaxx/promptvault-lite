@@ -1,0 +1,124 @@
+# BEGIN GITHUB_AI_GOVERNANCE
+name: AI Task
+description: KI-gesteuerte Aufgabe — für Agenten-gestützte Implementierung
+title: "ai: "
+labels: ["ai-task", "needs-evidence"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## KI-Aufgabe
+        Dieses Template ist für Aufgaben, die durch KI-Agenten umgesetzt werden.
+        Der Agent folgt dem verbindlichen Workflow:
+
+        Issue → Spec → Verification Contract → Red Tests → Agent-Code → CI/Security Gates → Sandbox Preview → Reviewer-Agent → Human Approval → Evidence-Kommentar → Merge.
+
+  - type: input
+    id: goal
+    attributes:
+      label: Ziel
+      description: Was soll erreicht werden? Ein Satz.
+      placeholder: "z.B. Dark-Mode-Theme implementieren"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Kontext
+      description: Warum ist diese Aufgabe wichtig? Welches Problem wird gelöst?
+      placeholder: "Beschreibe den Kontext..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Akzeptanzkriterien
+      description: Was muss erfüllt sein, damit die Aufgabe als "done" gilt?
+      placeholder: "- [ ] Dark Mode Toggle in Settings\n- [ ] Alle Komponenten unterstützen Dark Mode\n- [ ] Persistenz der Einstellung in localStorage\n- [ ] ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification-contract
+    attributes:
+      label: Verification Contract
+      description: Welche Tests beweisen die Korrektheit?
+      placeholder: "- Unit Test: Theme-Toggle schaltet zwischen light/dark\n- Visual Test: Screenshot-Vergleich light vs. dark\n- ..."
+
+  - type: textarea
+    id: red-tests
+    attributes:
+      label: Red Tests (vor Implementierung)
+      description: Welche Tests müssen VOR der Implementierung fehlschlagen?
+      placeholder: "- test_theme_toggle: erwartet 'dark' → schlägt fehl\n- test_component_dark: erwartet dark CSS-Klassen → schlägt fehl"
+
+  - type: textarea
+    id: security-requirements
+    attributes:
+      label: Sicherheitsanforderungen
+      description: Gibt es Sicherheits- oder Datenschutzanforderungen?
+      placeholder: "- Keine, da nur UI-Änderung\n- Keine neuen Abhängigkeiten\n- ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence-requirements
+    attributes:
+      label: Evidence-Anforderungen
+      description: Welche Evidence muss der Agent nach Abschluss vorlegen?
+      value: |
+        - [ ] Testausgaben (`pnpm test`, `cargo test`)
+        - [ ] Lint-Ausgabe (`pnpm lint`, `cargo clippy`)
+        - [ ] Security Checks (Secret Scan, Dependency Audit)
+        - [ ] Diff-Statistik (`git diff --stat`)
+        - [ ] Context Manifest (`docs/agent/context-manifest-<ISSUE>.md`)
+        - [ ] Evidence Log (`docs/agent/evidence-log-<ISSUE>.md`)
+        - [ ] Evidence-Kommentar im Issue
+
+  - type: dropdown
+    id: human-approval
+    attributes:
+      label: Human Approval erforderlich?
+      description: Benötigt diese Aufgabe zwingend menschliche Freigabe vor dem Merge?
+      options:
+        - "Nein — Standard-Task (automatisierte Checks genügen)"
+        - "Ja — Security-relevante Änderung"
+        - "Ja — Architekturänderung"
+        - "Ja — Neue Abhängigkeit"
+        - "Ja — Datenbankmigration"
+        - "Ja — Sonstiges (im Kontext begründet)"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: gates
+    attributes:
+      label: Pflicht-Gates
+      options:
+        - label: Context Manifest wird erstellt
+          required: true
+        - label: Evidence Log wird erstellt
+          required: true
+        - label: Spec-Driven-Development-Workflow wird befolgt
+          required: true
+        - label: Keine bestehenden Dateien werden blind überschrieben
+          required: true
+
+  - type: textarea
+    id: definition-of-done
+    attributes:
+      label: Definition of Done
+      value: |
+        - [ ] Alle Akzeptanzkriterien erfüllt
+        - [ ] Red Tests grün
+        - [ ] Tests bestehen (`pnpm test`, `cargo test`)
+        - [ ] CI grün (Typecheck, Lint, Build, Secret Scan)
+        - [ ] Agent-Code auf Feature-Branch
+        - [ ] PR mit ausgefülltem Template
+        - [ ] Evidence-Kommentar im Issue
+        - [ ] Human Approval (wo erforderlich)
+        - [ ] Merge auf main
+
+# END GITHUB_AI_GOVERNANCE

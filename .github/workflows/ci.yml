@@ -122,7 +122,7 @@ jobs:
           )
           FOUND=0
           for pattern in "${PATTERNS[@]}"; do
-            matches=$(git ls-files | xargs grep -n -i -E "$pattern" 2>/dev/null || true)
+            matches=$(git ls-files -z | xargs -0 grep -n -i -E "$pattern" 2>/dev/null || true)
             if [ -n "$matches" ]; then
               # Filter out legitimate uses (e.g. in .gitignore, docs about patterns)
               filtered=$(echo "$matches" | grep -v ".gitignore\|SECURITY_GATES.md\|AGENTS.md\|CLAUDE.md" || true)

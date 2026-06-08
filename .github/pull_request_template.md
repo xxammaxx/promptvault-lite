@@ -1,3 +1,5 @@
+<!-- BEGIN GITHUB_AI_GOVERNANCE -->
+
 # Pull Request
 
 ## Summary
@@ -9,6 +11,26 @@
 <!-- Fixes #<NUMMER> oder Closes #<NUMMER> -->
 
 Closes #
+
+## Workflow Checklist
+
+<!-- Pflicht: Alle Workflow-Phasen durchlaufen -->
+<!--
+Issue → Spec → Verification Contract → Red Tests → Agent-Code
+  → CI/Security Gates → Sandbox Preview → Reviewer-Agent
+  → Human Approval → Evidence-Kommentar → Merge
+-->
+
+- [ ] Issue gelesen und verstanden
+- [ ] Spec geprüft oder ergänzt (Speckit für Features)
+- [ ] Verification Contract definiert
+- [ ] Red Tests ergänzt (oder begründet nicht nötig)
+- [ ] Implementierung abgeschlossen (Agent-Code)
+- [ ] CI/Security Gates grün (Typecheck, Lint, Test, Build, Secret Scan)
+- [ ] Sandbox Preview geprüft (oder begründet nicht nötig)
+- [ ] Reviewer-Agent oder menschlicher Review durchgeführt
+- [ ] Human Approval ausstehend oder erteilt
+- [ ] Evidence-Kommentar vorbereitet
 
 ## Scope
 
@@ -109,3 +131,5 @@ pnpm lint
 ## Reviewer Notes
 
 <!-- Hinweise für den Reviewer -->
+
+<!-- END GITHUB_AI_GOVERNANCE -->

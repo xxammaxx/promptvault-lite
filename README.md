@@ -360,10 +360,30 @@ Keine Lizenzdatei vorhanden. Aktueller Status: **unspecified / TODO** — siehe 
 | Testing           | Vitest, Testing Library, jsdom | https://vitest.dev / https://testing-library.com / https://github.com/jsdom/jsdom    |
 | Linting / Format  | ESLint, Prettier               | https://eslint.org / https://prettier.io                                             |
 
+<!-- BEGIN GITHUB_AI_GOVERNANCE_README -->
+
+## KI-gestützte Entwicklung
+
+Dieses Repository nutzt einen verbindlichen GitHub-KI-Workflow für alle Entwicklungsarbeiten — ob durch Menschen oder KI-Agenten:
+
+**Issue → Spec → Verification Contract → Red Tests → Agent-Code → CI/Security Gates → Sandbox Preview → Reviewer-Agent → Human Approval → Evidence-Kommentar → Merge**
+
+### Referenzen
+
+- [AGENTS.md](./AGENTS.md) — Agentenregeln und Start/End Gates
+- [AI Handbuch](./docs/AI_HANDBUCH.md) — vollständiger Governance-Standard
+- [AI Workflow](./docs/AI_WORKFLOW.md) — Workflow-Phasen im Detail
+- [Evidence Standard](./docs/EVIDENCE_STANDARD.md) — verbindliches Evidence-Format
+- [Security Gates](./docs/SECURITY_GATES.md) — Sicherheitsregeln
+- [Context Engineering Standard](./docs/CONTEXT_ENGINEERING_STANDARD.md) — Kontext-Management
+- [ADR-001: AI Governance](./docs/adr/ADR-001-ai-governance.md) — Architekturentscheidung
+- [GitHub Settings Checklist](./docs/GITHUB_REPOSITORY_SETTINGS_CHECKLIST.md) — manuelle GitHub-Einstellungen
+<!-- END GITHUB_AI_GOVERNANCE_README -->
+
 ## Fehlende Informationen
 
 - Keine `LICENSE`-Datei im Repository.
-- Keine CI-Konfiguration (`.github/workflows/`) vorhanden.
+- CI-Konfiguration vorhanden in `.github/workflows/ci.yml` und `.github/workflows/ai-governance-check.yml` (GitHub Actions Status nicht verifiziert).
 - Versionsdrift: `package.json` und `Cargo.toml` nennen noch 1.4.0; `tauri.conf.json` und `docs/CHANGELOG.md` stehen auf 1.5.0.
 - Keine Screenshots im Repository vorhanden.
 - Kein Code-of-Conduct dokumentiert.

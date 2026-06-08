@@ -100,3 +100,50 @@ Follow Conventional Commits:
 - `test(scope): description` — tests
 - `refactor(scope): description` — refactoring
 - `security(scope): description` — security changes
+
+---
+
+<!-- BEGIN GITHUB_AI_GOVERNANCE -->
+
+# Repository Instructions for AI Assistants
+
+Follow `AGENTS.md` first — it contains the complete agent workflow rules.
+
+## Mandatory Workflow
+
+This repository uses:
+
+Issue → Spec → Verification Contract → Red Tests → Agent-Code → CI/Security Gates → Sandbox Preview → Reviewer-Agent → Human Approval → Evidence-Kommentar → Merge.
+
+## Critical Rules
+
+- **Do NOT overwrite existing files blindly.** Always read first, then add.
+- **Do NOT remove project-specific rules.** Extend, don't replace.
+- **Do NOT make unverified claims.** Every statement needs evidence.
+- **Every change must be traceable** to an issue, branch, commit, test result, and pull request.
+- **No implementation without Acceptance Criteria.**
+- **No merge without green CI + Human Approval + Evidence.**
+
+## Before Editing
+
+1. Read the relevant issue.
+2. Inspect existing files and identify project conventions.
+3. Create a minimal patch that respects existing patterns.
+4. Run tests (`pnpm test`, `cargo test`, `pnpm lint`, `tsc --noEmit`).
+5. Document evidence (Context Manifest + Evidence Log).
+
+## After Editing
+
+- Summarize changed files (`git diff --stat`).
+- List tests run with results.
+- List risks and rollback steps.
+- Comment evidence in the related issue or PR.
+
+## Key References
+
+- `AGENTS.md` — full agent rules
+- `docs/AI_WORKFLOW.md` — workflow phases in detail
+- `docs/EVIDENCE_STANDARD.md` — mandatory evidence format
+- `docs/SECURITY_GATES.md` — security rules
+- `docs/CONTEXT_ENGINEERING_STANDARD.md` — context management
+<!-- END GITHUB_AI_GOVERNANCE -->

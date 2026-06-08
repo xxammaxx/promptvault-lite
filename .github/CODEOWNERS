@@ -1,0 +1,23 @@
+# BEGIN GITHUB_AI_GOVERNANCE
+# CODEOWNERS — PromptVault Lite
+
+# Default Owner für das gesamte Repository
+* @xxammaxx
+
+# Security-relevante Dateien benötigen expliziten Owner-Review
+docs/SECURITY_GATES.md @xxammaxx
+docs/AI_HANDBUCH.md @xxammaxx
+docs/AI_WORKFLOW.md @xxammaxx
+docs/EVIDENCE_STANDARD.md @xxammaxx
+
+# CI/CD und Arbeitsabläufe
+.github/workflows/ @xxammaxx
+.github/copilot-instructions.md @xxammaxx
+
+# Agenten-Regeln und Governance
+AGENTS.md @xxammaxx
+docs/adr/ @xxammaxx
+
+# Policies und Datenhaltung
+.opencode/policies/ @xxammaxx
+# END GITHUB_AI_GOVERNANCE

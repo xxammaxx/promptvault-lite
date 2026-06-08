@@ -1,0 +1,26 @@
+# BEGIN GITHUB_AI_GOVERNANCE
+name: AI Governance Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  governance-check:
+    name: Governance Check (Python)
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Run governance check script
+        run: python scripts/check_ai_governance.py
+# END GITHUB_AI_GOVERNANCE

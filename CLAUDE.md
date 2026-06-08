@@ -99,4 +99,20 @@ pnpm build                             # Frontend build
 
 ---
 
+## Governance Reference
+
+Dieses Repository folgt verbindlichen Governance-Regeln. Bei Konflikten haben diese Vorrang vor freien Agentenentscheidungen.
+
+**Kern-Workflow:** Issue → Spec → Verification Contract → Red Tests → Agent-Code → CI/Security Gates → Sandbox Preview → Reviewer-Agent → Human Approval → Evidence-Kommentar → Merge
+
+**Referenzen:**
+
+- `AGENTS.md` — vollständige Agentenregeln
+- `docs/AI_WORKFLOW.md` — Workflow-Phasen im Detail
+- `docs/EVIDENCE_STANDARD.md` — verbindliches Evidence-Format
+- `docs/SECURITY_GATES.md` — Sicherheitsregeln für Commits/PRs
+- `docs/CONTEXT_ENGINEERING_STANDARD.md` — Kontext-Management-Regeln
+
+---
+
 > **Note:** For complete rules, see `AGENTS.md`. This file is a condensed reference for agent context windows.

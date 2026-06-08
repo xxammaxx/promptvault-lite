@@ -4,6 +4,8 @@
 > Diese Gates werden bei jedem Commit, PR und Merge geprüft.  
 > Kein Gate darf umgangen oder entfernt werden.
 
+<!-- BEGIN GITHUB_AI_GOVERNANCE -->
+
 ---
 
 ## Architektur-Sicherheit
@@ -177,3 +179,5 @@ Bei Verdacht auf Security-Incident:
 > **Letzte Aktualisierung:** 2026-06-07  
 > **Gültig ab:** Commit `chore/context-engineering-standard`  
 > **Änderungen an dieser Datei benötigen Human Approval.**
+
+<!-- END GITHUB_AI_GOVERNANCE -->
