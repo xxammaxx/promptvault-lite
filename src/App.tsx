@@ -1,11 +1,15 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useAppStore } from "./stores/appStore";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useResizablePanel } from "./hooks/useResizablePanel";
 import { ExplorerPanel } from "./components/explorer/ExplorerPanel";
 import { DetailsPanel } from "./components/details/DetailsPanel";
 import { AnalysisPanel } from "./components/analysis/AnalysisPanel";
 import { ExportDialog } from "./components/common/ExportDialog";
 import "./App.css";
+
+const MIN_EXPLORER_WIDTH = 240;
+const MAX_EXPLORER_WIDTH = 600;
 
 function App() {
   const {
@@ -83,6 +87,16 @@ function App() {
 
   const filteredCount = useAppStore((s) => s.filteredPrompts)().length;
 
+  // Resizable explorer panel
+  const explorerWidth = useAppStore((s) => s.explorerWidth);
+  const setExplorerWidth = useAppStore((s) => s.setExplorerWidth);
+  const { handleRef, handleProps } = useResizablePanel({
+    width: explorerWidth,
+    minWidth: MIN_EXPLORER_WIDTH,
+    maxWidth: MAX_EXPLORER_WIDTH,
+    onResize: setExplorerWidth,
+  });
+
   return (
     <div className="app-container">
       {/* Toolbar */}
@@ -132,8 +146,14 @@ function App() {
       </header>
 
       {/* Drei-Spalten-Layout */}
-      <main className="app-layout">
+      <main
+        className="app-layout"
+        style={
+          { "--explorer-width": explorerWidth + "px" } as React.CSSProperties
+        }
+      >
         <ExplorerPanel searchRef={searchInputRef} />
+        <div className="resize-handle" ref={handleRef} {...handleProps} />
         <DetailsPanel />
         <AnalysisPanel />
       </main>
