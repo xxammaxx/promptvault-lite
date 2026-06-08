@@ -47,9 +47,11 @@ function App() {
   useEffect(() => {
     if (theme !== "auto") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = () => {
-      const resolved = resolveTheme("auto");
-      document.documentElement.setAttribute("data-theme", resolved);
+    const handleChange = (e: MediaQueryListEvent) => {
+      document.documentElement.setAttribute(
+        "data-theme",
+        e.matches ? "dark" : "light",
+      );
     };
     mq.addEventListener("change", handleChange);
     return () => {
@@ -119,7 +121,8 @@ function App() {
           <ThemeToggle />
           <button
             className="btn"
-            disabled
+            aria-disabled="true"
+            tabIndex={-1}
             title="Einstellungen sind in Entwicklung"
             aria-label="Einstellungen (in Entwicklung)"
           >

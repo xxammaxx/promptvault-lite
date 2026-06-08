@@ -19,7 +19,7 @@
   --color-border: #e5e7eb;
   --color-text: #171717;
   --color-text-muted: #737373;
-  --color-text-light: #757575;
+  --color-text-light: #6e6e6e;
 
   /* Status bar (light) */
   --color-statusbar-bg: var(--color-primary);
@@ -74,7 +74,7 @@
   --color-border: #e5e7eb;
   --color-text: #171717;
   --color-text-muted: #737373;
-  --color-text-light: #757575;
+  --color-text-light: #6e6e6e;
 
   --color-statusbar-bg: #2563eb;
   --color-statusbar-text: #ffffff;

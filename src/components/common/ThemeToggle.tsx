@@ -23,7 +23,6 @@ export function ThemeToggle() {
       onClick={toggleTheme}
       title={`Thema: ${themeLabels[theme]} – Klicken für ${themeLabels[THEME_CYCLE[theme]]}`}
       aria-label={`Theme wechseln (aktuell: ${themeLabels[theme]})`}
-      aria-pressed={theme !== "auto"}
     >
       {themeIcons[theme]}
     </button>

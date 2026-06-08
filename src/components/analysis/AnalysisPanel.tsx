@@ -11,50 +11,49 @@ const scoreColorHex = (score: number) => {
 };
 
 /** SVG circular score gauge */
-const CircularScore: React.FC<{ score: number; size?: number }> = ({
-  score,
-  size = 90,
-}) => {
-  const radius = (size - 8) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
-  const color = scoreColorHex(score);
+const CircularScore: React.FC<{ score: number; size?: number }> = React.memo(
+  function CircularScore({ score, size = 90 }) {
+    const radius = (size - 8) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (score / 100) * circumference;
+    const color = scoreColorHex(score);
 
-  return (
-    <div className="circular-score" style={{ width: size, height: size }}>
-      <svg viewBox={`0 0 ${size} ${size}`} className="circular-score-svg">
-        {/* Background circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="var(--color-border)"
-          strokeWidth="6"
-        />
-        {/* Score arc */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          strokeWidth="6"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          style={{
-            stroke: color,
-            transition: "stroke-dashoffset 0.6s ease, stroke 0.3s ease",
-          }}
-        />
-      </svg>
-      <span className={`circular-score-value ${scoreColor(score)}`}>
-        {score}
-      </span>
-    </div>
-  );
-};
+    return (
+      <div className="circular-score" style={{ width: size, height: size }}>
+        <svg viewBox={`0 0 ${size} ${size}`} className="circular-score-svg">
+          {/* Background circle */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="var(--color-border)"
+            strokeWidth="6"
+          />
+          {/* Score arc */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            style={{
+              stroke: color,
+              transition: "stroke-dashoffset 0.6s ease, stroke 0.3s ease",
+            }}
+          />
+        </svg>
+        <span className={`circular-score-value ${scoreColor(score)}`}>
+          {score}
+        </span>
+      </div>
+    );
+  },
+);
 
 export const AnalysisPanel: React.FC = () => {
   const prompt = useAppStore((s) => s.selectedPrompt)();

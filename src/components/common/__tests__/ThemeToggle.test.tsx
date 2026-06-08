@@ -90,24 +90,24 @@ describe("ThemeToggle", () => {
     );
   });
 
-  it("has aria-pressed attribute", () => {
+  it("does not use aria-pressed (tri-state toggle)", () => {
     render(<ThemeToggle />);
     const button = screen.getByRole("button");
-    expect(button).toHaveAttribute("aria-pressed");
+    expect(button).not.toHaveAttribute("aria-pressed");
   });
 
-  it("aria-pressed is false for auto mode", () => {
+  it("title conveys current and next theme", () => {
     mockTheme = "auto";
     render(<ThemeToggle />);
     const button = screen.getByRole("button");
-    expect(button.getAttribute("aria-pressed")).toBe("false");
-  });
-
-  it("aria-pressed is true for light mode (non-auto)", () => {
-    mockTheme = "light";
-    render(<ThemeToggle />);
-    const button = screen.getByRole("button");
-    expect(button.getAttribute("aria-pressed")).toBe("true");
+    expect(button).toHaveAttribute(
+      "title",
+      expect.stringContaining("Thema: Auto"),
+    );
+    expect(button).toHaveAttribute(
+      "title",
+      expect.stringContaining("Klicken für Hell"),
+    );
   });
 
   // --- Interaction ---
