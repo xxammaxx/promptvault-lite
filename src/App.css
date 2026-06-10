@@ -248,7 +248,7 @@ body {
 }
 
 .panel-explorer {
-  width: var(--explorer-width);
+  /* width is now set dynamically via inline style from App.tsx */
   min-width: 200px;
   flex-shrink: 0;
 }
@@ -260,6 +260,41 @@ body {
   width: var(--analysis-width);
   min-width: 260px;
   flex-shrink: 0;
+}
+
+/* ---- Resize Handle ---- */
+.resize-handle {
+  width: 4px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  transition: background-color 0.15s ease;
+  position: relative;
+  z-index: 10;
+  user-select: none;
+  touch-action: none;
+}
+.resize-handle::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 -3px;
+  width: 10px;
+}
+.resize-handle:hover,
+.resize-handle--active {
+  background: var(--color-primary);
+}
+.resize-handle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -1px;
+}
+
+/* Prevent text selection during resize */
+.app-layout--resizing {
+  user-select: none;
+}
+.app-layout--resizing .panel-content {
+  pointer-events: none;
 }
 
 /* ---- Search Bar ---- */

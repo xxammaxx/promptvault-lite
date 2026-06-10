@@ -58,7 +58,9 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
         >
           <span className="tree-chevron">{isExpanded ? "▼" : "▶"}</span>
           <span className="tree-icon">📁</span>
-          <span className="tree-name">{node.name}</span>
+          <span className="tree-name" title={node.name}>
+            {node.name}
+          </span>
         </div>
         {isExpanded &&
           node.children.map((child) => (
@@ -101,7 +103,9 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
       >
         {node.is_favorite ? "⭐" : "📄"}
       </span>
-      <span className="tree-name">{node.name.replace(".md", "")}</span>
+      <span className="tree-name" title={node.name}>
+        {node.name.replace(".md", "")}
+      </span>
       {node.score !== undefined && (
         <span className={`tree-score ${scoreColor}`}>{node.score}</span>
       )}

@@ -6,20 +6,26 @@ import { useAppStore } from "@/stores/appStore";
 
 interface ExplorerPanelProps {
   searchRef?: React.RefObject<HTMLInputElement>;
+  style?: React.CSSProperties;
 }
 
-export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({ searchRef }) => {
+export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({
+  searchRef,
+  style,
+}) => {
   const [showFilters, setShowFilters] = useState(false);
   const isLoading = useAppStore((s) => s.isLoading);
   const prompts = useAppStore((s) => s.prompts);
 
   return (
-    <div className="panel panel-explorer">
+    <div className="panel panel-explorer" style={style}>
       <div className="panel-header">
         <span>Explorer</span>
         <button
           className="btn btn-icon"
-          onClick={() => { setShowFilters(!showFilters); }}
+          onClick={() => {
+            setShowFilters(!showFilters);
+          }}
           title="Filter"
         >
           {showFilters ? "✕" : "⚙"}
@@ -28,7 +34,13 @@ export const ExplorerPanel: React.FC<ExplorerPanelProps> = ({ searchRef }) => {
 
       <SearchBar ref={searchRef} />
 
-      {showFilters && <FilterPanel onClose={() => { setShowFilters(false); }} />}
+      {showFilters && (
+        <FilterPanel
+          onClose={() => {
+            setShowFilters(false);
+          }}
+        />
+      )}
 
       <div className="panel-content">
         {isLoading ? (

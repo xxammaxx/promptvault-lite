@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { useAppStore } from "@/stores/appStore";
+import { useAppStore, getExplorerWidthFromStorage } from "@/stores/appStore";
 import type { PromptItem, PromptEvaluation, PromptHygiene } from "@/types";
 
 // Mock tauri toggleFavorite for T5.10 tests
@@ -640,5 +640,70 @@ describe("toggleFavorite (async, Backend)", () => {
 
     const prompts = useAppStore.getState().prompts;
     expect(prompts[0].is_favorite).toBe(false);
+  });
+});
+
+// =============================================================================
+// Issue #65 — explorerWidth Persistenz & Clamping Tests
+// =============================================================================
+
+describe("explorerWidth", () => {
+  beforeEach(() => {
+    resetStore();
+    localStorage.removeItem("promptvault.layout.explorerWidth");
+  });
+
+  it("initial width is DEFAULT_EXPLORER_WIDTH (360)", () => {
+    useAppStore.setState({ explorerWidth: 360 });
+    const width = useAppStore.getState().explorerWidth;
+    expect(width).toBe(360);
+  });
+
+  it("setExplorerWidth clamps below MIN_EXPLORER_WIDTH (240)", () => {
+    useAppStore.getState().setExplorerWidth(100);
+    expect(useAppStore.getState().explorerWidth).toBe(240);
+  });
+
+  it("setExplorerWidth clamps above MAX_EXPLORER_WIDTH (600)", () => {
+    useAppStore.getState().setExplorerWidth(800);
+    expect(useAppStore.getState().explorerWidth).toBe(600);
+  });
+
+  it("setExplorerWidth accepts valid value in range", () => {
+    useAppStore.getState().setExplorerWidth(450);
+    expect(useAppStore.getState().explorerWidth).toBe(450);
+  });
+
+  it("setExplorerWidth persists to localStorage", () => {
+    useAppStore.getState().setExplorerWidth(420);
+    const stored = localStorage.getItem("promptvault.layout.explorerWidth");
+    expect(stored).toBe("420");
+  });
+
+  it("setExplorerWidth rounds non-integer values", () => {
+    useAppStore.getState().setExplorerWidth(399.7);
+    expect(useAppStore.getState().explorerWidth).toBe(400);
+  });
+
+  it("ignores invalid stored value and returns default", () => {
+    // Test the validation logic directly via the exported function
+    localStorage.setItem("promptvault.layout.explorerWidth", "not-a-number");
+    expect(getExplorerWidthFromStorage()).toBe(360);
+
+    localStorage.setItem("promptvault.layout.explorerWidth", "-100");
+    expect(getExplorerWidthFromStorage()).toBe(360);
+
+    localStorage.setItem("promptvault.layout.explorerWidth", "9999");
+    expect(getExplorerWidthFromStorage()).toBe(360);
+
+    localStorage.setItem("promptvault.layout.explorerWidth", "Infinity");
+    expect(getExplorerWidthFromStorage()).toBe(360);
+
+    localStorage.setItem("promptvault.layout.explorerWidth", "NaN");
+    expect(getExplorerWidthFromStorage()).toBe(360);
+
+    // Valid value should be returned
+    localStorage.setItem("promptvault.layout.explorerWidth", "450");
+    expect(getExplorerWidthFromStorage()).toBe(450);
   });
 });

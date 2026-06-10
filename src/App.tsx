@@ -19,9 +19,16 @@ function App() {
     watcherNotification,
     cleanupWatcher,
   } = useAppStore();
+  const explorerWidth = useAppStore((s) => s.explorerWidth);
+  const setExplorerWidth = useAppStore((s) => s.setExplorerWidth);
   const [folderPath, setFolderPath] = useState<string | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Resize state
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartX = useRef(0);
+  const dragStartWidth = useRef(0);
 
   const isTauri =
     typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -105,6 +112,43 @@ function App() {
           },
   });
 
+  // Resize explorer handle
+  const handleResizePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      dragStartX.current = e.clientX;
+      dragStartWidth.current = explorerWidth;
+      setIsDragging(true);
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    },
+    [explorerWidth],
+  );
+
+  const handleResizePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isDragging) return;
+      const delta = e.clientX - dragStartX.current;
+      setExplorerWidth(dragStartWidth.current + delta);
+    },
+    [isDragging, setExplorerWidth],
+  );
+
+  const handleResizePointerUp = useCallback((e: React.PointerEvent) => {
+    setIsDragging(false);
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      // Capture may already be released
+    }
+  }, []);
+
+  // Cleanup: release pointer capture if component unmounts during drag
+  useEffect(() => {
+    return () => {
+      setIsDragging(false);
+    };
+  }, []);
+
   const filteredCount = useAppStore((s) => s.filteredPrompts)().length;
 
   return (
@@ -166,8 +210,34 @@ function App() {
       </header>
 
       {/* Drei-Spalten-Layout */}
-      <main className="app-layout">
-        <ExplorerPanel searchRef={searchInputRef} />
+      <main
+        className={`app-layout${isDragging ? " app-layout--resizing" : ""}`}
+      >
+        <ExplorerPanel
+          searchRef={searchInputRef}
+          style={{ width: explorerWidth, minWidth: explorerWidth }}
+        />
+        <div
+          className={`resize-handle${isDragging ? " resize-handle--active" : ""}`}
+          role="separator"
+          aria-label="Explorer-Breite ändern"
+          aria-valuenow={explorerWidth}
+          aria-valuemin={240}
+          aria-valuemax={600}
+          aria-valuetext={`${explorerWidth} Pixel breit`}
+          tabIndex={0}
+          onPointerDown={handleResizePointerDown}
+          onPointerMove={handleResizePointerMove}
+          onPointerUp={handleResizePointerUp}
+          onPointerCancel={handleResizePointerUp}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowLeft") {
+              setExplorerWidth(explorerWidth - 10);
+            } else if (e.key === "ArrowRight") {
+              setExplorerWidth(explorerWidth + 10);
+            }
+          }}
+        />
         <DetailsPanel />
         <AnalysisPanel />
       </main>

@@ -271,4 +271,35 @@ describe("TreeNode", () => {
     // paddingLeft = 8 + depth * 16 = 8 + 80 = 88px
     expect(treeNode.style.paddingLeft).toBe("88px");
   });
+
+  // --- Issue #65: Tooltip / title attribute on tree-name ---
+
+  it("file node tree-name has title attribute with full name", () => {
+    const node: FileTreeNode = {
+      name: "very-long-prompt-name.md",
+      path: "/very-long-prompt-name.md",
+      is_directory: false,
+      prompt_id: "long-id",
+      children: [],
+    };
+
+    render(<TreeNode node={node} {...defaultProps} />);
+
+    const nameSpan = screen.getByText("very-long-prompt-name");
+    expect(nameSpan).toHaveAttribute("title", "very-long-prompt-name.md");
+  });
+
+  it("directory node tree-name has title attribute", () => {
+    const node: FileTreeNode = {
+      name: "very-long-folder-name",
+      path: "/very-long-folder-name",
+      is_directory: true,
+      children: [],
+    };
+
+    render(<TreeNode node={node} {...defaultProps} />);
+
+    const nameSpan = screen.getByText("very-long-folder-name");
+    expect(nameSpan).toHaveAttribute("title", "very-long-folder-name");
+  });
 });
