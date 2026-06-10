@@ -62,14 +62,14 @@ function saveThemeToStorage(theme: Theme): void {
   }
 }
 
-// --- Layout Persistenz ---
+// --- Layout Persistence ---
 
 const EXPLORER_WIDTH_KEY = "promptvault.layout.explorerWidth";
 const MIN_EXPLORER_WIDTH = 240;
 const MAX_EXPLORER_WIDTH = 600;
 const DEFAULT_EXPLORER_WIDTH = 360;
 
-function getExplorerWidthFromStorage(): number {
+export function getExplorerWidthFromStorage(): number {
   try {
     const stored = localStorage.getItem(EXPLORER_WIDTH_KEY);
     if (stored !== null) {
@@ -95,6 +95,13 @@ function saveExplorerWidthToStorage(width: number): void {
     // silent fail
   }
 }
+
+function clampExplorerWidth(width: number): number {
+  return Math.max(
+    MIN_EXPLORER_WIDTH,
+    Math.min(MAX_EXPLORER_WIDTH, Math.round(width)),
+  );
+}
 // --- Watcher Event Types ---
 
 interface ChangedPayload {
@@ -113,6 +120,7 @@ interface AppState {
   hygiene: Record<string, PromptHygiene>;
 
   // UI
+  explorerWidth: number;
   isLoading: boolean;
   isAnalyzing: boolean;
   error: string | null;
@@ -135,6 +143,7 @@ interface AppState {
   resetFilters: () => void;
   toggleFolder: (path: string) => void;
   toggleTheme: () => void;
+  setExplorerWidth: (width: number) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearWatcherNotification: () => void;
@@ -171,6 +180,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedPromptId: null,
   evaluations: {},
   hygiene: {},
+  explorerWidth: getExplorerWidthFromStorage(),
   isLoading: false,
   isAnalyzing: false,
   error: null,
@@ -255,6 +265,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       saveThemeToStorage(next);
       return { theme: next };
     });
+  },
+
+  setExplorerWidth: (width) => {
+    const clamped = clampExplorerWidth(width);
+    saveExplorerWidthToStorage(clamped);
+    set({ explorerWidth: clamped });
   },
 
   setLoading: (loading) => {
