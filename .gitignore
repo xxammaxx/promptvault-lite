@@ -35,7 +35,6 @@ Thumbs.db
 
 # Tauri
 src-tauri/gen/
-src-tauri/icons/
 
 # Test
 coverage/
