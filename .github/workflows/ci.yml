@@ -113,13 +113,14 @@ jobs:
         run: |
           echo "::group::Scanning for common secret patterns"
           # High-confidence patterns (check all tracked files)
+          # High-specificity patterns only — broad terms like "secret", "password",
+          # "api_key" match legitimate code/docs and produce false positives.
+          # The project's own Rust `detect_secrets()` covers content-level scanning.
           PATTERNS=(
-            "api_key|apikey|API_KEY"
-            "secret|SECRET"
-            "password|passwd|PASSWORD"
             "-----BEGIN.*PRIVATE KEY-----"
             "AKIA[0-9A-Z]{16}"
-            "ghp_[0-9a-zA-Z]{36}"
+            "gh[opsur]_[0-9a-zA-Z]{36}"
+            "github_pat_[0-9a-zA-Z]{22,}"
             "sk_live_[0-9a-zA-Z]{24}"
           )
           FOUND=0
