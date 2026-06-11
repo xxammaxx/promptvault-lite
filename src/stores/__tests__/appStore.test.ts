@@ -225,6 +225,136 @@ describe("fileTree()", () => {
     expect(rootChildren[1].name).toBe("apple.md");
     expect(rootChildren[2].name).toBe("zebra.md");
   });
+
+  // -----------------------------------------------------------------------
+  // Windows path normalization tests (fix/windows-path-filetree-root)
+  // -----------------------------------------------------------------------
+
+  it("relativiert Windows-Absolutpfade gegen currentFolderPath (gleiches Laufwerk)", () => {
+    useAppStore.setState({
+      currentFolderPath: "D:\\Prompts",
+      prompts: [makePrompt("p1", "D:\\Prompts\\Meta_Prompt\\test.md")],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+    expect(tree).toHaveLength(1);
+    // Must NOT show D: as root
+    expect(tree[0].name).toBe("Meta_Prompt");
+    expect(tree[0].is_directory).toBe(true);
+    expect(tree[0].children[0].name).toBe("test.md");
+    expect(tree[0].children[0].prompt_id).toBe("p1");
+  });
+
+  it("normalisiert Backslashes in Windows-Pfaden", () => {
+    useAppStore.setState({
+      currentFolderPath: "C:\\Vault",
+      prompts: [makePrompt("p1", "C:\\Vault\\sub\\file.md")],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+    expect(tree).toHaveLength(1);
+    expect(tree[0].name).toBe("sub");
+    expect(tree[0].is_directory).toBe(true);
+    expect(tree[0].children[0].name).toBe("file.md");
+  });
+
+  it("normalisiert Forward-Slashes in Windows-Pfaden", () => {
+    useAppStore.setState({
+      currentFolderPath: "D:/Prompts",
+      prompts: [makePrompt("p1", "D:/Prompts/Meta_Prompt/test.md")],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+    expect(tree).toHaveLength(1);
+    expect(tree[0].name).toBe("Meta_Prompt");
+    expect(tree[0].children[0].name).toBe("test.md");
+  });
+
+  it("Unix-Pfade bleiben kompatibel (bestehendes Verhalten)", () => {
+    useAppStore.setState({
+      currentFolderPath: "/home/user/vault",
+      prompts: [makePrompt("p1", "/home/user/vault/folder/file.md")],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+    expect(tree).toHaveLength(1);
+    expect(tree[0].name).toBe("folder");
+    expect(tree[0].children[0].name).toBe("file.md");
+    expect(tree[0].children[0].prompt_id).toBe("p1");
+  });
+
+  it("Relative Pfade ohne currentFolderPath bleiben kompatibel", () => {
+    // No currentFolderPath set — paths treated as-is
+    useAppStore.setState({
+      currentFolderPath: null,
+      prompts: [makePrompt("p1", "subdir/file.md")],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+    expect(tree).toHaveLength(1);
+    expect(tree[0].name).toBe("subdir");
+    expect(tree[0].children[0].name).toBe("file.md");
+  });
+
+  it("entfernt Windows-Long-Path-Präfix (\\\\\\\\?\\\\C:\\\\) und zeigt keinen ?-Root", () => {
+    useAppStore.setState({
+      currentFolderPath: "C:\\Vault",
+      prompts: [makePrompt("p1", "\\\\?\\C:\\Vault\\folder\\file.md")],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+    expect(tree).toHaveLength(1);
+    // Must NOT show ? as root
+    expect(tree[0].name).not.toBe("?");
+    expect(tree[0].name).toBe("folder");
+    expect(tree[0].children[0].name).toBe("file.md");
+  });
+
+  it("Leere Segmente erzeugen keinen leeren Root-Knoten", () => {
+    useAppStore.setState({
+      currentFolderPath: null,
+      prompts: [makePrompt("p1", "folder//file.md")],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+    expect(tree).toHaveLength(1);
+    expect(tree[0].name).toBe("folder");
+    expect(tree[0].children).toHaveLength(1);
+    expect(tree[0].children[0].name).toBe("file.md");
+    expect(tree[0].children[0].prompt_id).toBe("p1");
+  });
+
+  it(". und .. werden weiterhin sicher entfernt (Regressionstest)", () => {
+    useAppStore.setState({
+      currentFolderPath: "/vault",
+      prompts: [makePrompt("p1", "/vault/../etc/passwd.md")],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+    const collectAll = (nodes: typeof tree): string[] =>
+      nodes.flatMap((n) => [n.name, ...collectAll(n.children)]);
+
+    const names = collectAll(tree);
+    // ".." must NEVER appear in the tree (filtered during sanitization)
+    expect(names).not.toContain("..");
+    // After filtering "..", remaining valid segments appear normally
+    expect(names).toContain("etc");
+    expect(names).toContain("passwd.md");
+  });
+
+  it("Pfad außerhalb des Root-Ordners wird kontrolliert behandelt (nicht trügerisch relativiert)", () => {
+    useAppStore.setState({
+      currentFolderPath: "C:\\Vault",
+      prompts: [makePrompt("p1", "C:\\Other\\secret.md")],
+    });
+
+    const tree = useAppStore.getState().fileTree();
+    // Path is outside root — should appear as-is (normalized), not falsely relativized
+    // At minimum it must NOT show "secret.md" as a direct child (would be misleading)
+    const topLevelNames = tree.map((n) => n.name);
+    // The full normalized path should be visible, not falsely relativized
+    expect(topLevelNames).toContain("C:");
+  });
 });
 
 // ---------------------------------------------------------------------------
