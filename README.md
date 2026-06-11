@@ -136,7 +136,7 @@ flowchart LR
 
 ```bash
 git clone https://github.com/xxammaxx/promptvault-lite.git
-cd PromptVault_Lite
+cd promptvault-lite
 pnpm install
 pnpm start
 ```
@@ -208,7 +208,7 @@ Hinweis: Es gibt keine `.env`- oder `.env.example`-Datei; die App ist selbst ent
 
 ```bash
 git clone https://github.com/xxammaxx/promptvault-lite.git
-cd PromptVault_Lite
+cd promptvault-lite
 pnpm install
 pnpm start
 ```
