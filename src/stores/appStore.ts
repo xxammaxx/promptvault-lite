@@ -18,6 +18,57 @@ import {
 import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 
+// ---------------------------------------------------------------------------
+// Path Normalization Helpers (fix/windows-path-filetree-root)
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalize a file path for cross-platform comparison:
+ * - Replaces backslashes with forward slashes
+ * - Removes Windows long-path prefixes (\\?\C:\ → C:/, //?/C:/ → C:/)
+ * - Collapses consecutive slashes (except after drive letters)
+ * - Strips trailing slashes
+ */
+function normalizeFilePath(filePath: string): string {
+  let normalized = filePath.replace(/\\/g, "/");
+
+  // Remove Windows long-path prefix: //?/C:/path → C:/path
+  normalized = normalized.replace(/^\/\/\?\/([A-Za-z]):(?=\/)/, "$1:");
+
+  // Collapse consecutive slashes
+  normalized = normalized.replace(/\/{2,}/g, "/");
+
+  // Remove trailing slash (unless it's a bare root like "C:" or "/")
+  normalized = normalized.replace(/(.)\/$/, "$1");
+
+  return normalized;
+}
+
+/**
+ * Relativize an absolute file path against a root folder.
+ * Returns null if filePath is NOT under rootPath (or equal).
+ * Returns the relative path (without leading slash) on success.
+ *
+ * Comparison is case-insensitive on Windows (drive letters).
+ */
+function relativizePath(filePath: string, rootPath: string): string | null {
+  const nf = normalizeFilePath(filePath);
+  const nr = normalizeFilePath(rootPath);
+
+  // Exact match: file IS the root
+  if (nf.toLowerCase() === nr.toLowerCase()) {
+    return "";
+  }
+
+  // Check if file is under root (require path boundary: root + "/")
+  const nrWithSep = nr + "/";
+  if (nf.toLowerCase().startsWith(nrWithSep.toLowerCase())) {
+    return nf.slice(nrWithSep.length);
+  }
+
+  return null;
+}
+
 // --- Theme Types ---
 
 export type Theme = "light" | "dark" | "auto";
@@ -33,7 +84,7 @@ export function resolveTheme(theme: Theme): "light" | "dark" {
   if (theme === "auto") {
     if (
       typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-color-scheme: dark)").matches
+      window.matchMedia("(prefers-color-scheme: dark)").matches
     ) {
       return "dark";
     }
@@ -367,23 +418,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     const rootMap = new Map<string, FileTreeNode>();
 
     for (const prompt of prompts) {
-      // Normalize backslashes from Windows scanner output
-      let normalized = prompt.file_path.replace(/\\/g, "/");
+      // Normalize path (cross-platform: backslashes → /, strip long-path prefix)
+      let normalized = normalizeFilePath(prompt.file_path);
 
-      // Relativize absolute paths against the vault root (S4.3 AC-3)
+      // Relativize absolute paths against the vault root
       const root = get().currentFolderPath;
-      if (root && normalized.startsWith("/")) {
-        const normalizedRoot = root.replace(/\\/g, "/");
-        // Ensure we match at a path boundary: /vault should match /vault/file.md
-        // but NOT /vault-evil/file.md
-        if (
-          normalized === normalizedRoot ||
-          normalized.startsWith(normalizedRoot + "/")
-        ) {
-          normalized = normalized.slice(normalizedRoot.length);
-          if (normalized.startsWith("/")) {
-            normalized = normalized.slice(1);
-          }
+      if (root) {
+        const relative = relativizePath(normalized, root);
+        if (relative !== null) {
+          normalized = relative;
         }
       }
 
