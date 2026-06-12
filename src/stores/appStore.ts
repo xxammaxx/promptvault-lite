@@ -18,6 +18,51 @@ import {
 import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 
+// --- Theme Types ---
+
+export type Theme = "light" | "dark" | "auto";
+
+const THEME_KEY = "promptvault.theme";
+export const THEME_CYCLE: Record<Theme, Theme> = {
+  light: "dark",
+  dark: "auto",
+  auto: "light",
+};
+
+export function resolveTheme(theme: Theme): "light" | "dark" {
+  if (theme === "auto") {
+    if (
+      typeof window !== "undefined" &&
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      window.matchMedia?.("(prefers-color-scheme: dark)").matches
+    ) {
+      return "dark";
+    }
+    return "light";
+  }
+  return theme;
+}
+
+function getThemeFromStorage(): Theme {
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === "light" || stored === "dark" || stored === "auto") {
+      return stored;
+    }
+  } catch {
+    // localStorage not available
+  }
+  return "dark"; // Default: dark mode
+}
+
+function saveThemeToStorage(theme: Theme): void {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    // silent fail
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Path Normalization Helpers (fix/windows-path-filetree-root)
 // ---------------------------------------------------------------------------
@@ -69,23 +114,6 @@ function relativizePath(filePath: string, rootPath: string): string | null {
   return null;
 }
 
-// --- Theme Types ---
-
-export type Theme = "light" | "dark" | "auto";
-
-export function resolveTheme(theme: Theme): "light" | "dark" {
-  if (theme === "auto") {
-    if (
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-    ) {
-      return "dark";
-    }
-    return "light";
-  }
-  return theme;
-}
-
 // --- Layout Persistence ---
 
 const EXPLORER_WIDTH_KEY = "promptvault.layout.explorerWidth";
@@ -93,7 +121,7 @@ const MIN_EXPLORER_WIDTH = 240;
 const MAX_EXPLORER_WIDTH = 600;
 const DEFAULT_EXPLORER_WIDTH = 360;
 
-function getExplorerWidthFromStorage(): number {
+export function getExplorerWidthFromStorage(): number {
   try {
     const stored = localStorage.getItem(EXPLORER_WIDTH_KEY);
     if (stored !== null) {
@@ -118,6 +146,13 @@ function saveExplorerWidthToStorage(width: number): void {
   } catch {
     // silent fail
   }
+}
+
+export function clampExplorerWidth(width: number): number {
+  return Math.max(
+    MIN_EXPLORER_WIDTH,
+    Math.min(MAX_EXPLORER_WIDTH, Math.round(width)),
+  );
 }
 
 // --- Watcher Event Types ---
@@ -147,6 +182,9 @@ interface AppState {
   // Layout
   explorerWidth: number;
 
+  // Theme
+  theme: Theme;
+
   // Watcher
   currentFolderPath: string | null;
   watcherNotification: string | null;
@@ -168,6 +206,9 @@ interface AppState {
 
   // Layout actions
   setExplorerWidth: (width: number) => void;
+
+  // Theme actions
+  toggleTheme: () => void;
 
   // Derived
   filteredPrompts: () => PromptItem[];
@@ -208,6 +249,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Layout state
   explorerWidth: getExplorerWidthFromStorage(),
+
+  // Theme state
+  theme: getThemeFromStorage(),
 
   // Watcher state
   currentFolderPath: null,
@@ -321,6 +365,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     );
     saveExplorerWidthToStorage(clamped);
     set({ explorerWidth: clamped });
+  },
+
+  // Theme actions
+  toggleTheme: () => {
+    set((state) => {
+      const next = THEME_CYCLE[state.theme];
+      saveThemeToStorage(next);
+      return { theme: next };
+    });
   },
 
   // Derived data

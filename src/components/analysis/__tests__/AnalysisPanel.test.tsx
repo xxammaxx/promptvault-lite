@@ -175,9 +175,9 @@ describe("AnalysisPanel", () => {
     render(<AnalysisPanel />);
 
     expect(screen.getByText("85")).toBeInTheDocument();
-    expect(screen.getByText("/100")).toBeInTheDocument();
+    expect(screen.getByText("Gesamtwertung")).toBeInTheDocument();
     expect(screen.getByText("Qualitätsanalyse")).toBeInTheDocument();
-    // Score 85 >= 70 → score-high
+    // Score 85 >= 70 → score-high on the circular score value
     const scoreEl = screen.getByText("85");
     expect(scoreEl.className).toContain("score-high");
   });

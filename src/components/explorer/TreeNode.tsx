@@ -85,8 +85,6 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
           : "score-low"
       : "";
 
-  const displayName = node.name.replace(".md", "");
-
   return (
     <div
       className={`tree-node tree-file ${isSelected ? "tree-selected" : ""}`}
@@ -105,8 +103,8 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
       >
         {node.is_favorite ? "⭐" : "📄"}
       </span>
-      <span className="tree-name" title={displayName}>
-        {displayName}
+      <span className="tree-name" title={node.name}>
+        {node.name.replace(".md", "")}
       </span>
       {node.score !== undefined && (
         <span className={`tree-score ${scoreColor}`}>{node.score}</span>
