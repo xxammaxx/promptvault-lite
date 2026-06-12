@@ -45,3 +45,11 @@ coverage/
 *.db
 *.db-journal
 *.db-wal
+
+# WIP / Isolated Features (nicht für Release-Scope)
+.tmp/
+scripts/
+site/
+
+# Python cache
+__pycache__/
