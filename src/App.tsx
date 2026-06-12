@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useAppStore } from "./stores/appStore";
+import { useAppStore, resolveTheme } from "./stores/appStore";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useResizablePanel } from "./hooks/useResizablePanel";
 import { ExplorerPanel } from "./components/explorer/ExplorerPanel";
 import { DetailsPanel } from "./components/details/DetailsPanel";
 import { AnalysisPanel } from "./components/analysis/AnalysisPanel";
 import { ExportDialog } from "./components/common/ExportDialog";
+import { ThemeToggle } from "./components/common/ThemeToggle";
 import "./App.css";
 
 const MIN_EXPLORER_WIDTH = 240;
@@ -38,6 +39,29 @@ function App() {
       void cleanupWatcher();
     };
   }, [cleanupWatcher]);
+
+  // Sync theme to document element
+  const theme = useAppStore((s) => s.theme);
+  useEffect(() => {
+    const resolved = resolveTheme(theme);
+    document.documentElement.setAttribute("data-theme", resolved);
+  }, [theme]);
+
+  // Re-evaluate auto theme when OS preference changes
+  useEffect(() => {
+    if (theme !== "auto") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      document.documentElement.setAttribute(
+        "data-theme",
+        e.matches ? "dark" : "light",
+      );
+    };
+    mq.addEventListener("change", handleChange);
+    return () => {
+      mq.removeEventListener("change", handleChange);
+    };
+  }, [theme]);
 
   const handleSelectFolder = useCallback(async () => {
     if (!isTauri) return;
@@ -108,6 +132,16 @@ function App() {
               📁 {folderPath.split(/[/\\]/).pop() || folderPath}
             </span>
           )}
+          <ThemeToggle />
+          <button
+            className="btn"
+            aria-disabled="true"
+            tabIndex={-1}
+            title="Einstellungen sind in Entwicklung"
+            aria-label="Einstellungen (in Entwicklung)"
+          >
+            ⚙️
+          </button>
           <button
             className="btn btn-primary"
             onClick={() => {
@@ -116,7 +150,7 @@ function App() {
             disabled={isLoading || !isTauri}
             title={`Ordner öffnen (${modLabel}+O)`}
           >
-            {isLoading ? "⏳ Scanne..." : "📂 Ordner öffnen"}
+            {isLoading ? "⏳ Scanne..." : "📁 Ordner öffnen"}
           </button>
           {prompts.length > 0 && (
             <>
@@ -153,7 +187,25 @@ function App() {
         }
       >
         <ExplorerPanel searchRef={searchInputRef} />
-        <div className="resize-handle" ref={handleRef} {...handleProps} />
+        <div
+          className="resize-handle"
+          ref={handleRef}
+          {...handleProps}
+          role="separator"
+          aria-label="Explorer-Breite ändern"
+          aria-valuenow={explorerWidth}
+          aria-valuemin={MIN_EXPLORER_WIDTH}
+          aria-valuemax={MAX_EXPLORER_WIDTH}
+          aria-valuetext={`${explorerWidth} Pixel breit`}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowLeft") {
+              setExplorerWidth(explorerWidth - 10);
+            } else if (e.key === "ArrowRight") {
+              setExplorerWidth(explorerWidth + 10);
+            }
+          }}
+        />
         <DetailsPanel />
         <AnalysisPanel />
       </main>
