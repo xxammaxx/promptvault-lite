@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1e1e3a"/>
+      <stop offset="100%" stop-color="#13132a"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="100%" stop-color="#00b8d4"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffd54f"/>
+      <stop offset="100%" stop-color="#ffa000"/>
+    </linearGradient>
+    <radialGradient id="innerGlow" cx="0.5" cy="0.4" r="0.5">
+      <stop offset="0%" stop-color="#2a2a4a" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#13132a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="160" ry="160" fill="url(#bgGrad)" stroke="#2a2a5a" stroke-width="12"/>
+  <rect x="64" y="64" width="896" height="896" rx="160" ry="160" fill="url(#innerGlow)"/>
+  <rect x="180" y="180" width="664" height="520" rx="32" ry="32" fill="#0d0d1a" stroke="#2e2e5e" stroke-width="6"/>
+  <circle cx="220" cy="220" r="18" fill="#ff5f56"/>
+  <circle cx="270" cy="220" r="18" fill="#ffbd2e"/>
+  <circle cx="320" cy="220" r="18" fill="#27c93f"/>
+  <text x="220" y="330" font-family="'Courier New', 'Consolas', monospace" font-size="52" font-weight="bold" fill="url(#accentGrad)">&gt;</text>
+  <text x="270" y="330" font-family="'Courier New', 'Consolas', monospace" font-size="42" font-weight="normal" fill="#e0e0e0">vault</text>
+  <text x="430" y="330" font-family="'Courier New', 'Consolas', monospace" font-size="42" font-weight="normal" fill="#8888aa">--unlock</text>
+  <text x="220" y="410" font-family="'Courier New', 'Consolas', monospace" font-size="52" font-weight="bold" fill="url(#accentGrad)">&gt;</text>
+  <rect x="270" y="362" width="20" height="46" rx="4" fill="url(#accentGrad)" opacity="0.9"/>
+  <text x="220" y="490" font-family="'Courier New', 'Consolas', monospace" font-size="36" fill="#556" opacity="0.6">prompts loaded</text>
+  <g transform="translate(512, 780)">
+    <rect x="-60" y="-30" width="120" height="90" rx="16" ry="16" fill="url(#goldGrad)" opacity="0.9"/>
+    <path d="M -40,-30 L -40,-70 A 40,40 0 0,1 40,-70 L 40,-30" fill="none" stroke="url(#goldGrad)" stroke-width="24" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="0" cy="5" r="14" fill="#13132a"/>
+    <rect x="-8" y="5" width="16" height="24" rx="3" fill="#13132a"/>
+  </g>
+  <rect x="64" y="64" width="896" height="896" rx="160" ry="160" fill="none" stroke="#00e5ff" stroke-width="4" opacity="0.15"/>
+</svg>
