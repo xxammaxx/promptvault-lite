@@ -1,6 +1,7 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { useAppStore } from "@/stores/appStore";
 import ReactMarkdown from "react-markdown";
+import { OptimizationPanel } from "@/components/optimization/OptimizationPanel";
 
 export const PromptContent: React.FC = () => {
   const prompt = useAppStore((s) => s.selectedPrompt)();
@@ -59,7 +60,9 @@ export const PromptMeta: React.FC = () => {
   );
 };
 
-export const ActionBar: React.FC = () => {
+export const ActionBar: React.FC<{ onOptimize?: () => void }> = ({
+  onOptimize,
+}) => {
   const prompt = useAppStore((s) => s.selectedPrompt)();
   const toggleFavorite = useAppStore((s) => s.toggleFavorite);
   const analyzeSelected = useAppStore((s) => s.analyzeSelected);
@@ -129,6 +132,14 @@ export const ActionBar: React.FC = () => {
         📂 Öffnen
       </button>
       <button
+        className="btn"
+        onClick={onOptimize}
+        disabled={!onOptimize}
+        title="Prompt optimieren"
+      >
+        ✨ Optimieren
+      </button>
+      <button
         className="btn btn-primary"
         onClick={() => {
           void analyzeSelected();
@@ -144,6 +155,13 @@ export const ActionBar: React.FC = () => {
 
 export const DetailsPanel: React.FC = () => {
   const prompt = useAppStore((s) => s.selectedPrompt)();
+  const [showOptimizer, setShowOptimizer] = useState(false);
+
+  const handleOpenOptimizer = useCallback(() => {
+    if (prompt) {
+      setShowOptimizer(true);
+    }
+  }, [prompt]);
 
   if (!prompt) {
     return (
@@ -169,9 +187,17 @@ export const DetailsPanel: React.FC = () => {
       </div>
       <div className="panel-content">
         <PromptMeta />
-        <ActionBar />
+        <ActionBar onOptimize={handleOpenOptimizer} />
         <PromptContent />
       </div>
+      {showOptimizer && (
+        <OptimizationPanel
+          promptContent={prompt.content}
+          onClose={() => {
+            setShowOptimizer(false);
+          }}
+        />
+      )}
     </div>
   );
 };

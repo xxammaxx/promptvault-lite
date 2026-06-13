@@ -124,3 +124,27 @@ export interface FileTreeNode {
   /** Transient: Map used during tree construction (O(1) lookup). Removed before rendering. */
   _childrenMap?: Map<string, FileTreeNode>;
 }
+
+// =============================================================================
+// Prompt Optimization Engine Types
+// =============================================================================
+
+export type OptimizationMode = "conservative" | "balanced" | "aggressive";
+
+export interface OptimizationDiff {
+  original: string;
+  optimized: string;
+  changes: OptimizationChange[];
+  warnings: string[];
+}
+
+export interface OptimizationChange {
+  type:
+    | "whitespace"
+    | "structure"
+    | "content"
+    | "format"
+    | "add_section"
+    | "reorder";
+  description: string;
+}
