@@ -187,25 +187,7 @@ function App() {
         }
       >
         <ExplorerPanel searchRef={searchInputRef} />
-        <div
-          className="resize-handle"
-          ref={handleRef}
-          {...handleProps}
-          role="separator"
-          aria-label="Explorer-Breite ändern"
-          aria-valuenow={explorerWidth}
-          aria-valuemin={MIN_EXPLORER_WIDTH}
-          aria-valuemax={MAX_EXPLORER_WIDTH}
-          aria-valuetext={`${explorerWidth} Pixel breit`}
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowLeft") {
-              setExplorerWidth(explorerWidth - 10);
-            } else if (e.key === "ArrowRight") {
-              setExplorerWidth(explorerWidth + 10);
-            }
-          }}
-        />
+        <div className="resize-handle" ref={handleRef} {...handleProps} />
         <DetailsPanel />
         <AnalysisPanel />
       </main>

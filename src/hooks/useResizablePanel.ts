@@ -18,9 +18,11 @@ interface UseResizablePanelResult {
   handleProps: {
     role: "separator";
     "aria-label": string;
+    "aria-orientation": "vertical";
     "aria-valuemin": number;
     "aria-valuemax": number;
     "aria-valuenow": number;
+    "aria-valuetext": string;
     tabIndex: number;
     onKeyDown: (e: React.KeyboardEvent) => void;
   };
@@ -141,9 +143,11 @@ export function useResizablePanel({
     handleProps: {
       role: "separator" as const,
       "aria-label": "Explorer-Breite ändern",
+      "aria-orientation": "vertical" as const,
       "aria-valuemin": minWidth,
       "aria-valuemax": maxWidth,
       "aria-valuenow": width,
+      "aria-valuetext": `${width} Pixel breit`,
       tabIndex: 0,
       onKeyDown,
     },

@@ -747,4 +747,92 @@ describe("AnalysisPanel", () => {
     expect(screen.getByText("Hygieneanalyse")).toBeInTheDocument();
     expect(screen.queryByText("Qualitätsanalyse")).not.toBeInTheDocument();
   });
+
+  // --- AC-9: CircularScore clamping (Finding 3) ---
+
+  describe("CircularScore clamping", () => {
+    function promptWithScore(overallScore: number) {
+      const mockPrompt: PromptItem = {
+        id: "1",
+        file_path: "/test.md",
+        file_name: "test.md",
+        title: "Test",
+        description: "",
+        category: "test",
+        version: "1",
+        tags: [],
+        content: "",
+        raw_frontmatter: {},
+        created_at: "",
+        updated_at: "",
+        is_favorite: false,
+      };
+
+      const mockEvaluation: PromptEvaluation = {
+        id: "eval-1",
+        prompt_id: "1",
+        overall_score: overallScore,
+        criteria: [],
+        missing_sections: [],
+        recommendations: [],
+        evaluated_at: "2024-01-01",
+      };
+
+      mockStore({ prompt: mockPrompt, evaluation: mockEvaluation });
+    }
+
+    it("clamps negative score (-10) to 0", () => {
+      promptWithScore(-10);
+
+      render(<AnalysisPanel />);
+
+      // Should display 0, not -10
+      const scoreEl = screen.getByText("0");
+      expect(scoreEl).toBeInTheDocument();
+      expect(scoreEl.className).toContain("score-low");
+      expect(screen.queryByText("-10")).not.toBeInTheDocument();
+    });
+
+    it("clamps score above 100 (150) to 100", () => {
+      promptWithScore(150);
+
+      render(<AnalysisPanel />);
+
+      // Should display 100, not 150
+      const scoreEl = screen.getByText("100");
+      expect(scoreEl).toBeInTheDocument();
+      expect(scoreEl.className).toContain("score-high");
+      expect(screen.queryByText("150")).not.toBeInTheDocument();
+    });
+
+    it("preserves score=0 correctly (edge boundary)", () => {
+      promptWithScore(0);
+
+      render(<AnalysisPanel />);
+
+      const scoreEl = screen.getByText("0");
+      expect(scoreEl).toBeInTheDocument();
+      expect(scoreEl.className).toContain("score-low");
+    });
+
+    it("preserves score=100 correctly (edge boundary)", () => {
+      promptWithScore(100);
+
+      render(<AnalysisPanel />);
+
+      const scoreEl = screen.getByText("100");
+      expect(scoreEl).toBeInTheDocument();
+      expect(scoreEl.className).toContain("score-high");
+    });
+
+    it("preserves normal score 55 in [0,100] range", () => {
+      promptWithScore(55);
+
+      render(<AnalysisPanel />);
+
+      const scoreEl = screen.getByText("55");
+      expect(scoreEl).toBeInTheDocument();
+      expect(scoreEl.className).toContain("score-medium");
+    });
+  });
 });

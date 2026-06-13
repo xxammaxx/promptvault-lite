@@ -10,13 +10,14 @@ const scoreColorHex = (score: number) => {
   return "var(--color-danger)";
 };
 
-/** SVG circular score gauge */
+/** SVG circular score gauge — clamps score to [0, 100] */
 const CircularScore: React.FC<{ score: number; size?: number }> = React.memo(
   function CircularScore({ score, size = 90 }) {
+    const clampedScore = Math.min(100, Math.max(0, score));
     const radius = (size - 8) / 2;
     const circumference = 2 * Math.PI * radius;
-    const offset = circumference - (score / 100) * circumference;
-    const color = scoreColorHex(score);
+    const offset = circumference - (clampedScore / 100) * circumference;
+    const color = scoreColorHex(clampedScore);
 
     return (
       <div className="circular-score" style={{ width: size, height: size }}>
@@ -47,8 +48,8 @@ const CircularScore: React.FC<{ score: number; size?: number }> = React.memo(
             }}
           />
         </svg>
-        <span className={`circular-score-value ${scoreColor(score)}`}>
-          {score}
+        <span className={`circular-score-value ${scoreColor(clampedScore)}`}>
+          {clampedScore}
         </span>
       </div>
     );

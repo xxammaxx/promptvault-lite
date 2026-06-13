@@ -33,8 +33,7 @@ export function resolveTheme(theme: Theme): "light" | "dark" {
   if (theme === "auto") {
     if (
       typeof window !== "undefined" &&
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      window.matchMedia?.("(prefers-color-scheme: dark)").matches
+      window.matchMedia("(prefers-color-scheme: dark)").matches
     ) {
       return "dark";
     }
@@ -384,6 +383,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (filters.category && p.category !== filters.category) return false;
       if (filters.hygieneStatus) {
         const h = get().hygiene[p.id];
+        // Record<string,T> indexing returns T (not T|undefined) without
+        // noUncheckedIndexedAccess, but runtime safety requires this guard.
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!h || h.status !== filters.hygieneStatus) return false;
       }
@@ -420,6 +421,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedEvaluation: () => {
     const { selectedPromptId, evaluations } = get();
     if (!selectedPromptId) return null;
+    // Record<string,T> indexing returns T (not T|undefined) without
+    // noUncheckedIndexedAccess, but runtime safety requires || null fallback.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     return evaluations[selectedPromptId] || null;
   },
@@ -427,6 +430,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedHygiene: () => {
     const { selectedPromptId, hygiene } = get();
     if (!selectedPromptId) return null;
+    // Record<string,T> indexing returns T (not T|undefined) without
+    // noUncheckedIndexedAccess, but runtime safety requires || null fallback.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     return hygiene[selectedPromptId] || null;
   },
@@ -484,6 +489,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
         if (isLast) {
           existing.prompt_id = prompt.id;
+          // Record<string,T> indexing returns T (not T|undefined) without
+          // noUncheckedIndexedAccess, but a prompt may not have an evaluation yet.
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           existing.score = get().evaluations[prompt.id]?.overall_score;
           existing.is_favorite = prompt.is_favorite;
