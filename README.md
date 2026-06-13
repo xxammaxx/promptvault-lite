@@ -3,7 +3,7 @@
 > Lokales Prompt-Management-System mit Qualitäts- und Hygieneanalyse
 
 [![Version](https://img.shields.io/badge/version-1.5.0-blue)](https://github.com/xxammaxx/promptvault-lite)
-[![License](https://img.shields.io/badge/license-unspecified-lightgrey)](#-lizenz)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Tech](https://img.shields.io/badge/stack-React%20%2B%20Rust%20%2B%20Tauri-4444ff)](#-credits--stack)
 [![Tests](https://img.shields.io/badge/tests-94%20passing-brightgreen)](#-testing)
 [![CI](https://img.shields.io/badge/CI-not%20configured-orange)](#-fehlende-informationen)
@@ -343,7 +343,9 @@ Hinweise:
 
 ## 📄 Lizenz
 
-Keine Lizenzdatei vorhanden. Aktueller Status: **unspecified / TODO** — siehe [#39](../../issues/39) für die anstehende Klärung (MIT oder Apache-2.0 empfohlen). Bis dahin gelten die Default-Regelungen des Urheberrechts („All rights reserved" implizit).
+MIT License — siehe [LICENSE](./LICENSE).
+
+Kurzform: Beliebige Nutzung, Änderung und Weitergabe erlaubt, solange der Copyright-Hinweis erhalten bleibt. Keine Gewährleistung.
 
 ## 🙏 Credits / Stack
 
@@ -360,9 +362,6 @@ Keine Lizenzdatei vorhanden. Aktueller Status: **unspecified / TODO** — siehe 
 
 ## Fehlende Informationen
 
-- Keine `LICENSE`-Datei im Repository.
-- Keine CI-Konfiguration (`.github/workflows/`) vorhanden.
-- Versionsdrift: `package.json` und `Cargo.toml` nennen noch 1.4.0; `tauri.conf.json` und `docs/CHANGELOG.md` stehen auf 1.5.0.
 - Keine Screenshots im Repository vorhanden.
 - Kein Code-of-Conduct dokumentiert.
 - Filter-Defaults sind im hier vorliegenden Quellstand nicht explizit dokumentiert.
