@@ -528,10 +528,8 @@ export function optimizePrompt(
       return balancedOptimize(input);
     case "aggressive":
       return aggressiveOptimize(input);
-    default: {
-      // Exhaustive check: all OptimizationMode values are handled above
-      void (mode as never);
+    default:
+      // Exhaustive: TypeScript enforces all OptimizationMode cases handled above
       throw new Error(`Unbekannter Optimierungsmodus: ${String(mode)}`);
-    }
   }
 }
