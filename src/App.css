@@ -973,3 +973,220 @@ body {
   background: var(--color-primary);
   opacity: 0.6;
 }
+
+/* ============================================================
+   Prompt Optimization Panel
+   ============================================================ */
+.optimizer-dialog {
+  min-width: 680px;
+  max-width: 900px;
+  width: 90vw;
+  max-height: 90vh;
+}
+
+.optimizer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Mode Selector */
+.optimizer-mode-group {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.optimizer-mode-group legend {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.optimizer-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.optimizer-mode-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.optimizer-mode-option:hover {
+  background: var(--color-bg);
+}
+
+.optimizer-mode-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.optimizer-mode-option input[type="radio"] {
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.optimizer-mode-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.optimizer-mode-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.optimizer-mode-desc {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+/* Results */
+.optimizer-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Changes List */
+.optimizer-changes h3,
+.optimizer-warnings h3 {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--color-text-muted);
+}
+
+.optimizer-changes-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.change-item {
+  display: flex;
+  gap: 8px;
+  padding: 4px 6px;
+  font-size: 11px;
+  border-bottom: 1px solid var(--color-bg);
+  align-items: baseline;
+}
+
+.change-type {
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  white-space: nowrap;
+  min-width: 80px;
+}
+
+.change-type.change-whitespace {
+  color: var(--color-text-muted);
+}
+
+.change-type.change-structure {
+  color: var(--color-warning);
+}
+
+.change-type.change-add_section {
+  color: var(--color-success);
+}
+
+.change-type.change-reorder {
+  color: var(--color-primary);
+}
+
+.change-type.change-format {
+  color: var(--color-text-muted);
+}
+
+.change-type.change-content {
+  color: var(--color-danger);
+}
+
+.change-desc {
+  color: var(--color-text);
+}
+
+/* Warnings */
+.optimizer-warnings ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.optimizer-warnings li {
+  font-size: 11px;
+  color: var(--color-warning);
+  padding: 2px 6px;
+  background: var(--color-warning-light);
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+/* Diff View */
+.optimizer-diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.optimizer-diff-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.optimizer-diff-pane:first-child {
+  border-right: 1px solid var(--color-border);
+}
+
+.optimizer-diff-pane h3 {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  margin: 0;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.optimizer-diff-content {
+  flex: 1;
+  padding: 10px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  overflow-y: auto;
+  max-height: 300px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: none;
+  border-radius: 0;
+  -webkit-overflow-scrolling: touch;
+}
