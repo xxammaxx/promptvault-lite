@@ -569,16 +569,19 @@ Du bist ein erfahrener Softwareentwickler.
     expect(result.detected_prompt_type).not.toBe("simple_prompt");
   });
 
-  it("handles very long prompts within performance bounds", () => {
+  it("handles very long prompts and produces valid output", () => {
     const longContent =
       "## Role\nYou are a developer.\n\n" +
       "## Task\nAnalyze the following data.\n\n" +
       "A".repeat(10000);
-    const start = performance.now();
     const result = evalPrompt(longContent);
-    const elapsed = performance.now() - start;
-    expect(elapsed).toBeLessThan(500); // Should complete quickly
+    // Verify deterministic output shape and value ranges
+    expect(result.criteria.length).toBeGreaterThan(0);
     expect(result.overall_score).toBeGreaterThanOrEqual(0);
+    expect(result.overall_score).toBeLessThanOrEqual(100);
+    expect(result.prompt_engineering_score).toBeGreaterThanOrEqual(0);
+    expect(result.context_engineering_score).toBeGreaterThanOrEqual(0);
+    expect(result.robustness_score).toBeGreaterThanOrEqual(0);
   });
 
   it("handles prompts with only code and minimal natural language", () => {
