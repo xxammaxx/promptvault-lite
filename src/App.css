@@ -696,6 +696,181 @@ body {
   color: var(--color-text-muted);
 }
 
+/* ── Prompt & Context Engineering Evaluation ── */
+
+.analysis-section-context h3 {
+  border-bottom-color: var(--color-primary);
+}
+
+/* Context badges */
+.context-badges {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.context-type-badge {
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+.context-profile-badge {
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.profile-minimal {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+}
+.profile-moderate {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+.profile-rich {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+.profile-overloaded {
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+/* Context mini scores */
+.context-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.context-mini-score {
+  display: grid;
+  grid-template-columns: 110px 1fr 32px;
+  align-items: center;
+  gap: 6px;
+}
+.context-mini-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+.context-mini-value {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+.score-bar-track-sm {
+  height: 5px;
+  min-width: 40px;
+}
+
+/* Context overall */
+.context-overall {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  margin-bottom: 8px;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.context-overall-label {
+  font-size: 12px;
+  font-weight: 700;
+}
+.context-overall-value {
+  font-size: 20px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+}
+
+/* Risk flags */
+.context-risk-flags {
+  margin-bottom: 10px;
+}
+.risk-flags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.risk-pill {
+  padding: 1px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: default;
+}
+.risk-pill-critical {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+}
+.risk-pill-high {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+}
+.risk-pill-medium {
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning);
+}
+.risk-pill-low {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+/* Suggested improvements */
+.context-improvements {
+  margin-top: 6px;
+}
+.improvements-list {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0;
+}
+.improvement-item {
+  font-size: 10px;
+  padding: 3px 6px;
+  margin-bottom: 2px;
+  border-radius: 4px;
+  border-left: 3px solid var(--color-border);
+}
+.improvement-item.priority-high {
+  border-left-color: var(--color-danger);
+  background: var(--color-danger-light);
+}
+.improvement-item.priority-medium {
+  border-left-color: var(--color-warning);
+  background: var(--color-warning-light);
+}
+.improvement-item.priority-low {
+  border-left-color: var(--color-text-muted);
+}
+.improvement-message {
+  color: var(--color-text);
+}
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 0;
+  text-decoration: underline;
+}
+.btn-link:hover {
+  color: var(--color-primary-hover);
+}
+
 /* Empty / Loading States */
 .empty-state {
   display: flex;

@@ -5,6 +5,7 @@ import type {
   PromptHygiene,
   PromptFilters,
   FileTreeNode,
+  PromptContextEvaluation,
 } from "@/types";
 import {
   scanDirectory,
@@ -15,6 +16,7 @@ import {
   stopFileWatcher,
   toggleFavorite as tauriToggleFavorite,
 } from "@/lib/tauri";
+import { evaluatePromptContext } from "@/lib/promptContextEvaluation";
 import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 
@@ -170,6 +172,7 @@ interface AppState {
   selectedPromptId: string | null;
   evaluations: Record<string, PromptEvaluation>;
   hygiene: Record<string, PromptHygiene>;
+  contextEvaluations: Record<string, PromptContextEvaluation>;
 
   // UI
   isLoading: boolean;
@@ -194,6 +197,10 @@ interface AppState {
   selectPrompt: (id: string | null) => void;
   setEvaluation: (promptId: string, evaluation: PromptEvaluation) => void;
   setHygiene: (promptId: string, hygiene: PromptHygiene) => void;
+  setContextEvaluation: (
+    promptId: string,
+    evaluation: PromptContextEvaluation,
+  ) => void;
   toggleFavorite: (promptId: string) => Promise<void>;
   setFilters: (filters: Partial<PromptFilters>) => void;
   resetFilters: () => void;
@@ -214,6 +221,7 @@ interface AppState {
   selectedPrompt: () => PromptItem | null;
   selectedEvaluation: () => PromptEvaluation | null;
   selectedHygiene: () => PromptHygiene | null;
+  selectedContextEvaluation: () => PromptContextEvaluation | null;
   fileTree: () => FileTreeNode[];
   allCategories: () => string[];
   allTags: () => string[];
@@ -240,6 +248,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedPromptId: null,
   evaluations: {},
   hygiene: {},
+  contextEvaluations: {},
   isLoading: false,
   isAnalyzing: false,
   error: null,
@@ -275,6 +284,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   setHygiene: (promptId, hygiene) => {
     set((state) => ({
       hygiene: { ...state.hygiene, [promptId]: hygiene },
+    }));
+  },
+
+  setContextEvaluation: (promptId, evaluation) => {
+    set((state) => ({
+      contextEvaluations: {
+        ...state.contextEvaluations,
+        [promptId]: evaluation,
+      },
     }));
   },
 
@@ -430,10 +448,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedHygiene: () => {
     const { selectedPromptId, hygiene } = get();
     if (!selectedPromptId) return null;
-    // Record<string,T> indexing returns T (not T|undefined) without
-    // noUncheckedIndexedAccess, but runtime safety requires || null fallback.
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    return hygiene[selectedPromptId] || null;
+    return hygiene[selectedPromptId] ?? null;
+  },
+
+  selectedContextEvaluation: () => {
+    const { selectedPromptId, contextEvaluations } = get();
+    if (!selectedPromptId) return null;
+    return contextEvaluations[selectedPromptId] ?? null;
   },
 
   fileTree: () => {
@@ -603,9 +624,15 @@ export const useAppStore = create<AppState>((set, get) => ({
         evaluatePrompt(prompt.id, prompt.content),
         analyzeHygiene(prompt.id, prompt.content),
       ]);
+      // Context evaluation runs synchronously (pure TypeScript, no network)
+      const contextEval = evaluatePromptContext(prompt.content);
       set((state) => ({
         evaluations: { ...state.evaluations, [prompt.id]: evaluation },
         hygiene: { ...state.hygiene, [prompt.id]: hygiene },
+        contextEvaluations: {
+          ...state.contextEvaluations,
+          [prompt.id]: contextEval,
+        },
         isAnalyzing: false,
       }));
     } catch (err) {
@@ -624,11 +651,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       set((state) => {
         const evals = { ...state.evaluations };
         const hyg = { ...state.hygiene };
+        const ctxEvals = { ...state.contextEvaluations };
         for (let i = 0; i < prompts.length; i++) {
           evals[prompts[i].id] = report.evaluations[i];
           hyg[prompts[i].id] = report.hygiene[i];
+          ctxEvals[prompts[i].id] = evaluatePromptContext(prompts[i].content);
         }
-        return { evaluations: evals, hygiene: hyg, isAnalyzing: false };
+        return {
+          evaluations: evals,
+          hygiene: hyg,
+          contextEvaluations: ctxEvals,
+          isAnalyzing: false,
+        };
       });
     } catch (err) {
       set({ error: String(err), isAnalyzing: false });
