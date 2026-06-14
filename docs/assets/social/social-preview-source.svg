@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1117"/>
+      <stop offset="100%" style="stop-color:#161b22"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4fc3f7"/>
+      <stop offset="100%" style="stop-color:#7c4dff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#bg)"/>
+
+  <!-- Subtle grid pattern -->
+  <g opacity="0.03">
+    <line x1="0" y1="160" x2="1280" y2="160" stroke="#fff" stroke-width="1"/>
+    <line x1="0" y1="320" x2="1280" y2="320" stroke="#fff" stroke-width="1"/>
+    <line x1="0" y1="480" x2="1280" y2="480" stroke="#fff" stroke-width="1"/>
+    <line x1="320" y1="0" x2="320" y2="640" stroke="#fff" stroke-width="1"/>
+    <line x1="640" y1="0" x2="640" y2="640" stroke="#fff" stroke-width="1"/>
+    <line x1="960" y1="0" x2="960" y2="640" stroke="#fff" stroke-width="1"/>
+  </g>
+
+  <!-- Vault icon -->
+  <g transform="translate(640, 160)" opacity="0.9">
+    <rect x="-40" y="-50" width="80" height="80" rx="12" fill="none" stroke="url(#accent)" stroke-width="2.5"/>
+    <circle cx="0" cy="-10" r="14" fill="none" stroke="url(#accent)" stroke-width="2"/>
+    <rect x="-4" y="-10" width="8" height="20" rx="2" fill="url(#accent)"/>
+    <circle cx="0" cy="-10" r="5" fill="#0d1117" stroke="url(#accent)" stroke-width="1.5"/>
+  </g>
+
+  <!-- Project title -->
+  <text x="640" y="280" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="700" fill="#e6edf3" letter-spacing="1">
+    PromptVault Lite
+  </text>
+
+  <!-- Subtitle -->
+  <text x="640" y="330" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="400" fill="#8b949e">
+    Local prompt management, analysis and optimization
+  </text>
+
+  <!-- Divider line -->
+  <line x1="540" y1="365" x2="740" y2="365" stroke="url(#accent)" stroke-width="2" opacity="0.6"/>
+
+  <!-- Tech stack badges -->
+  <g transform="translate(640, 415)" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="15">
+    <rect x="-310" y="-16" width="620" height="32" rx="16" fill="none" stroke="#30363d" stroke-width="1"/>
+    <text fill="#8b949e">
+      <tspan fill="#4fc3f7">Tauri</tspan>
+      <tspan fill="#30363d">  •  </tspan>
+      <tspan fill="#61dafb">React</tspan>
+      <tspan fill="#30363d">  •  </tspan>
+      <tspan fill="#3178c6">TypeScript</tspan>
+      <tspan fill="#30363d">  •  </tspan>
+      <tspan fill="#dea584">Rust</tspan>
+      <tspan fill="#30363d">  •  </tspan>
+      <tspan fill="#4fc3f7">SQLite</tspan>
+      <tspan fill="#30363d">  •  </tspan>
+      <tspan fill="#7c4dff">Local-First</tspan>
+    </text>
+  </g>
+
+  <!-- Version badge -->
+  <g transform="translate(640, 490)">
+    <rect x="-70" y="-18" width="140" height="36" rx="18" fill="#1a1f2e" stroke="#f0883e" stroke-width="1.5"/>
+    <text x="0" y="6" text-anchor="middle" font-family="monospace" font-size="15" font-weight="600" fill="#f0883e">
+      v1.5.0-rc.1
+    </text>
+  </g>
+
+  <!-- Bottom text -->
+  <text x="640" y="550" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#484f58">
+    Release Candidate — Stable blocked pending human desktop QA
+  </text>
+
+  <!-- Bottom corner decorations -->
+  <rect x="0" y="636" width="1280" height="4" fill="url(#accent)" opacity="0.8"/>
+</svg>

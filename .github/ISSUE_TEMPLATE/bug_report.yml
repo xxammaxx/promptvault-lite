@@ -1,0 +1,56 @@
+name: Bug Report
+description: Report a bug in PromptVault Lite
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out this form.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Which version of PromptVault Lite are you using?
+      placeholder: v1.5.0-rc.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: What operating system are you on?
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: What happened? What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Provide step-by-step instructions to reproduce the bug.
+      placeholder: |
+        1. Open the app
+        2. Select a vault folder
+        3. Click ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Console Output
+      description: If applicable, paste any error messages or console output.
+      render: shell
