@@ -126,6 +126,80 @@ export interface FileTreeNode {
 }
 
 // =============================================================================
+// Prompt & Context Engineering Evaluation Types
+// =============================================================================
+
+export type PromptType =
+  | "simple_prompt"
+  | "structured_prompt"
+  | "agentic_prompt";
+
+export type ContextProfile = "minimal" | "moderate" | "rich" | "overloaded";
+
+export interface ContextCriterion {
+  dimension: "prompt_engineering" | "context_engineering" | "agent_readiness";
+  name: string;
+  score: number; // 0, 1, or 2
+  max_score: number; // always 2
+  details: string;
+}
+
+export interface SuggestedImprovement {
+  dimension: "prompt_engineering" | "context_engineering" | "agent_readiness";
+  criterion: string;
+  message: string;
+  priority: "high" | "medium" | "low";
+}
+
+export type RiskFlagType =
+  | "ambiguous_task"
+  | "missing_goal"
+  | "missing_output_format"
+  | "missing_constraints"
+  | "missing_verification"
+  | "context_missing"
+  | "context_overload"
+  | "source_of_truth_missing"
+  | "mixed_objectives"
+  | "scope_creep_risk"
+  | "no_human_approval"
+  | "no_evidence_contract"
+  | "unbounded_agent_autonomy"
+  | "stale_or_undated_context";
+
+export interface RiskFlag {
+  flag: RiskFlagType;
+  severity: "low" | "medium" | "high" | "critical";
+  message: string;
+  score_penalty: number;
+}
+
+export interface PromptContextEvaluation {
+  // Type detection
+  detected_prompt_type: PromptType;
+  detected_context_profile: ContextProfile;
+
+  // Scores (0-100, higher is better)
+  prompt_engineering_score: number;
+  context_engineering_score: number;
+  agent_readiness_score: number;
+  robustness_score: number; // 100 = low risk, 0 = high risk
+  overall_score: number;
+
+  // Structured findings
+  criteria: ContextCriterion[];
+  strengths: string[];
+  warnings: string[];
+  missing_elements: string[];
+  suggested_improvements: SuggestedImprovement[];
+  risk_flags: RiskFlag[];
+
+  // Metadata
+  confidence: number; // 0.0-1.0
+  evaluated_at: string;
+}
+
+// =============================================================================
 // Prompt Optimization Engine Types
 // =============================================================================
 

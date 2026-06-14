@@ -11,6 +11,7 @@ import type {
   PromptItem,
   PromptEvaluation,
   PromptHygiene,
+  PromptContextEvaluation,
   EvaluationCriterion,
   DetectedArtifact,
 } from "@/types";
@@ -23,12 +24,14 @@ describe("AnalysisPanel", () => {
     prompt?: PromptItem | null;
     evaluation?: PromptEvaluation | null;
     hygiene?: PromptHygiene | null;
+    contextEval?: PromptContextEvaluation | null;
     isAnalyzing?: boolean;
   }) {
     const {
       prompt = null,
       evaluation = null,
       hygiene = null,
+      contextEval = null,
       isAnalyzing = false,
     } = overrides;
 
@@ -38,6 +41,7 @@ describe("AnalysisPanel", () => {
           selectedPrompt: () => prompt,
           selectedEvaluation: () => evaluation,
           selectedHygiene: () => hygiene,
+          selectedContextEvaluation: () => contextEval,
           isAnalyzing,
           analyzeSelected: mockAnalyzeSelected,
         };

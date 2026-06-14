@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { useAppStore } from "@/stores/appStore";
+import type { RiskFlagType } from "@/types";
 
 const scoreColor = (score: number) =>
   score >= 70 ? "score-high" : score >= 40 ? "score-medium" : "score-low";
@@ -56,12 +57,115 @@ const CircularScore: React.FC<{ score: number; size?: number }> = React.memo(
   },
 );
 
+/** Compact horizontal score bar */
+const MiniScoreBar: React.FC<{
+  label: string;
+  score: number;
+  title?: string;
+}> = React.memo(function MiniScoreBar({ label, score, title }) {
+  const clamped = Math.min(100, Math.max(0, score));
+  return (
+    <div className="context-mini-score" title={title}>
+      <span className="context-mini-label">{label}</span>
+      <div className="score-bar-track score-bar-track-sm">
+        <div
+          className={`score-bar-fill ${scoreColor(clamped)}`}
+          style={{ width: `${clamped}%` }}
+        />
+      </div>
+      <span className={`context-mini-value ${scoreColor(clamped)}`}>
+        {clamped}
+      </span>
+    </div>
+  );
+});
+
+/** Severity pill for risk flags */
+const severityPillClass = (severity: string): string => {
+  switch (severity) {
+    case "critical":
+      return "risk-pill-critical";
+    case "high":
+      return "risk-pill-high";
+    case "medium":
+      return "risk-pill-medium";
+    default:
+      return "risk-pill-low";
+  }
+};
+
+const flagLabel = (flag: RiskFlagType): string => {
+  const labels: Record<RiskFlagType, string> = {
+    ambiguous_task: "Ambiguous Task",
+    missing_goal: "Missing Goal",
+    missing_output_format: "Missing Output Format",
+    missing_constraints: "Missing Constraints",
+    missing_verification: "Missing Verification",
+    context_missing: "Missing Context",
+    context_overload: "Context Overload",
+    source_of_truth_missing: "No Source of Truth",
+    mixed_objectives: "Mixed Objectives",
+    scope_creep_risk: "Scope Creep Risk",
+    no_human_approval: "No Human Approval",
+    no_evidence_contract: "No Evidence Contract",
+    unbounded_agent_autonomy: "Unbounded Autonomy",
+    stale_or_undated_context: "Stale Context",
+  };
+  return labels[flag] || flag;
+};
+
+const promptTypeLabel = (type: string): string => {
+  switch (type) {
+    case "simple_prompt":
+      return "Simple";
+    case "structured_prompt":
+      return "Structured";
+    case "agentic_prompt":
+      return "Agentic";
+    default:
+      return type;
+  }
+};
+
+const contextProfileLabel = (profile: string): string => {
+  switch (profile) {
+    case "minimal":
+      return "Minimal";
+    case "moderate":
+      return "Moderate";
+    case "rich":
+      return "Rich";
+    case "overloaded":
+      return "Overloaded";
+    default:
+      return profile;
+  }
+};
+
+const contextProfileClass = (profile: string): string => {
+  switch (profile) {
+    case "minimal":
+      return "profile-minimal";
+    case "moderate":
+      return "profile-moderate";
+    case "rich":
+      return "profile-rich";
+    case "overloaded":
+      return "profile-overloaded";
+    default:
+      return "";
+  }
+};
+
 export const AnalysisPanel: React.FC = () => {
   const prompt = useAppStore((s) => s.selectedPrompt)();
   const evaluation = useAppStore((s) => s.selectedEvaluation)();
   const hygiene = useAppStore((s) => s.selectedHygiene)();
+  const contextEval = useAppStore((s) => s.selectedContextEvaluation)();
   const isAnalyzing = useAppStore((s) => s.isAnalyzing);
   const analyzeSelected = useAppStore((s) => s.analyzeSelected);
+
+  const [showAllImprovements, setShowAllImprovements] = useState(false);
 
   if (!prompt) {
     return (
@@ -113,6 +217,16 @@ export const AnalysisPanel: React.FC = () => {
       </div>
     );
   }
+
+  const topImprovements = contextEval
+    ? showAllImprovements
+      ? contextEval.suggested_improvements
+      : contextEval.suggested_improvements.slice(0, 3)
+    : [];
+
+  const totalImprovements = contextEval
+    ? contextEval.suggested_improvements.length
+    : 0;
 
   return (
     <div className="panel panel-analysis">
@@ -192,6 +306,115 @@ export const AnalysisPanel: React.FC = () => {
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Prompt & Context Engineering Evaluation ── */}
+        {contextEval && (
+          <div className="analysis-section analysis-section-context">
+            <h3>Prompt &amp; Context Engineering</h3>
+
+            {/* Prompt type and context profile badges */}
+            <div className="context-badges">
+              <span className="context-type-badge">
+                {promptTypeLabel(contextEval.detected_prompt_type)}
+              </span>
+              <span
+                className={`context-profile-badge ${contextProfileClass(contextEval.detected_context_profile)}`}
+                title={`Confidence: ${Math.round(contextEval.confidence * 100)}%`}
+              >
+                {contextProfileLabel(contextEval.detected_context_profile)}{" "}
+                context
+              </span>
+            </div>
+
+            {/* Score summary */}
+            <div className="context-scores">
+              <MiniScoreBar
+                label="Prompt Engineering"
+                score={contextEval.prompt_engineering_score}
+              />
+              <MiniScoreBar
+                label="Context Engineering"
+                score={contextEval.context_engineering_score}
+              />
+              {contextEval.detected_prompt_type === "agentic_prompt" && (
+                <MiniScoreBar
+                  label="Agent Readiness"
+                  score={contextEval.agent_readiness_score}
+                />
+              )}
+              <MiniScoreBar
+                label="Robustness"
+                score={contextEval.robustness_score}
+                title="Higher is better. 100 = minimal detected risk."
+              />
+            </div>
+
+            {/* Overall quality score */}
+            <div className="context-overall">
+              <span className="context-overall-label">Overall Quality</span>
+              <span
+                className={`context-overall-value ${scoreColor(contextEval.overall_score)}`}
+              >
+                {contextEval.overall_score}
+              </span>
+            </div>
+
+            {/* Risk flags */}
+            {contextEval.risk_flags.length > 0 && (
+              <div className="context-risk-flags">
+                <h4>Risk Flags ({contextEval.risk_flags.length})</h4>
+                <div className="risk-flags-list">
+                  {contextEval.risk_flags.map((flag) => (
+                    <span
+                      key={flag.flag}
+                      className={`risk-pill ${severityPillClass(flag.severity)}`}
+                      title={flag.message}
+                    >
+                      {flagLabel(flag.flag)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Suggested improvements */}
+            {topImprovements.length > 0 && (
+              <div className="context-improvements">
+                <h4>Suggested Improvements</h4>
+                <ul className="improvements-list">
+                  {topImprovements.map((imp, i) => (
+                    <li
+                      key={i}
+                      className={`improvement-item priority-${imp.priority}`}
+                    >
+                      <span className="improvement-message">{imp.message}</span>
+                    </li>
+                  ))}
+                </ul>
+                {totalImprovements > 3 && !showAllImprovements && (
+                  <button
+                    className="btn btn-link"
+                    onClick={() => {
+                      setShowAllImprovements(true);
+                    }}
+                  >
+                    Show all {totalImprovements} improvements
+                  </button>
+                )}
+                {showAllImprovements && totalImprovements > 3 && (
+                  <button
+                    className="btn btn-link"
+                    onClick={() => {
+                      setShowAllImprovements(false);
+                    }}
+                  >
+                    Show fewer
+                  </button>
+                )}
               </div>
             )}
           </div>
