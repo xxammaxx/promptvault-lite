@@ -15,10 +15,14 @@ import {
   startFileWatcher,
   stopFileWatcher,
   toggleFavorite as tauriToggleFavorite,
+  createPrompt as tauriCreatePrompt,
+  updatePrompt as tauriUpdatePrompt,
 } from "@/lib/tauri";
 import { evaluatePromptContext } from "@/lib/promptContextEvaluation";
 import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { HandlerContext } from "@/actions/handlers";
+import type { CreatePromptInput, UpdatePromptInput } from "@/types";
 
 // --- Theme Types ---
 
@@ -187,6 +191,9 @@ interface AppState {
   // Theme
   theme: Theme;
 
+  // Dev Mode
+  devMode: boolean;
+
   // Watcher
   currentFolderPath: string | null;
   watcherNotification: string | null;
@@ -215,6 +222,12 @@ interface AppState {
 
   // Theme actions
   toggleTheme: () => void;
+
+  // Dev Mode actions
+  toggleDevMode: () => void;
+
+  // Handler context provider
+  getHandlerContext: () => HandlerContext;
 
   // Derived
   filteredPrompts: () => PromptItem[];
@@ -260,6 +273,15 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Theme state
   theme: getThemeFromStorage(),
+
+  // Dev Mode state
+  devMode: (() => {
+    try {
+      return localStorage.getItem("promptvault.devMode") === "true";
+    } catch {
+      return false;
+    }
+  })(),
 
   // Watcher state
   currentFolderPath: null,
@@ -391,6 +413,45 @@ export const useAppStore = create<AppState>((set, get) => ({
       saveThemeToStorage(next);
       return { theme: next };
     });
+  },
+
+  // Dev Mode actions
+  toggleDevMode: () => {
+    set((state) => {
+      const next = !state.devMode;
+      try {
+        if (next) {
+          localStorage.setItem("promptvault.devMode", "true");
+        } else {
+          localStorage.removeItem("promptvault.devMode");
+        }
+      } catch {
+        // silent fail
+      }
+      return { devMode: next };
+    });
+  },
+
+  // Handler context builder
+  getHandlerContext: (): HandlerContext => {
+    const state = get();
+    return {
+      getPrompts: () => state.prompts,
+      getEvaluation: (promptId: string) => state.evaluations[promptId] ?? null,
+      getHygiene: (promptId: string) => state.hygiene[promptId] ?? null,
+      getContextEvaluation: (promptId: string) =>
+        state.contextEvaluations[promptId] ?? null,
+      evaluatePrompt: (promptId: string, content: string) =>
+        evaluatePrompt(promptId, content),
+      analyzeHygiene: (promptId: string, content: string) =>
+        analyzeHygiene(promptId, content),
+      createPrompt: async (input: CreatePromptInput) => {
+        return tauriCreatePrompt(input);
+      },
+      updatePrompt: async (input: UpdatePromptInput) => {
+        return tauriUpdatePrompt(input);
+      },
+    };
   },
 
   // Derived data

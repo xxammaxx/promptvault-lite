@@ -4,6 +4,8 @@ import type {
   PromptEvaluation,
   PromptHygiene,
   AnalysisReport,
+  CreatePromptInput,
+  UpdatePromptInput,
 } from "@/types";
 
 // =============================================================================
@@ -102,4 +104,18 @@ export async function startFileWatcher(path: string): Promise<void> {
 
 export async function stopFileWatcher(): Promise<void> {
   await invoke("stop_file_watcher");
+}
+
+// --- Prompt CRUD ---
+
+export async function createPrompt(
+  input: CreatePromptInput,
+): Promise<PromptItem> {
+  return invoke<PromptItem>("create_prompt", { input });
+}
+
+export async function updatePrompt(
+  input: UpdatePromptInput,
+): Promise<PromptItem> {
+  return invoke<PromptItem>("update_prompt", { input });
 }

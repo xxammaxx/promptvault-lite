@@ -58,6 +58,10 @@ pub fn run() {
             commands::export::export_zip,
             commands::persistence::load_cache,
             commands::persistence::save_cache,
+            // Action Layer Commands (Issue #90)
+            commands::actions::detect_artifacts_action,
+            commands::actions::create_prompt,
+            commands::actions::update_prompt,
         ])
         .run(tauri::generate_context!())
         .expect("Fehler beim Starten der Tauri-Anwendung");

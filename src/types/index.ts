@@ -69,7 +69,13 @@ export type ArtifactCategory =
   | "JSON_DUMP"
   | "CODE_DUMP"
   | "PII"
-  | "SECRET";
+  | "SECRET"
+  | "CHAT_META"
+  | "SCOPE_POLLUTION"
+  | "OCR_RESIDUE"
+  | "ROLE_MISMATCH"
+  | "MISSING_STRUCTURE"
+  | "EVIDENCE_BLOCK";
 
 export interface AnalysisReport {
   evaluations: PromptEvaluation[];
@@ -221,4 +227,196 @@ export interface OptimizationChange {
     | "add_section"
     | "reorder";
   description: string;
+}
+
+// =============================================================================
+// Typed Local Action Layer Types
+// =============================================================================
+
+/** All registered action names */
+export type ActionName =
+  | "prompts.search"
+  | "prompts.get"
+  | "prompts.create"
+  | "prompts.update"
+  | "prompts.score"
+  | "prompts.detect_artifacts"
+  | "prompts.optimize"
+  | "collections.list"
+  | "qa.load_fixture"
+  | "qa.compare_score";
+
+/** Risk level for an action */
+export type ActionRisk = "low" | "medium" | "high" | "critical";
+
+/** Read/Write classification */
+export type ActionAccess = "read" | "write";
+
+/** UI state impact of an action */
+export type UIStateImpact = "none" | "selection" | "navigation" | "modal";
+
+/** Typed contract for a single action */
+export interface ActionContract {
+  name: ActionName;
+  description: string;
+  risk: ActionRisk;
+  access: ActionAccess;
+  uiStateImpact: UIStateImpact;
+  approvalRequired: boolean;
+  evidenceRequired: boolean;
+  validateInput: (input: unknown) => ValidationResult;
+  validateOutput: (output: unknown) => ValidationResult;
+}
+
+/** Validation result with optional errors */
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+/** Evidence log entry for every action call */
+export interface EvidenceLogEntry {
+  timestamp: string;
+  action: ActionName | "(unknown)";
+  input_hash: string;
+  result: "success" | "error" | "blocked";
+  duration_ms: number;
+  error?: string;
+}
+
+/** Input type for prompts.search */
+export interface SearchInput {
+  query: string;
+  filters?: PromptFilters;
+  limit?: number;
+  offset?: number;
+}
+
+/** Output type for prompts.search */
+export interface SearchOutput {
+  results: PromptItem[];
+  total: number;
+  query: string;
+  duration_ms: number;
+}
+
+/** Input type for prompts.score */
+export interface ScoreInput {
+  prompt_id: string;
+  content?: string;
+}
+
+/** Output type for prompts.score */
+export interface ScoreOutput {
+  quality: PromptEvaluation;
+  hygiene: PromptHygiene;
+  context: PromptContextEvaluation;
+  combined_score: number;
+}
+
+/** Input type for prompts.detect_artifacts */
+export interface DetectArtifactsInput {
+  content: string;
+}
+
+/** Output type for prompts.detect_artifacts */
+export interface DetectArtifactsOutput {
+  artifacts: DetectedArtifact[];
+  hygiene_score: number;
+  status: HygieneStatus;
+  categories_found: ArtifactCategory[];
+}
+
+/** Input type for prompts.optimize */
+export interface OptimizeInput {
+  content: string;
+  mode: OptimizationMode;
+  target_format?: "standard" | "agentic";
+}
+
+/** Output type for prompts.optimize */
+export interface OptimizeOutput {
+  original: string;
+  optimized: string;
+  changes: OptimizationChange[];
+  warnings: string[];
+  before_score?: number;
+  after_score?: number;
+}
+
+/** Input type for prompts.create */
+export interface CreatePromptInput {
+  title: string;
+  content: string;
+  category?: string;
+  tags?: string[];
+  description?: string;
+}
+
+/** Output type for prompts.create */
+export interface CreatePromptOutput {
+  prompt: PromptItem;
+  created: boolean;
+}
+
+/** Input type for prompts.update */
+export interface UpdatePromptInput {
+  prompt_id: string;
+  content?: string;
+  title?: string;
+  category?: string;
+  tags?: string[];
+  description?: string;
+}
+
+/** Output type for prompts.update */
+export interface UpdatePromptOutput {
+  prompt: PromptItem;
+  updated: boolean;
+  changed_fields: string[];
+}
+
+/** Output type for collections.list */
+export interface CollectionListOutput {
+  collections: CollectionSummary[];
+  total_prompts: number;
+}
+
+export interface CollectionSummary {
+  category: string;
+  count: number;
+  avg_score: number;
+}
+
+/** Input type for qa.load_fixture */
+export interface LoadFixtureInput {
+  fixture_name: string;
+}
+
+/** Output type for qa.load_fixture */
+export interface LoadFixtureOutput {
+  content: string;
+  loaded: boolean;
+}
+
+/** Input type for qa.compare_score */
+export interface CompareScoreInput {
+  prompt_id_a: string;
+  prompt_id_b: string;
+}
+
+/** Output type for qa.compare_score */
+export interface CompareScoreOutput {
+  a: { overall_score: number; prompt_engineering_score: number };
+  b: { overall_score: number; prompt_engineering_score: number };
+  delta: number;
+  better: "a" | "b" | "tie";
+}
+
+/** Action dispatch result */
+export interface ActionResult<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  evidence?: EvidenceLogEntry;
 }
