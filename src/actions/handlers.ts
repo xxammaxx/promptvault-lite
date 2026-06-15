@@ -109,7 +109,8 @@ export function handleSearch(input: unknown): SearchOutput {
     if (filters) {
       if (filters.favoritesOnly && !p.is_favorite) return false;
       if (filters.category && p.category !== filters.category) return false;
-      if (filters.tags.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime safety: input is `unknown` cast to SearchInput, tags may be absent
+      if (filters.tags && filters.tags.length > 0) {
         if (!filters.tags.some((t) => p.tags.includes(t))) return false;
       }
     }

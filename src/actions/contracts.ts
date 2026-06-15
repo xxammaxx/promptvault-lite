@@ -375,7 +375,7 @@ export const ACTION_CONTRACTS: Record<ActionName, ActionContract> = {
     description: "Update an existing prompt's content or metadata",
     risk: "high",
     access: "write",
-    uiStateImpact: "none",
+    uiStateImpact: "selection",
     approvalRequired: true,
     evidenceRequired: true,
     validateInput: validateUpdateInput,

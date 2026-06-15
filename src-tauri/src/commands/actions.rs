@@ -5,30 +5,17 @@
 // They delegate to existing analysis modules and provide create/update CRUD.
 
 use crate::analysis;
-use crate::models::{PromptEvaluation, PromptHygiene, PromptItem};
+use crate::models::PromptItem;
 use serde::{Deserialize, Serialize};
-use tauri::State;
 use std::fs;
 use std::path::PathBuf;
+use tauri::State;
 
 use crate::commands::scan::AppState;
 
 // =============================================================================
 // Input/Output types (mirror TypeScript side)
 // =============================================================================
-
-#[derive(Debug, Deserialize)]
-pub struct ScoreInput {
-    pub prompt_id: String,
-    pub content: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ScoreOutput {
-    pub quality: PromptEvaluation,
-    pub hygiene: PromptHygiene,
-    pub combined_score: u8,
-}
 
 #[derive(Debug, Deserialize)]
 pub struct DetectArtifactsInput {
@@ -78,30 +65,9 @@ pub struct UpdatePromptOutput {
 // Commands
 // =============================================================================
 
-#[tauri::command]
-pub async fn score_prompt(input: ScoreInput) -> Result<ScoreOutput, String> {
-    let content = input.content.unwrap_or_default();
-
-    if content.trim().is_empty() {
-        return Err("Content is empty — cannot score an empty prompt.".into());
-    }
-
-    let quality = analysis::quality::evaluate_prompt(&content, &input.prompt_id);
-    let hygiene = analysis::hygiene::analyze_hygiene(&content, &input.prompt_id);
-
-    let combined_score = ((quality.overall_score as f64 * 0.4)
-        + (hygiene.hygiene_score as f64 * 0.2)
-        + ((100u8.saturating_sub(
-            hygiene.artifacts.len().min(100) as u8
-        )) as f64 * 0.4))
-        .round()
-        .clamp(0.0, 100.0) as u8;
-
-    Ok(ScoreOutput {
-        quality,
-        hygiene,
-        combined_score,
-    })
+/// Escape a string value for safe embedding in YAML double-quoted strings.
+fn yaml_escape(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
 #[tauri::command]
@@ -124,8 +90,12 @@ pub async fn create_prompt(
 ) -> Result<CreatePromptOutput, String> {
     // Get vault path
     let vault_path = {
-        let vp = state.vault_path.lock().map_err(|e| format!("Lock error: {}", e))?;
-        vp.clone().ok_or_else(|| "No vault path set. Scan a directory first.".to_string())?
+        let vp = state
+            .vault_path
+            .lock()
+            .map_err(|e| format!("Lock error: {}", e))?;
+        vp.clone()
+            .ok_or_else(|| "No vault path set. Scan a directory first.".to_string())?
     };
 
     // Generate a new prompt ID
@@ -150,9 +120,9 @@ pub async fn create_prompt(
     // Build frontmatter
     let frontmatter = format!(
         "---\ntitle: \"{}\"\ndescription: \"{}\"\ncategory: \"{}\"\nversion: \"1.0.0\"\ntags: [{}]\ncreated_at: \"{}\"\n---\n\n{}",
-        title,
-        description,
-        category,
+        yaml_escape(&title),
+        yaml_escape(&description),
+        yaml_escape(&category),
         tags.join(", "),
         now,
         content,
@@ -184,9 +154,18 @@ pub async fn create_prompt(
         is_favorite: false,
     };
 
-    // Add to in-memory state
-    if let Ok(mut prompts) = state.prompts.lock() {
-        prompts.push(prompt.clone());
+    // Add to in-memory state (file already on disk, so warn but don't fail)
+    match state.prompts.lock() {
+        Ok(mut prompts) => {
+            prompts.push(prompt.clone());
+        }
+        Err(e) => {
+            log::warn!(
+                "Prompt file written to disk but failed to update in-memory state: {}. \
+                 A subsequent scan will recover the file.",
+                e
+            );
+        }
     }
 
     Ok(CreatePromptOutput {
@@ -202,13 +181,22 @@ pub async fn update_prompt(
 ) -> Result<UpdatePromptOutput, String> {
     // Verify vault path is set (write goes to file_path from the prompt record)
     let _vault_path = {
-        let vp = state.vault_path.lock().map_err(|e| format!("Lock error: {}", e))?;
-        vp.clone().ok_or_else(|| "No vault path set. Scan a directory first.".to_string())?
+        let vp = state
+            .vault_path
+            .lock()
+            .map_err(|e| format!("Lock error: {}", e))?;
+        vp.clone()
+            .ok_or_else(|| "No vault path set. Scan a directory first.".to_string())?
     };
 
     // Find and update prompt in memory
-    let mut prompts = state.prompts.lock().map_err(|e| format!("Lock error: {}", e))?;
-    let idx = prompts.iter().position(|p| p.id == input.prompt_id)
+    let mut prompts = state
+        .prompts
+        .lock()
+        .map_err(|e| format!("Lock error: {}", e))?;
+    let idx = prompts
+        .iter()
+        .position(|p| p.id == input.prompt_id)
         .ok_or_else(|| format!("Prompt not found: {}", input.prompt_id))?;
 
     let prompt = &mut prompts[idx];
@@ -241,9 +229,9 @@ pub async fn update_prompt(
     let file_path = prompt.file_path.clone();
     let full_content = format!(
         "---\ntitle: \"{}\"\ndescription: \"{}\"\ncategory: \"{}\"\nversion: \"{}\"\ntags: [{}]\nupdated_at: \"{}\"\n---\n\n{}",
-        prompt.title,
-        prompt.description,
-        prompt.category,
+        yaml_escape(&prompt.title),
+        yaml_escape(&prompt.description),
+        yaml_escape(&prompt.category),
         prompt.version,
         prompt.tags.join(", "),
         prompt.updated_at,
