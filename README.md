@@ -3,7 +3,7 @@
 > **Local desktop app for managing, analyzing, and optimizing prompts — built with Tauri, React, TypeScript, and Rust.**
 
 [![CI](https://github.com/xxammaxx/promptvault-lite/actions/workflows/ci.yml/badge.svg)](https://github.com/xxammaxx/promptvault-lite/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/badge/release-v1.5.0--rc.1-orange)](https://github.com/xxammaxx/promptvault-lite/releases/tag/v1.5.0-rc.1)
+[![Release](https://img.shields.io/badge/release-v1.6.0-blue)](https://github.com/xxammaxx/promptvault-lite/releases/tag/v1.6.0)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Stack](https://img.shields.io/badge/stack-Tauri%20%7C%20React%20%7C%20Rust-4444ff)](#tech-stack)
 
@@ -20,7 +20,7 @@
 |      [![Optimizer](docs/assets/screenshots/promptvault-optimizer.png)](docs/assets/screenshots/promptvault-optimizer.png)       |
 |                                   **Prompt Optimizer** — Three-mode local optimization engine                                   |
 
-> **Note:** Screenshots show the web frontend (Vite dev server). Full desktop QA pending for `v1.5.0` stable.
+> **Note:** Screenshots show the web frontend (Vite dev server). Desktop QA completed for `v1.6.0` stable.
 
 ---
 
@@ -35,7 +35,7 @@ PromptVault Lite is a **local-first desktop application** for managing prompt co
 - **📁 Local Prompt Archive** — Recursively scan directories of `.md` files with YAML frontmatter
 - **🌳 Explorer with File Tree** — Browse prompts in a hierarchical tree with full-text search, category/tag filters, and favorites
 - **📊 Quality Analysis** — 10 weighted criteria scoring each prompt on role clarity, goal definition, context quality, and more
-- **🧹 Hygiene Analysis** — Detects 12 artifact categories including PII, secrets, log output, and build artifacts
+- **🧹 Hygiene Analysis** — Detects 18 artifact categories including PII, secrets, log output, build artifacts, and evidence blocks
 - **⚡ Prompt Optimization Engine** — Three deterministic modes (conservative, balanced, aggressive) for local prompt improvement
 - **🌓 Dark Mode** — Full light/dark/auto theme support with OS preference detection and localStorage persistence
 - **🖥️ Desktop App** — Native Tauri window with resizable panels, keyboard shortcuts, and system integration
@@ -81,18 +81,20 @@ cargo test --manifest-path src-tauri/Cargo.toml   # Rust tests
 
 |                     |                                                                                                                                                                                                              |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Current Release** | `v1.5.0-rc.1` — [Release Notes](https://github.com/xxammaxx/promptvault-lite/releases/tag/v1.5.0-rc.1)                                                                                                       |
-| **Status**          | 🟠 Release Candidate — published as pre-release                                                                                                                                                              |
-| **Stable**          | `v1.5.0` blocked until human desktop QA                                                                                                                                                                      |
+| **Current Release** | `v1.6.0` — [Release Notes](https://github.com/xxammaxx/promptvault-lite/releases/tag/v1.6.0)                                                                                                                 |
+| **Status**          | 🟢 Stable — source-only release, post-release verified                                                                                                                                                       |
 | **Binaries**        | No native binaries distributed yet — install from source                                                                                                                                                     |
 | **CI**              | [![CI](https://github.com/xxammaxx/promptvault-lite/actions/workflows/ci.yml/badge.svg)](https://github.com/xxammaxx/promptvault-lite/actions/workflows/ci.yml) — 3 green jobs (Frontend, Rust, Secret Scan) |
 
-### What's in v1.5.0-rc.1
+### What's in v1.6.0
 
 - Dark Mode with auto theme detection
 - Resizable explorer sidebar (mouse drag + keyboard)
 - Cross-platform file tree with Windows path normalization
 - Local Prompt Optimization Engine (conservative, balanced, aggressive)
+- Typed local action layer with batch processing support
+- Prompt and context engineering evaluation corpus
+- Expanded hygiene analysis (18 artifact categories including EvidenceBlock, RoleMismatch, MissingStructure)
 - MIT License with SPDX identifiers
 - Real Tauri release icons
 
@@ -202,12 +204,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## Roadmap / Open Work
 
-These are **not release blockers** for the RC. Stable `v1.5.0` requires only manual desktop QA.
+These are **post-v1.6.0** enhancements — not release blockers.
 
 ### Planned (P1/P2)
 
 - Settings Modal (#63)
-- EVIDENCE_BLOCK hygiene category (#66)
+- EVIDENCE_BLOCK hygiene category (#66) — implemented in v1.6.0
 - Prompt suggestions workflow (#45)
 - Agentic Browser Repair Kit (#71)
 
