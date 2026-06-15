@@ -2,7 +2,14 @@
 // Typed Local Action Layer — Public API
 // =============================================================================
 
-export { dispatch, isDeveloperModeEnabled, setDeveloperMode } from "./registry";
+export {
+  dispatch,
+  isDeveloperModeEnabled,
+  setDeveloperMode,
+  setApprovalProvider,
+  getApprovalProvider,
+} from "./registry";
+export type { ApprovalRequest, ApprovalProvider } from "./registry";
 export {
   getActionContract,
   ACTION_CONTRACTS,

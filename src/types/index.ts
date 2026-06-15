@@ -274,12 +274,20 @@ export interface ValidationResult {
   errors: string[];
 }
 
+/** Evidence log result types */
+export type EvidenceResult =
+  | "success"
+  | "error"
+  | "blocked"
+  | "approved"
+  | "denied";
+
 /** Evidence log entry for every action call */
 export interface EvidenceLogEntry {
   timestamp: string;
   action: ActionName | "(unknown)";
   input_hash: string;
-  result: "success" | "error" | "blocked";
+  result: EvidenceResult;
   duration_ms: number;
   error?: string;
 }

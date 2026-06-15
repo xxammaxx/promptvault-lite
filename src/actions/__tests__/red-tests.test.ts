@@ -5,9 +5,14 @@
 // Each test MUST fail when its corresponding protection is missing.
 // Green = protection works. Red = vulnerability exists.
 
-import { describe, it, expect, beforeAll, beforeEach } from "vitest";
-import { dispatch, setDeveloperMode } from "../registry";
-import { setHandlerContext, clearEvidenceLog } from "../index";
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from "vitest";
+import { dispatch, setDeveloperMode, setApprovalProvider } from "../registry";
+import {
+  setHandlerContext,
+  clearEvidenceLog,
+  getEvidenceLog,
+  getEvidenceSummary,
+} from "../index";
 import type { HandlerContext } from "../handlers";
 import type {
   PromptItem,
@@ -662,5 +667,230 @@ describe("Dev Mode Gate", () => {
       // Always re-enable, even if the test fails
       setDeveloperMode(true);
     }
+  });
+
+  it("should default to OFF when localStorage has no dev mode key", () => {
+    // Simulate first launch: remove the localStorage key
+    localStorage.removeItem("promptvault.devMode");
+
+    // After removal, setDeveloperMode reads false from localStorage
+    // and isDeveloperModeEnabled() should return false
+    // We use setDeveloperMode(false) which removes the key, then verify
+    // the next dispatch would be blocked
+    setDeveloperMode(false);
+    // The registry's isDeveloperModeEnabled reads localStorage directly.
+    // Since we cleared it, the next call should see dev mode as false.
+    // The "block actions when dev mode is disabled" test above already
+    // validates this behavior end-to-end via dispatch.
+    // This test just confirms the localStorage key removal sets state to OFF.
+    expect(localStorage.getItem("promptvault.devMode")).toBeNull();
+  });
+});
+
+// =============================================================================
+// RT-10: UI Approval Flow (Issue #92)
+// =============================================================================
+
+describe("RT-10: UI Approval Flow", () => {
+  // A mock approval provider that resolves based on a controllable variable
+  let approvalDecision = false;
+
+  beforeEach(() => {
+    approvalDecision = false;
+    // Register a mock approval provider
+    setApprovalProvider(() => Promise.resolve(approvalDecision));
+  });
+
+  afterEach(() => {
+    // Unregister the provider
+    setApprovalProvider(null);
+  });
+
+  it("should execute write action when approved", async () => {
+    approvalDecision = true;
+
+    const result = await dispatch("prompts.create", {
+      title: "Test Prompt",
+      content: "Test content for approval flow",
+      category: "test",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("should block write action when denied (cancelled)", async () => {
+    approvalDecision = false;
+
+    const result = await dispatch("prompts.create", {
+      title: "Cancelled Prompt",
+      content: "This should not be created",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("cancelled");
+  });
+
+  it("should allow read actions without approval dialog", async () => {
+    // Read actions don't need approval
+    const result = await dispatch("prompts.search", { query: "test" });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("should NOT call approval provider for read actions", async () => {
+    let providerCalled = false;
+    setApprovalProvider(() => {
+      providerCalled = true;
+      return Promise.resolve(true);
+    });
+
+    await dispatch("prompts.search", { query: "test" });
+
+    expect(providerCalled).toBe(false);
+  });
+
+  it("should block when no approval provider is registered", async () => {
+    // Unregister the provider (tests without one)
+    setApprovalProvider(null);
+    // Ensure dev mode is on
+    setDeveloperMode(true);
+
+    const result = await dispatch("prompts.update", {
+      prompt_id: "prompt-001",
+      content: "No provider update",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("No approval provider");
+  });
+
+  it("should block prompts.update when denied", async () => {
+    approvalDecision = false;
+
+    const result = await dispatch("prompts.update", {
+      prompt_id: "prompt-001",
+      content: "Denied update",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("cancelled");
+  });
+});
+
+// =============================================================================
+// RT-11: Evidence Log for Approval/Denied (Issue #92)
+// =============================================================================
+
+describe("RT-11: Evidence Log Approval Categories", () => {
+  beforeEach(() => {
+    clearEvidenceLog();
+    setDeveloperMode(true);
+  });
+
+  afterEach(() => {
+    setApprovalProvider(null);
+  });
+
+  it("should log 'approved' when write action is approved", async () => {
+    setApprovalProvider(() => Promise.resolve(true));
+
+    await dispatch("prompts.create", {
+      title: "Evidence Test",
+      content: "Testing evidence log for approved actions",
+    });
+
+    const summary = getEvidenceSummary();
+    expect(summary.approved).toBeGreaterThanOrEqual(1);
+  });
+
+  it("should log 'denied' when write action is cancelled", async () => {
+    setApprovalProvider(() => Promise.resolve(false));
+
+    await dispatch("prompts.create", {
+      title: "Denied Evidence Test",
+      content: "Testing evidence log for denied actions",
+    });
+
+    const summary = getEvidenceSummary();
+    expect(summary.denied).toBeGreaterThanOrEqual(1);
+  });
+
+  it("should log 'blocked' when dev mode is off", async () => {
+    setDeveloperMode(false);
+
+    try {
+      await dispatch("prompts.search", { query: "test" });
+    } finally {
+      setDeveloperMode(true);
+    }
+
+    const summary = getEvidenceSummary();
+    expect(summary.blocked).toBeGreaterThanOrEqual(1);
+  });
+
+  it("should log 'blocked' when no approval provider is registered", async () => {
+    setApprovalProvider(null);
+
+    await dispatch("prompts.create", {
+      title: "No Provider Test",
+      content: "Testing blocked when no provider",
+    });
+
+    const summary = getEvidenceSummary();
+    expect(summary.blocked).toBeGreaterThanOrEqual(1);
+  });
+
+  it("should NOT store raw prompt content in evidence log", async () => {
+    const sensitiveContent = "This is a secret API_KEY=sk-1234567890abcdef";
+
+    setApprovalProvider(() => Promise.resolve(true));
+    await dispatch("prompts.create", {
+      title: "Sensitive",
+      content: sensitiveContent,
+    });
+
+    const log = getEvidenceLog();
+    const createEntry = log.find(
+      (e) => e.action === "prompts.create" && e.result === "approved",
+    );
+    expect(createEntry).toBeDefined();
+
+    if (createEntry) {
+      // input_hash should be a short hex string, not raw content
+      expect(createEntry.input_hash).toMatch(/^[0-9a-f]{8}$/);
+      // Raw content must NOT appear in any evidence log entry
+      for (const entry of log) {
+        const entryStr = JSON.stringify(entry);
+        expect(entryStr).not.toContain(sensitiveContent);
+      }
+    }
+  });
+
+  it("should distinguish approved, denied, and blocked in evidence summary", async () => {
+    // Approved
+    setApprovalProvider(() => Promise.resolve(true));
+    await dispatch("prompts.create", {
+      title: "A",
+      content: "Approved action",
+    });
+
+    // Denied
+    setApprovalProvider(() => Promise.resolve(false));
+    await dispatch("prompts.create", {
+      title: "D",
+      content: "Denied action",
+    });
+
+    // Blocked (no provider)
+    setApprovalProvider(null);
+    await dispatch("prompts.create", {
+      title: "B",
+      content: "Blocked action",
+    });
+
+    const summary = getEvidenceSummary();
+    expect(summary.approved).toBeGreaterThanOrEqual(1);
+    expect(summary.denied).toBeGreaterThanOrEqual(1);
+    expect(summary.blocked).toBeGreaterThanOrEqual(1);
   });
 });

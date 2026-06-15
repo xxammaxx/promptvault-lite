@@ -2,7 +2,7 @@
 // Action Registry — Central dispatch with validation, approval, and evidence
 // =============================================================================
 
-import type { ActionName, ActionResult } from "@/types";
+import type { ActionName, ActionRisk, ActionResult } from "@/types";
 import { getActionContract } from "./contracts";
 import { logEvidence } from "./evidence";
 import {
@@ -42,6 +42,37 @@ export function setDeveloperMode(enabled: boolean): void {
   } catch {
     // silent fail (private browsing, etc.)
   }
+}
+
+// =============================================================================
+// UI Approval Provider
+// =============================================================================
+
+/** Parameters passed to the UI for approval decision */
+export interface ApprovalRequest {
+  actionName: ActionName;
+  description: string;
+  risk: ActionRisk;
+}
+
+/** Callback type: the UI registers this to handle approval dialogs */
+export type ApprovalProvider = (request: ApprovalRequest) => Promise<boolean>;
+
+let approvalProvider: ApprovalProvider | null = null;
+
+/**
+ * Register an approval provider from the UI layer.
+ * The provider receives an ApprovalRequest and must return a Promise<boolean>.
+ * - `true` = user approved → action proceeds
+ * - `false` = user cancelled → action blocked
+ */
+export function setApprovalProvider(provider: ApprovalProvider | null): void {
+  approvalProvider = provider;
+}
+
+/** Get the current approval provider (for testing) */
+export function getApprovalProvider(): ApprovalProvider | null {
+  return approvalProvider;
 }
 
 // =============================================================================
@@ -96,7 +127,7 @@ export async function dispatch<T = unknown>(
     return {
       success: false,
       error:
-        "Developer mode not enabled. Set promptvault.devMode in localStorage or enable in settings.",
+        "Developer mode not enabled. Enable Developer Mode in Settings to use actions.",
       evidence,
     };
   }
@@ -119,24 +150,62 @@ export async function dispatch<T = unknown>(
     };
   }
 
-  // 4. Approval gate for write actions
+  // 4. Approval gate for write actions (UI-based)
   if (contract.approvalRequired) {
-    // Check for approval token in input (temporary mechanism until UI dialog)
-    const inputObj = input as Record<string, unknown> | null;
-    const hasApprovalToken = inputObj && inputObj._approvalToken === "approved";
-
-    if (!hasApprovalToken) {
+    if (!approvalProvider) {
+      // No UI provider registered — block by default
       const duration = performance.now() - startTime;
       const evidence = logEvidence(
         contract.name,
         input,
         "blocked",
         duration,
-        "Write action requires approval. Include _approvalToken: 'approved' in input.",
+        "Write action requires approval but no approval provider is registered.",
       );
       return {
         success: false,
-        error: `Action "${contract.name}" is a write action and requires approval. Pass _approvalToken: "approved" in the input to proceed.`,
+        error: `Action "${contract.name}" is a write action and requires approval. No approval provider registered.`,
+        evidence,
+      };
+    }
+
+    // Ask the UI for approval (with error handling)
+    let approved: boolean;
+    try {
+      approved = await approvalProvider({
+        actionName: contract.name,
+        description: contract.description,
+        risk: contract.risk,
+      });
+    } catch (err) {
+      const duration = performance.now() - startTime;
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      const evidence = logEvidence(
+        contract.name,
+        input,
+        "error",
+        duration,
+        `Approval provider threw: ${errorMsg}`,
+      );
+      return {
+        success: false,
+        error: `Approval error: ${errorMsg}`,
+        evidence,
+      };
+    }
+
+    if (!approved) {
+      const duration = performance.now() - startTime;
+      const evidence = logEvidence(
+        contract.name,
+        input,
+        "denied",
+        duration,
+        "User denied the write action approval request.",
+      );
+      return {
+        success: false,
+        error: `Action "${contract.name}" was cancelled by the user.`,
         evidence,
       };
     }
@@ -164,7 +233,16 @@ export async function dispatch<T = unknown>(
       };
     }
 
-    // 7. Log evidence
+    // 7. Log evidence (success, with approval note if applicable)
+    if (contract.approvalRequired) {
+      logEvidence(
+        contract.name,
+        input,
+        "approved",
+        execTime,
+        "User approved the write action via UI dialog.",
+      );
+    }
     const evidence = logEvidence(contract.name, input, "success", execTime);
 
     return {
