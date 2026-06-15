@@ -8,26 +8,44 @@ version: 1.5.0
 
 ## v1.5.0 — Phase 5: Feature Completion & Developer Experience
 
-**Datum:** 2026-06-05
+### Unreleased
 
-### Features
+#### Features
+
+- **Typed Local Action Layer:** 10 typisierte lokale Aktionen (`prompts.search`, `prompts.get`, `prompts.create`, `prompts.update`, `prompts.score`, `prompts.detect_artifacts`, `prompts.optimize`, `collections.list`, `qa.load_fixture`, `qa.compare_score`) mit Schema-validierten Input/Output-Verträgen. Jede Aktion besitzt ein eigenes Request/Response-Schema mit Typsicherheit zur Compile-Zeit. (#90)
+- **6 neue Artefakt-Kategorien:** `CHAT_META`, `SCOPE_POLLUTION`, `OCR_RESIDUE`, `ROLE_MISMATCH`, `MISSING_STRUCTURE`, `EVIDENCE_BLOCK` erweitern die Hygieneanalyse um KI-spezifische Prompt-Artefakte. (#90)
+- **Read-Only-First-Strategie:** Standardmäßig sind nur lesende Aktionen (`prompts.search`, `prompts.get`, `prompts.score`, `collections.list`) verfügbar. Schreibaktionen erfordern explizite Freigabe über Approval-Gates. (#90)
+
+#### Backend
+
+- **Developer-Mode-Gate:** Neuer `dev_mode`-Schalter steuert den Zugriff auf alle Aktionen. Im Standard-Modus sind ausschließlich lesende Aktionen freigeschaltet. Entwicklermodus aktiviert das vollständige Action-Repertoire inklusive Schreib- und QA-Aktionen. (#90)
+- **Evidence-Log:** Jeder Aktionsaufruf wird mit Timestamp, Action-Typ, Parametern und Ergebnisstatus in einer strukturierten Log-Datei aufgezeichnet. Ermöglicht vollständige Audit-Trail-Transparenz. (#90)
+- **Schema-Validierung:** Alle Action-Inputs werden vor der Ausführung gegen definierte JSON-Schemata validiert. Bei Schemaverletzung erfolgt ein frühzeitiger Abbruch mit detaillierter Fehlermeldung. (#90)
+
+#### Testing
+
+- **25 Red Tests:** Umfassende Sicherheitsszenarien für den Action Layer – unbefugter Zugriff ohne Developer-Mode, Schema-Verletzungen, fehlende Berechtigungen für Schreibaktionen, Edge-Cases bei leeren Inputs. Alle Tests bestätigen das erwartete Fehlverhalten (Rot-Phase). (#90)
+
+### v1.5.0 (2026-06-05)
+
+#### Features
 
 - **Favoriten-Backend:** `toggle_favorite(prompt_id)` toggled Favoriten-Status via SQLite. `get_favorites()` gibt alle favorisierten Prompt-IDs zurück. Persistenz über Neustarts via `Database::set_favorite()`. ADR-006: Database als separates `tauri::State`. (#24)
 - **Score-Filter:** `filteredPrompts()` wertet `evaluations` für `minScore`/`maxScore`-Filter aus. Prompt ohne Evaluation → Score = 0. Nur aktiv wenn Filter nicht Default (0–100). ADR-007: reines Frontend-Feature. (#23)
 - **Favoriten-UI:** Button in Detailansicht mit optimistischem UI-Update, Revert bei Backend-Fehler, ARIA-Attribute (`aria-label`, `aria-pressed`). FileTree zeigt ★-Indikator mit `favorite-indicator` CSS-Klasse. (#25)
 
-### Backend
+#### Backend
 
 - **Database-Mutex:** `Database.conn` von `rusqlite::Connection` auf `Mutex<Connection>` umgestellt. Ermöglicht `Send + Sync` für `tauri::State<Database>`. Eigene `lock_conn()`-Hilfsfunktion.
 - **ADR-008:** Integrationstests in `command_errors.rs` verwenden `Database::new_in_memory()` und rufen `_impl`-Hilfsfunktionen direkt auf.
 - **Neue Rust-Tests:** 5 Integrationstests für Favoriten (unknown_id, set, unset, empty, returns_favorites).
 
-### Frontend
+#### Frontend
 
 - **Search-Filter umstrukturiert:** `return`-Early-Exit entfernt — andere Filter (Score, Favoriten) werden jetzt bei aktivem Search-Filter mitgeprüft.
 - **toggleFavorite Store-Action async:** Optimistisches UI-Update mit Revert bei `Err`. Import von `@/lib/tauri` `toggleFavorite`.
 
-### Test Summary
+#### Test Summary
 
 - Rust: 96 lib (1 ignored) + 17 integration = 113 total (0 failures, 0 clippy warnings)
 - Frontend: 93 tests (0 failures)

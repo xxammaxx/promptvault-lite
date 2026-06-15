@@ -6,6 +6,7 @@ use std::sync::Mutex;
 pub struct AppState {
     pub prompts: Mutex<Vec<PromptItem>>,
     pub watcher: Mutex<DebouncedWatcher>,
+    pub vault_path: Mutex<Option<String>>,
 }
 
 impl Default for AppState {
@@ -19,6 +20,7 @@ impl AppState {
         Self {
             prompts: Mutex::new(Vec::new()),
             watcher: Mutex::new(DebouncedWatcher::new()),
+            vault_path: Mutex::new(None),
         }
     }
 }
@@ -35,6 +37,9 @@ pub fn scan_directory(
     // Update App-State
     if let Ok(mut cached) = state.prompts.lock() {
         *cached = prompts.clone();
+    }
+    if let Ok(mut vp) = state.vault_path.lock() {
+        *vp = Some(path.clone());
     }
 
     // Auto-start watcher after scan

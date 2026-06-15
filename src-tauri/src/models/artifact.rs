@@ -26,6 +26,18 @@ pub enum ArtifactCategory {
     Pii,
     #[serde(rename = "SECRET")]
     Secret,
+    #[serde(rename = "CHAT_META")]
+    ChatMeta,
+    #[serde(rename = "SCOPE_POLLUTION")]
+    ScopePollution,
+    #[serde(rename = "OCR_RESIDUE")]
+    OcrResidue,
+    #[serde(rename = "ROLE_MISMATCH")]
+    RoleMismatch,
+    #[serde(rename = "MISSING_STRUCTURE")]
+    MissingStructure,
+    #[serde(rename = "EVIDENCE_BLOCK")]
+    EvidenceBlock,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

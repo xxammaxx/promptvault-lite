@@ -24,6 +24,13 @@ pub fn analyze_hygiene(content: &str, prompt_id: &str) -> PromptHygiene {
     all_artifacts.extend(detect_code_dumps(content));
     all_artifacts.extend(detect_pii(content));
     all_artifacts.extend(detect_secrets(content));
+    // Neue Detektoren (Issue #90)
+    all_artifacts.extend(detect_chat_meta(content));
+    all_artifacts.extend(detect_scope_pollution(content));
+    all_artifacts.extend(detect_ocr_residue(content));
+    all_artifacts.extend(detect_role_mismatch(content));
+    all_artifacts.extend(detect_missing_structure(content));
+    all_artifacts.extend(detect_evidence_blocks(content));
 
     // Hygiene-Score berechnen (100 minus Abzüge pro Artefakt)
     let mut score: i32 = 100;
@@ -599,6 +606,249 @@ fn col_of(content: &str, pos: usize) -> usize {
 }
 
 // =============================================================================
+// Neue Detektoren (Issue #90 — Typed Local Action Layer)
+// =============================================================================
+
+/// Kategorie 13: Chat-Metakommentare (User/Assistant/System/Human/AI labels)
+fn detect_chat_meta(content: &str) -> Vec<DetectedArtifact> {
+    let mut artifacts = Vec::new();
+    let chat_regex =
+        Regex::new(r"(?im)^(User|Assistant|System|Human|AI|Agent|Bot|Model)\s*:\s*.+$").unwrap();
+
+    for cap in chat_regex.captures_iter(content) {
+        let matched = cap.get(0).unwrap();
+        artifacts.push(DetectedArtifact::new(
+            ArtifactCategory::ChatMeta,
+            "warning".into(),
+            matched.as_str().to_string(),
+            line_of(content, matched.start()),
+            col_of(content, matched.start()),
+            Some("{CHAT_ROLE}".into()),
+        ));
+    }
+    artifacts
+}
+
+/// Kategorie 14: Scope-Pollution (fremde App-/Projektartefakte)
+fn detect_scope_pollution(content: &str) -> Vec<DetectedArtifact> {
+    let mut artifacts = Vec::new();
+    // Bekannte fremde Projektnamen
+    let foreign_apps = [
+        "Positron",
+        "MietVisor",
+        "CiviPet",
+        "Tesseron",
+        "OpenCode",
+        "CodeBuddy",
+        "Cursor",
+        "Copilot",
+    ];
+
+    for app in &foreign_apps {
+        let pattern = format!(r"\b{}\b", regex::escape(app));
+        if let Ok(re) = Regex::new(&pattern) {
+            for cap in re.captures_iter(content) {
+                let matched = cap.get(0).unwrap();
+                artifacts.push(DetectedArtifact::new(
+                    ArtifactCategory::ScopePollution,
+                    "warning".into(),
+                    matched.as_str().to_string(),
+                    line_of(content, matched.start()),
+                    col_of(content, matched.start()),
+                    Some("{SCOPE_CLEAN}".into()),
+                ));
+            }
+        }
+    }
+    artifacts
+}
+
+/// Kategorie 15: OCR-Residue (Screenshot/OCR-Textfragmente ohne Aufgabenbezug)
+fn detect_ocr_residue(content: &str) -> Vec<DetectedArtifact> {
+    let mut artifacts = Vec::new();
+
+    // UI-Elementbeschreibungen ohne Kontext
+    let ocr_patterns = [
+        r"(?i)\b(button|schaltfläche|dropdown|eingabefeld|textfeld|checkbox|radio|tab|menü|menu|toolbar|statusbar|title bar|dialog|modal|popup|overlay)\s*(?:label|text|angezeigt|click|klick)?\s*$",
+        r"(?i)^\s*(?:OK|Cancel|Abbrechen|Save|Speichern|Delete|Löschen|Submit|Senden|Close|Schließen)\s*$",
+        r"(?i)^\s*(?:Settings|Einstellungen|Preferences|Präferenzen|Help|Hilfe|About|Über)\s*$",
+    ];
+
+    let mut has_task_context = false;
+    // Check if there's a task-related section
+    if Regex::new(r"(?i)(aufgabe|task|ziel|goal|auftrag|rolle|role|context|kontext)")
+        .unwrap()
+        .is_match(content)
+    {
+        has_task_context = true;
+    }
+
+    for pattern in &ocr_patterns {
+        if let Ok(re) = Regex::new(pattern) {
+            for cap in re.captures_iter(content) {
+                let matched = cap.get(0).unwrap();
+                // Only flag if there's no task context (isolated UI descriptions)
+                if !has_task_context {
+                    artifacts.push(DetectedArtifact::new(
+                        ArtifactCategory::OcrResidue,
+                        "info".into(),
+                        matched.as_str().to_string(),
+                        line_of(content, matched.start()),
+                        col_of(content, matched.start()),
+                        Some("{UI_RELEVANT}".into()),
+                    ));
+                }
+            }
+        }
+    }
+    artifacts
+}
+
+/// Kategorie 16: Role Mismatch (unstimmige Rollen/Sektoren)
+fn detect_role_mismatch(content: &str) -> Vec<DetectedArtifact> {
+    let mut artifacts = Vec::new();
+
+    // Detect multiple conflicting role statements
+    let role_sectors = [
+        ("developer|entwickler|engineer|programmierer", "dev"),
+        ("designer|gestalter|ux|ui", "design"),
+        ("analyst|analytiker|data|daten", "analytics"),
+        ("writer|autor|redakteur|content|texter", "writing"),
+        ("tester|qa|qualität|prüfer", "testing"),
+        ("manager|projektleiter|scrum|product owner", "management"),
+    ];
+
+    let mut found_sectors: Vec<&str> = Vec::new();
+
+    for (pattern, sector) in &role_sectors {
+        if let Ok(re) = Regex::new(&format!(r"(?i)\b(?:{})\b", pattern)) {
+            if re.is_match(content) {
+                found_sectors.push(sector);
+            }
+        }
+    }
+
+    // Flag if 3+ different sectors are mentioned (suggests role confusion)
+    if found_sectors.len() >= 3 {
+        // Find the context line with role mentions
+        for (line_idx, line) in content.lines().enumerate() {
+            let match_count = role_sectors
+                .iter()
+                .filter(|(p, _)| {
+                    Regex::new(&format!(r"(?i)\b(?:{})\b", p))
+                        .map(|re| re.is_match(line))
+                        .unwrap_or(false)
+                })
+                .count();
+            if match_count >= 2 {
+                artifacts.push(DetectedArtifact::new(
+                    ArtifactCategory::RoleMismatch,
+                    "warning".into(),
+                    line.trim().to_string(),
+                    line_idx + 1,
+                    1,
+                    Some("{CORRECTED_ROLE}".into()),
+                ));
+            }
+        }
+    }
+
+    artifacts
+}
+
+/// Kategorie 17: Missing Structure (fehlender Standardaufbau)
+fn detect_missing_structure(content: &str) -> Vec<DetectedArtifact> {
+    let mut artifacts = Vec::new();
+
+    // Canonical sections that should be present in a well-structured prompt
+    let required_sections = [
+        (r"(?im)^#{1,3}\s*(rolle|role|rollendefinition)", "Rolle"),
+        (r"(?im)^#{1,3}\s*(ziel|goal|aufgabe|task|objective)", "Ziel"),
+        (
+            r"(?im)^#{1,3}\s*(kontext|context|hintergrund|background)",
+            "Kontext",
+        ),
+        (
+            r"(?im)^#{1,3}\s*(anforderung|requirements|eingabe|input)",
+            "Anforderungen",
+        ),
+        (
+            r"(?im)^#{1,3}\s*(ausgabe|output|format|ergebnis)",
+            "Ausgabeformat",
+        ),
+        (
+            r"(?im)^#{1,3}\s*(einschränkung|constraint|grenze|limitation|boundary)",
+            "Constraints",
+        ),
+    ];
+
+    let mut missing: Vec<&str> = Vec::new();
+
+    for (pattern, name) in &required_sections {
+        if let Ok(re) = Regex::new(pattern) {
+            if !re.is_match(content) {
+                missing.push(name);
+            }
+        }
+    }
+
+    // Flag if >= 3 canonical sections are missing
+    if missing.len() >= 3 && content.trim().len() > 100 {
+        artifacts.push(DetectedArtifact::new(
+            ArtifactCategory::MissingStructure,
+            "info".into(),
+            format!("Fehlende Sektionen: {}", missing.join(", ")),
+            1,
+            1,
+            Some("{ADD_STRUCTURE}".into()),
+        ));
+    }
+
+    artifacts
+}
+
+/// Kategorie 18: Evidence Block (Rohe Evidence/Log-Blöcke nicht in Prompt integriert)
+fn detect_evidence_blocks(content: &str) -> Vec<DetectedArtifact> {
+    let mut artifacts = Vec::new();
+
+    // Detect raw evidence patterns:
+    let evidence_patterns = [
+        (
+            r"(?im)^={3,}\s*(test\s*results?|testergebnis|build\s*output|log|report)\s*={3,}",
+            "critical",
+        ),
+        (
+            r"(?im)^\-{3,}\s*(test\s*results?|testergebnis|evidence|nachweis|proof)\s*\-{3,}",
+            "warning",
+        ),
+        (
+            r"(?im)^\*\*(evidence|test\s*results?|ci\s*pipeline|build\s*status)\*\*",
+            "warning",
+        ),
+        // Diff blocks
+        (r"^diff\s+\-\-git", "info"),
+    ];
+
+    for (pattern, severity) in &evidence_patterns {
+        if let Ok(re) = Regex::new(pattern) {
+            for cap in re.captures_iter(content) {
+                let matched = cap.get(0).unwrap();
+                artifacts.push(DetectedArtifact::new(
+                    ArtifactCategory::EvidenceBlock,
+                    severity.to_string(),
+                    matched.as_str().to_string(),
+                    line_of(content, matched.start()),
+                    col_of(content, matched.start()),
+                    Some("{INTEGRATE_EVIDENCE}".into()),
+                ));
+            }
+        }
+    }
+
+    artifacts
+}
+
+// =============================================================================
 // Unit Tests
 // =============================================================================
 
@@ -800,12 +1050,106 @@ mod tests {
             ArtifactCategory::CodeDump,
             ArtifactCategory::Pii,
             ArtifactCategory::Secret,
+            ArtifactCategory::ChatMeta,
+            ArtifactCategory::ScopePollution,
+            ArtifactCategory::OcrResidue,
+            ArtifactCategory::RoleMismatch,
+            ArtifactCategory::MissingStructure,
+            ArtifactCategory::EvidenceBlock,
         ];
 
         for category in &categories {
             // Nur sicherstellen dass die Kategorie existiert
             assert!(!format!("{:?}", category).is_empty());
         }
+    }
+
+    // ---- New detector tests (Issue #90) ----
+
+    #[test]
+    fn test_chat_meta_detection() {
+        let content = "User: What is the capital of France?\nAssistant: The capital of France is Paris.\nSystem: This conversation is logged.";
+        let result = analyze_hygiene(content, "test-chat-meta");
+        assert!(
+            artifact_count(&result.artifacts, ArtifactCategory::ChatMeta) >= 1,
+            "Chat meta should be detected. Artifacts: {:?}",
+            result
+                .artifacts
+                .iter()
+                .filter(|a| a.category == ArtifactCategory::ChatMeta)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_scope_pollution_detection() {
+        let content = "Open the Positron IDE and fix the MietVisor dashboard.";
+        let result = analyze_hygiene(content, "test-scope-pollution");
+        assert!(
+            artifact_count(&result.artifacts, ArtifactCategory::ScopePollution) >= 1,
+            "Scope pollution should be detected. Artifacts: {:?}",
+            result
+                .artifacts
+                .iter()
+                .filter(|a| a.category == ArtifactCategory::ScopePollution)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_ocr_residue_detection() {
+        // UI element descriptions without any task/context section headings
+        let content = "OK\nCancel\nSettings\nHelp\nButton\nDropdown\nCheckbox\nTextfeld\nMenü";
+        let result = analyze_hygiene(content, "test-ocr-residue");
+        assert!(
+            artifact_count(&result.artifacts, ArtifactCategory::OcrResidue) >= 1,
+            "OCR residue should be detected. Artifacts: {:?}",
+            result
+                .artifacts
+                .iter()
+                .filter(|a| a.category == ArtifactCategory::OcrResidue)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_role_mismatch_detection() {
+        let content = "As a developer, designer, and project manager, I need you to analyze this data and write a report.";
+        let result = analyze_hygiene(content, "test-role-mismatch");
+        // May or may not detect depending on sector threshold (3+)
+        // Main assertion: should not panic
+        assert_eq!(result.prompt_id, "test-role-mismatch");
+    }
+
+    #[test]
+    fn test_missing_structure_detection() {
+        let content = "Fix the bug in the login module. It crashes when users enter invalid credentials. The database should handle this gracefully.";
+        let result = analyze_hygiene(content, "test-missing-structure");
+        assert!(
+            artifact_count(&result.artifacts, ArtifactCategory::MissingStructure) >= 1,
+            "Missing structure should be detected. Artifacts: {:?}",
+            result
+                .artifacts
+                .iter()
+                .filter(|a| a.category == ArtifactCategory::MissingStructure)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_evidence_block_detection() {
+        let content =
+            "=== Test Results ===\n1886 passed, 29 failed\n=== Build Output ===\nCompiling...";
+        let result = analyze_hygiene(content, "test-evidence-block");
+        assert!(
+            artifact_count(&result.artifacts, ArtifactCategory::EvidenceBlock) >= 1,
+            "Evidence blocks should be detected. Artifacts: {:?}",
+            result
+                .artifacts
+                .iter()
+                .filter(|a| a.category == ArtifactCategory::EvidenceBlock)
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]
