@@ -811,3 +811,115 @@ ${noise}`);
     expect(result.detected_context_profile).toBe("overloaded");
   });
 });
+
+// =============================================================================
+// 13. Regression: Corpus QA Calibration (Issue #93)
+// =============================================================================
+
+describe("Regression: Corpus QA Calibration", () => {
+  it("context+repo+issue prompt without workflow is NOT agentic (P4-like)", () => {
+    // A structured prompt with context, repo, and issue reference
+    // but NO active workflow signals should be structured, not agentic.
+    const result = evalPrompt(`## Context
+- Project: my-project
+- Repository: https://github.com/org/my-project
+- Relevant files: src/lib/module.ts
+
+## Task
+Fix issue #42: The panel shows incorrect flags.
+
+## Verification
+- Run \`npm test\` and ensure all tests pass
+- Check the panel in the app
+
+## Output Format
+Return the modified source files.`);
+    expect(result.detected_prompt_type).toBe("structured_prompt");
+    // Should not have agentic-only risk flags
+    expect(riskFlagTypes(result)).not.toContain("no_human_approval");
+    expect(riskFlagTypes(result)).not.toContain("unbounded_agent_autonomy");
+  });
+
+  it("prompt with 'run tests and submit PR' IS agentic", () => {
+    // Run tests + submit PR are active workflow signals
+    const result = evalPrompt(`## Role
+You are a developer.
+
+## Task
+Implement feature X from Issue #123 in src/features/x.ts.
+Run the tests and submit a PR.`);
+    expect(result.detected_prompt_type).toBe("agentic_prompt");
+  });
+
+  it("writing task mentioning GitHub repo does NOT trigger source_of_truth_missing", () => {
+    // A technical writing prompt that mentions a GitHub repo as part of
+    // the task description should not be flagged for missing SOT.
+    const result = evalPrompt(`## Role
+You are a technical writer.
+
+## Task
+Write a README for a TypeScript library called "mylib".
+
+## Constraints
+- Do not include any external links besides the GitHub repo`);
+    expect(riskFlagTypes(result)).not.toContain("source_of_truth_missing");
+    // Should not be classified as agentic
+    expect(result.detected_prompt_type).not.toBe("agentic_prompt");
+  });
+
+  it("German 'Einschränkungen' heading without colon is detected", () => {
+    // German constraint heading without trailing colon should still score
+    const result = evalPrompt(`## Rolle
+Du bist ein Entwickler.
+
+## Aufgabe
+Erstelle eine API.
+
+## Einschränkungen
+- Keine externen Bibliotheken
+- Muss offline funktionieren`);
+    // Should detect the constraints section
+    const constraintCriteria = result.criteria.find(
+      (c) => c.name === "Constraints",
+    );
+    expect(constraintCriteria).toBeDefined();
+    expect(constraintCriteria?.score).toBeGreaterThanOrEqual(1);
+  });
+
+  it("multiple task headings in moderate content trigger context_overload", () => {
+    // P5-like: moderate content (>400 chars) with 3+ task headings and extraneous info
+    const result = evalPrompt(`## Kontext
+Das Projekt läuft seit 2018 und ist in Python 3.6 geschrieben. Es gibt ungefähr 500 Dateien.
+Die Datenbank ist PostgreSQL 9.6 und läuft auf einem Server in Frankfurt.
+Wir brauchen dringend neue Bürostühle. Der Pizzadienst um die Ecke liefert nicht mehr.
+
+## Aufgabe
+Bitte schreibe einen Blogpost über Nachhaltigkeit in der Softwareentwicklung.
+
+## Noch eine Aufgabe
+Außerdem muss der Login-Fehler auf der Website behoben werden. Der tritt seit dem letzten Deployment auf.
+
+## Und noch was
+Könntest du auch die Datenschutzerklärung aktualisieren? Das ist wegen der neuen DSGVO-Richtlinie nötig.`);
+    expect(riskFlagTypes(result)).toContain("context_overload");
+  });
+
+  it("'## Constraints' heading without colon is detected", () => {
+    // Constraints heading like "## Constraints" without colon should score
+    const result = evalPrompt(`## Role
+You are a developer.
+
+## Task
+Implement a REST API.
+
+## Constraints
+- No external dependencies
+- No network calls
+- Must work offline`);
+    const constraintCriteria = result.criteria.find(
+      (c) => c.name === "Constraints",
+    );
+    expect(constraintCriteria).toBeDefined();
+    expect(constraintCriteria?.score).toBeGreaterThanOrEqual(1);
+  });
+});

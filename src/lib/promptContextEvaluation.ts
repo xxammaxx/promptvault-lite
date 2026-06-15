@@ -125,7 +125,7 @@ const AGENTIC_SIGNALS: { name: string; pattern: RegExp }[] = [
   {
     name: "workflow_steps",
     pattern:
-      /(?:workflow|pipeline|step\s+\d|phase\s+\d|process\s+flow|implement.*then.*test|code.*review.*merge|deploy|deployment)/i,
+      /(?:workflow|pipeline|step\s+\d|phase\s+\d|process\s+flow|implement.*then.*test|code.*review.*merge|deploy|deployment|run\s+(?:the\s+)?tests?|submit\s+(?:a\s+)?PR|merge\s+(?:if|when|after))/i,
   },
   {
     name: "repo_reference",
@@ -166,12 +166,34 @@ const AGENTIC_SIGNALS: { name: string; pattern: RegExp }[] = [
 
 const AGENTIC_THRESHOLD = 3;
 
+// Active (strong) agentic signals indicate the user expects autonomous workflow execution,
+// not just passive repository/file references. At least one active signal is required
+// for agentic classification, preventing false positives on structured prompts that
+// merely reference repos, issues, or file paths.
+const ACTIVE_AGENTIC_SIGNAL_NAMES = new Set([
+  "workflow_steps",
+  "ci_gate",
+  "review_approval",
+  "spec_requirement",
+]);
+
 function countAgenticSignals(content: string): number {
   return AGENTIC_SIGNALS.filter((s) => s.pattern.test(content)).length;
 }
 
+function countActiveAgenticSignals(content: string): number {
+  return AGENTIC_SIGNALS.filter(
+    (s) => ACTIVE_AGENTIC_SIGNAL_NAMES.has(s.name) && s.pattern.test(content),
+  ).length;
+}
+
 function isAgenticPrompt(content: string): boolean {
-  return countAgenticSignals(content) >= AGENTIC_THRESHOLD;
+  const totalSignals = countAgenticSignals(content);
+  const activeSignals = countActiveAgenticSignals(content);
+  // Require >=3 total signals AND at least 1 active (workflow/CI/review/spec) signal.
+  // Passive signals alone (repo_reference, code_context, issue_tracking,
+  // evidence_required) are insufficient — they appear in structured non-agentic prompts.
+  return totalSignals >= AGENTIC_THRESHOLD && activeSignals >= 1;
 }
 
 function isStructuredPrompt(content: string): boolean {
@@ -328,17 +350,19 @@ const PE_CRITERIA: CriterionDef[] = [
     dimension: "prompt_engineering",
     name: "Constraints",
     detect: (content: string): number => {
+      // Match explicit constraints sections (with or without colon after heading)
       const constraintPatterns =
         /(?:constraints?\s*:|einschränkungen?\s*:|do not|nicht\s|avoid|vermeide|must not|darf nicht|limitations?\s*:|begrenzungen?\s*:)/i;
+      const constraintHeadings =
+        /^#+\s*(?:constraints?|einschränkungen?|limitations?|begrenzungen?)\s*$/im;
       const negativeInstructions =
         /(?:never|niemals|under no circumstances|auf keinen fall|forbidden|verboten|prohibited)/i;
 
-      if (
-        constraintPatterns.test(content) &&
-        negativeInstructions.test(content)
-      )
-        return 2;
-      if (constraintPatterns.test(content)) return 1;
+      const hasConstraintSection =
+        constraintPatterns.test(content) || constraintHeadings.test(content);
+
+      if (hasConstraintSection && negativeInstructions.test(content)) return 2;
+      if (hasConstraintSection) return 1;
       if (
         (content.match(/\b(?:do not|don't|nicht|kein)\b/gi)?.length ?? 0) >= 2
       )
@@ -352,12 +376,17 @@ const PE_CRITERIA: CriterionDef[] = [
     detect: (content: string): number => {
       const formatPatterns =
         /(?:output\s*(?:format|as|should be)|ausgabe\s*(?:format|als)|return\s+(?:as|a|in|the)|gib\s+(?:zurück|aus)\s+(?:als|in)|format\s*:\s*(?:json|markdown|md|yaml|xml|csv|table|tabelle|list|liste|bullet|code)|response\s*(?:format|as|in))/i;
+      // Also detect headings like "## Output Format" or "## Ausgabeformat" without colon
+      const formatHeadings =
+        /^#+\s*(?:output\s*format|ausgabe\s*format|ausgabeformat|output|ausgabe)\s*$/im;
       const explicitFormat =
         /(?:JSON|Markdown|YAML|XML|CSV|plain text|code block|React component|function|class|module|endpoint|REST|GraphQL|TypeScript|JavaScript)/i;
 
-      if (formatPatterns.test(content) && explicitFormat.test(content))
-        return 2;
-      if (formatPatterns.test(content)) return 1;
+      const hasFormatSection =
+        formatPatterns.test(content) || formatHeadings.test(content);
+
+      if (hasFormatSection && explicitFormat.test(content)) return 2;
+      if (hasFormatSection) return 1;
       return 0;
     },
   },
@@ -860,14 +889,21 @@ const RISK_FLAG_DEFS: RiskFlagDef[] = [
       const cleanLen = contentLengthWithoutCode(content);
       const headingCount = countHeadings(content);
 
-      // Very large content with few headings = potential overload
-      if (cleanLen > 3000 && headingCount < 3) return true;
+      // Large content with few headings = potential overload
+      if (cleanLen > 1000 && headingCount < 3) return true;
 
       // Check if task-to-context ratio is very low
       const hasTaskHeading = /^#+\s*(?:task|aufgabe|goal|ziel|auftrag)/im.test(
         content,
       );
-      if (!hasTaskHeading && cleanLen > 1500) return true;
+      if (!hasTaskHeading && cleanLen > 800) return true;
+
+      // Multiple task-like headings in moderate content = scattered focus
+      const taskHeadingCount =
+        content.match(
+          /^#+\s*(?:task|aufgabe|noch\s+eine\s+aufgabe|und\s+noch\s+was|goal|ziel|objective)/gim,
+        )?.length ?? 0;
+      if (taskHeadingCount >= 3 && cleanLen > 400) return true;
 
       return false;
     },
@@ -879,17 +915,16 @@ const RISK_FLAG_DEFS: RiskFlagDef[] = [
       "No source of truth or authoritative reference cited. Specify the canonical data, issue, or document.",
     score_penalty: 20,
     detect: (content: string, isAgentic: boolean): boolean => {
-      // Flag for agentic prompts or prompts with code/repo references
-      const hasCodeRef =
-        /(?:github\.com|gitlab\.com|bitbucket\.org|src\/|tests\/|components\/|Cargo\.toml|package\.json|\.ts\b|\.rs\b|\.py\b|\.js\b|repository|repo\b|branch|commit|merge|pull request|PR\b|module|function\s+\w+\s*\(|class\s+\w+)/i.test(
-          content,
-        );
+      // For non-agentic prompts, only flag SOT missing if there is explicit
+      // code modification intent (fix/bug/repair). Mere mentions of repos,
+      // file paths, or module names (e.g., in a writing task) should not
+      // trigger this flag — those are natural references, not missing SOT.
       const hasFixBug =
         /(?:fix\s+(?:the|a)\s+(?:bug|issue|problem|critical)|bug\s+fix|behebe|repariere)/i.test(
           content,
         );
 
-      if (!isAgentic && !hasCodeRef && !hasFixBug) return false;
+      if (!isAgentic && !hasFixBug) return false;
 
       return !/(?:source of truth|authoritative|maßgebend|referenz|reference|see issue|siehe issue|github\.com\/\w+\/\w+\/issues\/\d+|gemäß|according to|based on|basierend auf|per\s+(?:spec|issue|ticket|doc))/i.test(
         content,
