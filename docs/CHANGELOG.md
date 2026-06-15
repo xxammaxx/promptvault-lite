@@ -1,30 +1,54 @@
 ---
 title: Changelog
 description: Versionshinweise für PromptVault Lite.
-version: 1.5.0
+version: 1.6.0
 ---
 
 # Changelog
 
-## v1.5.0 — Phase 5: Feature Completion & Developer Experience
+## v1.6.0 — Stable Release: Prompt Optimization & Action Layer
 
-### Unreleased
+**Datum:** 2026-06-15
 
-#### Features
+> **Hinweis:** Dies ist ein neuer Stable Release auf aktuellem `master`. Der zuvor getaggte `v1.5.0` (2026-06-05, Commit `0bd2208`) bleibt unverändert bestehen. `v1.6.0` enthält 26 zusätzliche Commits und ersetzt `v1.5.0` als empfohlenen Stable Release.
 
-- **Typed Local Action Layer:** 10 typisierte lokale Aktionen (`prompts.search`, `prompts.get`, `prompts.create`, `prompts.update`, `prompts.score`, `prompts.detect_artifacts`, `prompts.optimize`, `collections.list`, `qa.load_fixture`, `qa.compare_score`) mit Schema-validierten Input/Output-Verträgen. Jede Aktion besitzt ein eigenes Request/Response-Schema mit Typsicherheit zur Compile-Zeit. (#90)
-- **6 neue Artefakt-Kategorien:** `CHAT_META`, `SCOPE_POLLUTION`, `OCR_RESIDUE`, `ROLE_MISMATCH`, `MISSING_STRUCTURE`, `EVIDENCE_BLOCK` erweitern die Hygieneanalyse um KI-spezifische Prompt-Artefakte. (#90)
-- **Read-Only-First-Strategie:** Standardmäßig sind nur lesende Aktionen (`prompts.search`, `prompts.get`, `prompts.score`, `collections.list`) verfügbar. Schreibaktionen erfordern explizite Freigabe über Approval-Gates. (#90)
+### Highlights
 
-#### Backend
+- **Local Prompt Optimization Engine:** Drei deterministische Optimierungsmodi — `conservative` (Whitespace, Bullets), `balanced` (Section-Reordering, Heading-Standardisierung), `aggressive` (Agentic-Workflow-Scaffolding, Context-Engineering-Sections, Verification-Contracts). Läuft vollständig lokal ohne API-Calls. (#86)
+- **Prompt & Context Engineering Evaluation:** Automatisierte Qualitätsanalyse mit 6 Dimensionen (Clarity, Role Detection, Procedure, Output Format, Reusability, Security Boundaries). (#88)
+- **Evaluation-Corpus Calibration:** 68 Corpus-QA-Tests validieren die Scoring-Engine. Corpus-Failures von 12 auf 0 reduziert. (#94)
+- **Typed Local Action Layer:** 10 typisierte lokale Aktionen mit Schema-validierten Input/Output-Verträgen, Read-Only-First-Strategie und Developer-Mode-Gate. (#90, #91)
+- **Erweiterte Artefakterkennung:** 6 neue Kategorien — `CHAT_META`, `SCOPE_POLLUTION`, `OCR_RESIDUE`, `ROLE_MISMATCH`, `MISSING_STRUCTURE`, `EVIDENCE_BLOCK`. (#90)
+- **Dark Mode:** Light/Dark/Auto-Theme mit OS-Erkennung und localStorage-Persistenz. Accessibility- und Robustness-Fixes. (#84, #85)
+- **Resizable Explorer:** Maus-/Touch-Drag, Keyboard-Pfeiltasten, ARIA-Separator-Attribute, Persistenz. (#60)
+- **Cross-Platform File Tree:** Windows-Backslash-Normalisierung, Long-Path-Präfixe, UNC-Pfade, Laufwerksbuchstaben. (#73)
+- **GitHub Presentation & Onboarding:** Verbesserte Repository-Struktur, README, und Contributor-Experience. (#89)
+- **MIT License:** SPDX-Identifier, README-Badge, vollständiger Lizenztext. (#87)
+- **CI/CD Pipeline:** Drei Jobs (Frontend TypeScript/React, Rust/Tauri Backend, Secret Scan) mit platform-robusten Workflows. (#75–79)
+- **Release-Icons:** Echte Tauri-Icons ersetzen Platzhalter-PNGs. (#80–83)
 
-- **Developer-Mode-Gate:** Neuer `dev_mode`-Schalter steuert den Zugriff auf alle Aktionen. Im Standard-Modus sind ausschließlich lesende Aktionen freigeschaltet. Entwicklermodus aktiviert das vollständige Action-Repertoire inklusive Schreib- und QA-Aktionen. (#90)
-- **Evidence-Log:** Jeder Aktionsaufruf wird mit Timestamp, Action-Typ, Parametern und Ergebnisstatus in einer strukturierten Log-Datei aufgezeichnet. Ermöglicht vollständige Audit-Trail-Transparenz. (#90)
-- **Schema-Validierung:** Alle Action-Inputs werden vor der Ausführung gegen definierte JSON-Schemata validiert. Bei Schemaverletzung erfolgt ein frühzeitiger Abbruch mit detaillierter Fehlermeldung. (#90)
+### Quality Gates
 
-#### Testing
+| Gate               | Ergebnis                                              |
+| ------------------ | ----------------------------------------------------- |
+| `pnpm test`        | **326 passed** (11 Dateien, 0 Failures)               |
+| `pnpm lint`        | **0 Errors, 0 Warnings**                              |
+| `npx tsc --noEmit` | **0 Errors**                                          |
+| `pnpm build`       | **PASS**                                              |
+| `cargo test`       | **119 passed** (102 Unit + 17 Integration), 1 Ignored |
+| `cargo build`      | **PASS**                                              |
+| Frontend CI        | SUCCESS                                               |
+| Rust/Tauri CI      | SUCCESS                                               |
+| Secret Scan        | SUCCESS                                               |
 
-- **25 Red Tests:** Umfassende Sicherheitsszenarien für den Action Layer – unbefugter Zugriff ohne Developer-Mode, Schema-Verletzungen, fehlende Berechtigungen für Schreibaktionen, Edge-Cases bei leeren Inputs. Alle Tests bestätigen das erwartete Fehlverhalten (Rot-Phase). (#90)
+### Known Limits
+
+- **Source-only Release** — keine nativen Binaries (konsistent mit v1.5.0)
+- UI-Approval-Dialog für Action Layer offen (#92)
+- Blueprint-Feature bleibt zukünftige Arbeit (#49–59)
+- Settings-Modal bleibt zukünftige Arbeit (#63)
+
+---
 
 ### v1.5.0 (2026-06-05)
 
