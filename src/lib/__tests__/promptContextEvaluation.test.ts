@@ -883,7 +883,7 @@ Erstelle eine API.
       (c) => c.name === "Constraints",
     );
     expect(constraintCriteria).toBeDefined();
-    expect(constraintCriteria!.score).toBeGreaterThanOrEqual(1);
+    expect(constraintCriteria?.score).toBeGreaterThanOrEqual(1);
   });
 
   it("multiple task headings in moderate content trigger context_overload", () => {
@@ -920,6 +920,6 @@ Implement a REST API.
       (c) => c.name === "Constraints",
     );
     expect(constraintCriteria).toBeDefined();
-    expect(constraintCriteria!.score).toBeGreaterThanOrEqual(1);
+    expect(constraintCriteria?.score).toBeGreaterThanOrEqual(1);
   });
 });
