@@ -35,6 +35,7 @@ Thumbs.db
 
 # Tauri
 src-tauri/gen/
+src-tauri/Cargo.lock
 
 # Test
 coverage/
