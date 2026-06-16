@@ -12,6 +12,10 @@ By contributing to this project, you agree that your contributions are licensed 
 4. Run linting (`pnpm lint`, `cargo fmt --check --manifest-path src-tauri/Cargo.toml`).
 5. Submit a pull request with a clear description of the change.
 
+## Governance
+
+See [docs/GOVERNANCE.md](docs/GOVERNANCE.md) for the project's governance rules (code ownership, PR requirements, merge rules).
+
 ## Code of Conduct
 
 Be respectful and constructive. This is a small community project — keep interactions professional.
