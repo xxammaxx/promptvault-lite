@@ -35,6 +35,7 @@ function App() {
     resolve: (approved: boolean) => void;
   } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const approvalPendingRef = useRef(false);
 
   const isTauri =
     typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -52,6 +53,12 @@ function App() {
   // Register the UI approval provider for write actions
   useEffect(() => {
     setApprovalProvider(async (request: ApprovalRequest): Promise<boolean> => {
+      // Re-entrant guard: reject if an approval is already pending.
+      // Prevents the second request from overwriting the first resolver.
+      if (approvalPendingRef.current) {
+        return false;
+      }
+      approvalPendingRef.current = true;
       return new Promise<boolean>((resolve) => {
         setPendingApproval({ request, resolve });
       });
@@ -59,6 +66,7 @@ function App() {
 
     return () => {
       setApprovalProvider(null);
+      approvalPendingRef.current = false;
       // Resolve any pending approval as denied on unmount
       setPendingApproval((prev) => {
         if (prev) prev.resolve(false);
@@ -265,10 +273,12 @@ function App() {
         <ApprovalDialog
           request={pendingApproval.request}
           onApprove={() => {
+            approvalPendingRef.current = false;
             pendingApproval.resolve(true);
             setPendingApproval(null);
           }}
           onCancel={() => {
+            approvalPendingRef.current = false;
             pendingApproval.resolve(false);
             setPendingApproval(null);
           }}

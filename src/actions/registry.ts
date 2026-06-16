@@ -209,6 +209,16 @@ export async function dispatch<T = unknown>(
         evidence,
       };
     }
+
+    // Log approval evidence immediately — before handler execution.
+    // Ensures the audit trail records user consent even if the handler fails.
+    logEvidence(
+      contract.name,
+      input,
+      "approved",
+      performance.now() - startTime,
+      "User approved the write action via UI dialog.",
+    );
   }
 
   // 5. Execute handler
@@ -233,16 +243,7 @@ export async function dispatch<T = unknown>(
       };
     }
 
-    // 7. Log evidence (success, with approval note if applicable)
-    if (contract.approvalRequired) {
-      logEvidence(
-        contract.name,
-        input,
-        "approved",
-        execTime,
-        "User approved the write action via UI dialog.",
-      );
-    }
+    // 7. Log success evidence
     const evidence = logEvidence(contract.name, input, "success", execTime);
 
     return {
