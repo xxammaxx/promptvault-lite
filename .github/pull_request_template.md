@@ -1,31 +1,32 @@
 ## Summary
 
-<!-- Briefly describe what this PR changes and why. -->
+<!-- Briefly describe what this PR changes and why. Reference the issue it closes. -->
 
-## Type of Change
+Closes #
 
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Enhancement
-- [ ] Documentation
-- [ ] CI / Tooling
-- [ ] Other
+## Scope
 
-## Testing
+- [ ] No unrelated files
+- [ ] No generated local artifacts (`.db`, `.db-shm`, `.db-wal`, `.env`, node_modules)
+- [ ] No secrets or credentials
+- [ ] No release/tag/binary work unless explicitly approved
 
-- [ ] Frontend tests pass (`pnpm test`)
-- [ ] Rust tests pass (`cargo test --manifest-path src-tauri/Cargo.toml`)
-- [ ] Linting passes (`pnpm lint`, `cargo fmt --check --manifest-path src-tauri/Cargo.toml`)
-- [ ] TypeScript typecheck passes (`npx tsc --noEmit`)
-- [ ] Build passes (`pnpm build`, `cargo build --manifest-path src-tauri/Cargo.toml`)
+## Verification
 
-## Screenshots
+- [ ] `pnpm test`
+- [ ] `pnpm lint`
+- [ ] `npx tsc --noEmit`
+- [ ] `pnpm build`
+- [ ] `cargo test --manifest-path src-tauri/Cargo.toml`
+- [ ] `cargo build --manifest-path src-tauri/Cargo.toml`
 
-<!-- If applicable, add screenshots to show the change. -->
+## Review
 
-## Checklist
+- [ ] I have read [CONTRIBUTING.md](CONTRIBUTING.md) and [GOVERNANCE.md](docs/GOVERNANCE.md)
+- [ ] CI green
+- [ ] Reviewer findings addressed or documented
+- [ ] Human merge approval received
 
-- [ ] I have read [CONTRIBUTING.md](CONTRIBUTING.md)
-- [ ] This PR references a related issue (if applicable)
-- [ ] I have added tests that verify my change
-- [ ] I have updated documentation where needed
+## Evidence
+
+<!-- Link issue, PR, screenshots, logs, or test output here. -->

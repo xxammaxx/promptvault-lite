@@ -1,0 +1,12 @@
+# PromptVault Lite — Code Ownership
+#
+# These owners will be automatically requested for review
+# when files matching the pattern are changed in a PR.
+#
+# Last updated: 2026-06-16
+
+*                   @xxammaxx
+.github/            @xxammaxx
+src/                @xxammaxx
+src-tauri/          @xxammaxx
+docs/               @xxammaxx
