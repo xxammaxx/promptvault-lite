@@ -7,6 +7,10 @@ import { DetailsPanel } from "./components/details/DetailsPanel";
 import { AnalysisPanel } from "./components/analysis/AnalysisPanel";
 import { ExportDialog } from "./components/common/ExportDialog";
 import { ThemeToggle } from "./components/common/ThemeToggle";
+import { SettingsPanel } from "./components/settings/SettingsPanel";
+import { ApprovalDialog } from "./components/settings/ApprovalDialog";
+import { setApprovalProvider } from "./actions";
+import type { ApprovalRequest } from "./actions";
 import "./App.css";
 
 const MIN_EXPLORER_WIDTH = 240;
@@ -25,7 +29,13 @@ function App() {
   } = useAppStore();
   const [folderPath, setFolderPath] = useState<string | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState<{
+    request: ApprovalRequest;
+    resolve: (approved: boolean) => void;
+  } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const approvalPendingRef = useRef(false);
 
   const isTauri =
     typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -39,6 +49,31 @@ function App() {
       void cleanupWatcher();
     };
   }, [cleanupWatcher]);
+
+  // Register the UI approval provider for write actions
+  useEffect(() => {
+    setApprovalProvider(async (request: ApprovalRequest): Promise<boolean> => {
+      // Re-entrant guard: reject if an approval is already pending.
+      // Prevents the second request from overwriting the first resolver.
+      if (approvalPendingRef.current) {
+        return false;
+      }
+      approvalPendingRef.current = true;
+      return new Promise<boolean>((resolve) => {
+        setPendingApproval({ request, resolve });
+      });
+    });
+
+    return () => {
+      setApprovalProvider(null);
+      approvalPendingRef.current = false;
+      // Resolve any pending approval as denied on unmount
+      setPendingApproval((prev) => {
+        if (prev) prev.resolve(false);
+        return null;
+      });
+    };
+  }, []);
 
   // Sync theme to document element
   const theme = useAppStore((s) => s.theme);
@@ -135,10 +170,11 @@ function App() {
           <ThemeToggle />
           <button
             className="btn"
-            aria-disabled="true"
-            tabIndex={-1}
-            title="Einstellungen sind in Entwicklung"
-            aria-label="Einstellungen (in Entwicklung)"
+            onClick={() => {
+              setShowSettings(true);
+            }}
+            title="Einstellungen"
+            aria-label="Einstellungen öffnen"
           >
             ⚙️
           </button>
@@ -219,6 +255,32 @@ function App() {
         <ExportDialog
           onClose={() => {
             setShowExportDialog(false);
+          }}
+        />
+      )}
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <SettingsPanel
+          onClose={() => {
+            setShowSettings(false);
+          }}
+        />
+      )}
+
+      {/* Approval Dialog for write actions */}
+      {pendingApproval && (
+        <ApprovalDialog
+          request={pendingApproval.request}
+          onApprove={() => {
+            approvalPendingRef.current = false;
+            pendingApproval.resolve(true);
+            setPendingApproval(null);
+          }}
+          onCancel={() => {
+            approvalPendingRef.current = false;
+            pendingApproval.resolve(false);
+            setPendingApproval(null);
           }}
         />
       )}

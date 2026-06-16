@@ -2,7 +2,7 @@
 // Evidence Log — Immutable audit trail for every action call
 // =============================================================================
 
-import type { ActionName, EvidenceLogEntry } from "@/types";
+import type { ActionName, EvidenceLogEntry, EvidenceResult } from "@/types";
 
 /** Action type for evidence log entries */
 export type EvidenceAction = ActionName | "(unknown)";
@@ -39,7 +39,7 @@ export function hashInput(input: unknown): string {
 export function logEvidence(
   action: EvidenceAction,
   input: unknown,
-  result: EvidenceLogEntry["result"],
+  result: EvidenceResult,
   durationMs: number,
   error?: string,
 ): EvidenceLogEntry {
@@ -88,12 +88,16 @@ export function getEvidenceSummary(): {
   success: number;
   error: number;
   blocked: number;
+  approved: number;
+  denied: number;
 } {
   const summary = {
     total: evidenceLog.length,
     success: 0,
     error: 0,
     blocked: 0,
+    approved: 0,
+    denied: 0,
   };
   for (const entry of evidenceLog) {
     switch (entry.result) {
@@ -105,6 +109,12 @@ export function getEvidenceSummary(): {
         break;
       case "blocked":
         summary.blocked++;
+        break;
+      case "approved":
+        summary.approved++;
+        break;
+      case "denied":
+        summary.denied++;
         break;
     }
   }
