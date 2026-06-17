@@ -109,13 +109,22 @@ pub async fn create_prompt(
     let tags = input.tags.clone().unwrap_or_default();
     let content = input.content.clone();
 
-    // Sanitize filename
+    // Sanitize filename (including null bytes to prevent path truncation)
     let safe_name = title
-        .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_")
+        .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|', '\0'], "_")
         .trim()
         .to_string();
     let file_name = format!("{}.md", safe_name);
     let full_path = PathBuf::from(&vault_path).join(&file_name);
+
+    // Defense-in-depth: verify the resolved path stays within the vault
+    let canonical_vault =
+        dunce::canonicalize(&vault_path).map_err(|e| format!("Invalid vault path: {}", e))?;
+    let canonical_file =
+        dunce::canonicalize(&full_path).map_err(|e| format!("Invalid file path: {}", e))?;
+    if !canonical_file.starts_with(&canonical_vault) {
+        return Err("Path traversal detected: file path escapes vault root".to_string());
+    }
 
     // Build frontmatter
     let frontmatter = format!(

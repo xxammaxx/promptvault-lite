@@ -39,7 +39,11 @@ pub fn scan_directory(
         *cached = prompts.clone();
     }
     if let Ok(mut vp) = state.vault_path.lock() {
-        *vp = Some(path.clone());
+        // Store canonicalized path to prevent path traversal in downstream writes
+        let canonical = dunce::canonicalize(&path)
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or(path.clone());
+        *vp = Some(canonical);
     }
 
     // Auto-start watcher after scan
