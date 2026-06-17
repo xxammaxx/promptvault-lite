@@ -4,8 +4,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
-/// Canonicalize a path using dunce (strips Windows `\\?\` verbatim prefix).
-/// Falls back to std::fs::canonicalize on non-Windows platforms.
+/// Canonicalize a path using dunce. On Windows, this strips the `\\?\` verbatim
+/// prefix before canonicalizing. On non-Windows platforms, it behaves like
+/// `std::fs::canonicalize`. Requires the path to exist (returns Err for
+/// non-existent paths).
 fn canonicalize(path: &Path) -> Result<PathBuf, std::io::Error> {
     let canonical = dunce::canonicalize(path)?;
     Ok(canonical)
@@ -170,7 +172,7 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
             Ok(content) => {
                 let frontmatter_result = parse_frontmatter(&content);
 
-                // Titel: Frontmatter > Dateiname (ohne .md)
+                // Titel: Frontmatter > Dateiname (ohne .md / .markdown)
                 let title = frontmatter_result
                     .metadata
                     .get("title")
@@ -179,6 +181,7 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
                     .unwrap_or_else(|| {
                         file.file_name
                             .strip_suffix(".md")
+                            .or_else(|| file.file_name.strip_suffix(".markdown"))
                             .unwrap_or(&file.file_name)
                             .to_string()
                     });
@@ -659,6 +662,35 @@ mod tests {
         let names: Vec<&str> = result.iter().map(|p| p.file_name.as_str()).collect();
         assert!(names.contains(&"prompt.markdown"));
         assert!(names.contains(&"regular.md"));
+    }
+
+    #[test]
+    fn test_markdown_extension_title_fallback() {
+        // .md and .markdown files without frontmatter title should
+        // derive the title from the filename with extension stripped.
+        let dir = TempDir::new().unwrap();
+        create_test_md(dir.path(), "example.md", "# No frontmatter title");
+        create_test_md(dir.path(), "example.markdown", "# Also no title");
+        create_test_md(dir.path(), "nested.markdown", "# Nested markdown");
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 3);
+
+        // Find each prompt by file_name and verify title
+        let md_prompt = result.iter().find(|p| p.file_name == "example.md").unwrap();
+        assert_eq!(md_prompt.title, "example");
+
+        let markdown_prompt = result
+            .iter()
+            .find(|p| p.file_name == "example.markdown")
+            .unwrap();
+        assert_eq!(markdown_prompt.title, "example");
+
+        let nested_prompt = result
+            .iter()
+            .find(|p| p.file_name == "nested.markdown")
+            .unwrap();
+        assert_eq!(nested_prompt.title, "nested");
     }
 
     #[test]

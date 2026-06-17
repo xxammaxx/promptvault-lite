@@ -21,9 +21,8 @@ gemounteten Ordner wie einen normalen lokalen Ordner.
 
 ## File Scope
 
-- Nur `.md`-Dateien
-- Optional: `.markdown`-Dateien (Phase 2)
-- File Scope: `.md` und `.markdown` werden unterstützt (seit v1.6.1)
+- `.md`-Dateien
+- `.markdown`-Dateien (seit v1.6.1)
 - Keine Binärdateien
 - Keine versteckten Systemdateien
 - Keine temporären Dateien (`*.tmp`, `~*`, `.*.swp`)
@@ -80,7 +79,7 @@ Nicht Teil des MVP. Schreibzugriff wird in einem späteren Release geprüft.
 
 ## Platform Path Examples
 
-```
+```text
 Windows Desktop:
   Z:\PromptVault\Prompts
   \\192.168.1.144\<share>\Prompts
@@ -191,7 +190,7 @@ sudo mount -t nfs 192.168.1.144:/<export_path> /mnt/promptvault-prompts -o ro
 
 ### Windows Desktop
 
-```
+```text
 Netzlaufwerk verbinden:
   \\192.168.1.144\<share_name>\<folder_with_md_files>
 
