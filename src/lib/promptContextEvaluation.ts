@@ -118,6 +118,94 @@ function codeBlockLength(content: string): number {
 }
 
 // =============================================================================
+// Placeholder-only section stripping (prevents score inflation)
+// =============================================================================
+
+const PLACEHOLDER_ONLY_PATTERNS: RegExp[] = [
+  /<!--\s*TODO/i,
+  /\bTBD\b/i,
+  /requirements?\s+ergänzen/i,
+  /verify\s+ergänzen/i,
+  /Anforderungen?\s+ergänzen/i,
+  /Acceptance\s+Criteria\s+ergänzen/i,
+  /Verifikation\s+ergänzen/i,
+  /\bplaceholder\b/i,
+  /\bPlatzhalter\b/i,
+];
+
+/**
+ * Check if a string is only whitespace, HTML comments, or placeholder text.
+ * Used to determine if a section has no real content.
+ */
+function isPlaceholderOnly(text: string): boolean {
+  // Remove HTML comments
+  const withoutComments = text.replace(/<!--[\s\S]*?-->/g, "").trim();
+  if (withoutComments.length === 0) return true;
+
+  // Check if remaining text is only placeholder patterns
+  const cleaned = withoutComments.replace(/\s+/g, " ").trim();
+  for (const pattern of PLACEHOLDER_ONLY_PATTERNS) {
+    if (pattern.test(cleaned) && cleaned.length < 60) {
+      // Short text that only contains a placeholder pattern
+      if (cleaned.replace(pattern, "").trim().length === 0) return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Strip sections from content whose only content is a placeholder/TODO.
+ * Prevents score inflation from empty placeholder sections.
+ */
+function stripPlaceholderSections(content: string): string {
+  const lines = content.split("\n");
+  const result: string[] = [];
+  let inSection = false;
+  let sectionLines: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const isHeading = /^#{1,3}\s/.test(line);
+
+    if (isHeading) {
+      // Process previous section (exclude heading from content check)
+      if (inSection && sectionLines.length > 1) {
+        const sectionContentWithoutHeading = sectionLines.slice(1).join("\n");
+        if (!isPlaceholderOnly(sectionContentWithoutHeading)) {
+          result.push(...sectionLines);
+        }
+        // If placeholder-only, drop the entire section including heading
+      } else if (inSection && sectionLines.length === 1) {
+        // Heading-only section (no content lines) — keep the heading
+        result.push(...sectionLines);
+      }
+
+      sectionLines = [line];
+      inSection = true;
+    } else if (inSection) {
+      sectionLines.push(line);
+    } else {
+      // Content before first heading — always keep
+      result.push(line);
+    }
+  }
+
+  // Process last section (exclude heading from content check)
+  if (inSection && sectionLines.length > 1) {
+    const sectionContentWithoutHeading = sectionLines.slice(1).join("\n");
+    if (!isPlaceholderOnly(sectionContentWithoutHeading)) {
+      result.push(...sectionLines);
+    }
+  } else if (inSection && sectionLines.length === 1) {
+    // Heading-only last section
+    result.push(...sectionLines);
+  }
+
+  return result.join("\n");
+}
+
+// =============================================================================
 // Agentic signal detection (robust threshold: >= 3 signals required)
 // =============================================================================
 
@@ -1335,19 +1423,24 @@ export function evaluatePromptContext(
     };
   }
 
-  // 1. Detect prompt type
+  // 0. Strip placeholder-only sections to prevent score inflation
+  //    Sections with only TODO markers, TBD, or placeholder text do not
+  //    count as fulfilled criteria.
+  const evalContent = stripPlaceholderSections(content);
+
+  // 1. Detect prompt type (use original content for type detection)
   const detectedPromptType = detectPromptType(content);
   const isAgentic = detectedPromptType === "agentic_prompt";
 
   // 2. Score prompt engineering criteria
-  const peResult = normalizeScore(PE_CRITERIA, content);
+  const peResult = normalizeScore(PE_CRITERIA, evalContent);
 
   // 3. Score context engineering criteria
-  const ceResult = normalizeScore(CE_CRITERIA, content);
+  const ceResult = normalizeScore(CE_CRITERIA, evalContent);
 
   // 4. Score agent readiness (only for agentic prompts)
   const arResult = isAgentic
-    ? normalizeScore(AR_CRITERIA, content)
+    ? normalizeScore(AR_CRITERIA, evalContent)
     : {
         totalScore: 0,
         maxScore: 20,
@@ -1355,9 +1448,9 @@ export function evaluatePromptContext(
         details: [] as ContextCriterion[],
       };
 
-  // 5. Detect risk flags
+  // 5. Detect risk flags (use evalContent for scoring, but content for risk detection)
   const detectedFlags = RISK_FLAG_DEFS.filter((def) =>
-    def.detect(content, isAgentic),
+    def.detect(evalContent, isAgentic),
   ).map(
     (def): RiskFlag => ({
       flag: def.flag,

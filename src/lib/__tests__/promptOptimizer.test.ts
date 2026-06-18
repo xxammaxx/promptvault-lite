@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { optimizePrompt } from "../promptOptimizer";
+import {
+  optimizePrompt,
+  containsUnresolvedPlaceholder,
+  validateOptimizedPromptQuality,
+} from "../promptOptimizer";
 import type { OptimizationMode } from "@/types";
 
 // =============================================================================
@@ -146,12 +150,16 @@ describe("optimizePrompt", () => {
       );
     });
 
-    it("adds missing section placeholders with TODO markers", () => {
+    it("does NOT inject TODO placeholders for missing sections", () => {
       const input = "Write code for me";
       const result = optimizePrompt(input, "balanced");
-      // balanced mode should add structural sections when they're missing
-      expect(result.optimized.length).toBeGreaterThan(input.length);
-      expect(result.optimized).toMatch(/TODO|ergänzen/i);
+      // balanced mode should NOT add structural placeholder sections with TODO
+      expect(containsUnresolvedPlaceholder(result.optimized)).toBe(false);
+      // Instead, it should warn about missing sections
+      const sectionWarnings = result.warnings.filter((w) =>
+        w.includes("Fehlende Sektion"),
+      );
+      expect(sectionWarnings.length).toBeGreaterThan(0);
     });
 
     it("reorders sections into canonical order", () => {
@@ -308,6 +316,293 @@ Data Scientist`;
         expect(Array.isArray(result.warnings)).toBe(true);
         expect(result.original).toBe(samplePrompt);
       }
+    });
+  });
+
+  // ===========================================================================
+  // Placeholder Hardening Tests
+  // ===========================================================================
+
+  describe("placeholder hardening — balanced mode", () => {
+    it("does NOT inject TODO comments in balanced mode", () => {
+      const input = "Write code for me";
+      const result = optimizePrompt(input, "balanced");
+      expect(containsUnresolvedPlaceholder(result.optimized)).toBe(false);
+      expect(result.optimized).not.toMatch(/<!--\s*TODO/);
+    });
+
+    it("emits warnings instead of placeholder sections", () => {
+      const input = "Just a simple prompt";
+      const result = optimizePrompt(input, "balanced");
+      // Should warn about missing sections
+      const sectionWarnings = result.warnings.filter((w) =>
+        w.includes("Fehlende Sektion"),
+      );
+      expect(sectionWarnings.length).toBeGreaterThanOrEqual(3); // role, requirements, verify, etc.
+    });
+
+    it("does NOT contain 'requirements ergänzen' or 'verify ergänzen'", () => {
+      const input = "A basic prompt with no structure";
+      const result = optimizePrompt(input, "balanced");
+      expect(result.optimized).not.toMatch(/requirements?\s+ergänzen/i);
+      expect(result.optimized).not.toMatch(/verify\s+ergänzen/i);
+    });
+  });
+
+  describe("placeholder hardening — aggressive mode", () => {
+    it("does NOT inject TODO comments in aggressive scaffolding", () => {
+      const input = "Write good code";
+      const result = optimizePrompt(input, "aggressive");
+      expect(containsUnresolvedPlaceholder(result.optimized)).toBe(false);
+      expect(result.optimized).not.toMatch(/<!--\s*TODO/);
+    });
+
+    it("scaffolding sections do not contain TODO markers", () => {
+      const input = "Help me with my project";
+      const result = optimizePrompt(input, "aggressive");
+      // Context engineering sections should exist but without TODO
+      expect(result.optimized).toMatch(
+        /Cold Context|Warm Context|Hot Context/i,
+      );
+      expect(result.optimized).not.toMatch(/TODO.*ergänzen/);
+      expect(result.optimized).not.toMatch(/TODO.*beschreiben/);
+    });
+
+    it("does NOT contain 'requirements ergänzen' or 'verify ergänzen'", () => {
+      const input = "Build a feature";
+      const result = optimizePrompt(input, "aggressive");
+      expect(result.optimized).not.toMatch(/requirements?\s+ergänzen/i);
+      expect(result.optimized).not.toMatch(/verify\s+ergänzen/i);
+    });
+
+    it("scaffolding uses fill-in prompts instead of TODO comments", () => {
+      const input = "Build a feature";
+      const result = optimizePrompt(input, "aggressive");
+      // Should have "Bitte ausfüllen" style hints instead of TODO
+      expect(result.optimized).toMatch(/Bitte ausfüllen/i);
+    });
+  });
+
+  // ===========================================================================
+  // Regression: Positron-artiger Agentic Prompt
+  // ===========================================================================
+
+  describe("regression: Positron-style agentic prompt", () => {
+    // Simulates a prompt like "Agentic/Vibe-Coding Baseline 2026 — Positron"
+    const positronPrompt = [
+      "## Rolle",
+      "Du bist ein Senior Fullstack-Entwickler mit Fokus auf Tauri + React.",
+      "",
+      "## Kontextfenster-Empfehlung",
+      "Nutze ein frisches Kontextfenster.",
+      "",
+      "## Hard Constraints",
+      "- Keine Dockerisierung",
+      "- Keine externen API-Calls",
+      "- Keine neuen Abhängigkeiten",
+      "- Kein Direct-Push auf master",
+      "",
+      "## Projektfokus",
+      "PromptVault Lite — eine lokale Desktop-Anwendung.",
+      "",
+      "## Ziel",
+      "Implementiere den Batch-Optimizer für Markdown-Ordner.",
+      "",
+      "## Priorisierte Arbeitsphasen",
+      "1. Planungslogik (pure, kein I/O)",
+      "2. Rust-Backend-Befehl",
+      "3. Node-FS-Adapter für Tests",
+      "4. Integrationstests mit Desktop-Ordner",
+      "5. E2E-Test mit 12 echten Dateien",
+      "",
+      "## Red Tests",
+      "- `planBatchOptimization` muss leere Ordner korrekt behandeln",
+      "- Batch darf keine bestehenden `.optimized.md`-Dateien überschreiben",
+      "- Batch muss Pfadinjektion blockieren (null bytes, `..`)",
+      "- Originale müssen unverändert bleiben (Hash-Check)",
+      "- Tauri-FS-Adapter muss korrekt cachen",
+      "",
+      "## Ergebnisformat",
+      "`.optimized.md`-Dateien neben den Originalen.",
+    ].join("\n");
+
+    it("preserves concrete Red Tests after aggressive optimization", () => {
+      const result = optimizePrompt(positronPrompt, "aggressive");
+      // Red Tests must survive
+      expect(result.optimized).toMatch(/planBatchOptimization.*leere Ordner/);
+      expect(result.optimized).toMatch(/überschreiben/);
+      expect(result.optimized).toMatch(/Pfadinjektion/);
+      expect(result.optimized).toMatch(/Hash-Check/);
+    });
+
+    it("preserves Hard Constraints after aggressive optimization", () => {
+      const result = optimizePrompt(positronPrompt, "aggressive");
+      expect(result.optimized).toMatch(/Keine Dockerisierung/);
+      expect(result.optimized).toMatch(/Keine externen API-Calls/);
+      expect(result.optimized).toMatch(/Kein Direct-Push auf master/);
+    });
+
+    it("preserves Projektfokus after aggressive optimization", () => {
+      const result = optimizePrompt(positronPrompt, "aggressive");
+      expect(result.optimized).toMatch(/PromptVault Lite/);
+    });
+
+    it("balanced mode does NOT inject TODO placeholders for missing sections", () => {
+      const result = optimizePrompt(positronPrompt, "balanced");
+      expect(containsUnresolvedPlaceholder(result.optimized)).toBe(false);
+    });
+
+    it("aggressive mode does NOT inject TODO placeholders", () => {
+      const result = optimizePrompt(positronPrompt, "aggressive");
+      expect(containsUnresolvedPlaceholder(result.optimized)).toBe(false);
+    });
+  });
+
+  // ===========================================================================
+  // Regression: BescheidPilot-artiger Local-only/Privacy Prompt
+  // ===========================================================================
+
+  describe("regression: BescheidPilot-style local-only prompt", () => {
+    // Simulates a local-first privacy-sensitive prompt
+    const bescheidPilotPrompt = [
+      "## Rolle",
+      "Du bist ein DSGVO-Compliance-Engineer mit Fokus auf lokale Verarbeitung.",
+      "",
+      "## Kontextfenster-Empfehlung",
+      "Starte in einem leeren Kontextfenster.",
+      "",
+      "## Hard Constraints",
+      "- KEINE Daten verlassen den lokalen Rechner",
+      "- KEINE Cloud-API, KEIN Telemetrie",
+      "- ALLE Verarbeitung muss offline funktionieren",
+      "- KEINE echten personenbezogenen Daten testen",
+      "- KEINE Secrets committen",
+      "",
+      "## Projektfokus",
+      "CiviPet OS — lokale Tierheimverwaltung ohne Cloud.",
+      "",
+      "## Ziel",
+      "Erstelle einen DSGVO-konformen Datenexport.",
+      "",
+      "## Priorisierte Arbeitsphasen",
+      "1. Datenflussdiagramm erstellen",
+      "2. Consent-Tracking validieren",
+      "3. Retention-Policy in Code prüfen",
+      "4. Export-Funktion ohne personenbezogene Daten testen",
+      "5. Audit-Log für Export-Operationen",
+      "",
+      "## Red Tests",
+      "- Export darf KEINE echten Namen enthalten",
+      "- Export darf KEINE Adressdaten enthalten",
+      "- Export-Pfad muss auf Vault-Root beschränkt sein",
+      "- Symlink-Escape muss blockiert werden",
+      "- Audit-Log muss jede Export-Operation dokumentieren",
+      "",
+      "## Ergebnisformat",
+      "JSON-Export mit Pseudonymisierung aller personenbezogenen Felder.",
+    ].join("\n");
+
+    it("preserves Hard Constraints after aggressive optimization", () => {
+      const result = optimizePrompt(bescheidPilotPrompt, "aggressive");
+      expect(result.optimized).toMatch(/KEINE Daten verlassen/);
+      expect(result.optimized).toMatch(/KEINE Cloud-API/);
+      expect(result.optimized).toMatch(/KEINE echten personenbezogenen/);
+    });
+
+    it("preserves Red Tests after balanced optimization", () => {
+      const result = optimizePrompt(bescheidPilotPrompt, "balanced");
+      expect(result.optimized).toMatch(/Export darf KEINE echten Namen/);
+      expect(result.optimized).toMatch(/Symlink-Escape/);
+      expect(result.optimized).toMatch(/Audit-Log/);
+    });
+
+    it("balanced mode does NOT inject TODO placeholders", () => {
+      const result = optimizePrompt(bescheidPilotPrompt, "balanced");
+      expect(containsUnresolvedPlaceholder(result.optimized)).toBe(false);
+    });
+
+    it("aggressive mode does NOT inject TODO placeholders", () => {
+      const result = optimizePrompt(bescheidPilotPrompt, "aggressive");
+      expect(containsUnresolvedPlaceholder(result.optimized)).toBe(false);
+    });
+
+    it("Projektfokus is preserved after optimization", () => {
+      const result = optimizePrompt(bescheidPilotPrompt, "aggressive");
+      expect(result.optimized).toMatch(/CiviPet OS/);
+    });
+  });
+
+  // ===========================================================================
+  // Quality Validation Function Tests
+  // ===========================================================================
+
+  describe("validateOptimizedPromptQuality", () => {
+    it("passes clean output", () => {
+      const result = validateOptimizedPromptQuality(
+        "Original",
+        "## Rolle\n\nKonkreter Inhalt\n\n## Ziel\n\nKlares Ziel",
+      );
+      expect(result.passed).toBe(true);
+      expect(result.unresolved_placeholders).toHaveLength(0);
+    });
+
+    it("fails on TODO comment", () => {
+      const result = validateOptimizedPromptQuality(
+        "Original",
+        "## Anforderungen\n\n<!-- TODO: requirements ergänzen -->",
+      );
+      expect(result.passed).toBe(false);
+      expect(result.unresolved_placeholders.length).toBeGreaterThan(0);
+    });
+
+    it("fails on TBD placeholder", () => {
+      const result = validateOptimizedPromptQuality(
+        "Original",
+        "## Acceptance Criteria\n\nTBD",
+      );
+      expect(result.passed).toBe(false);
+    });
+
+    it("fails on 'requirements ergänzen' text", () => {
+      const result = validateOptimizedPromptQuality(
+        "Original",
+        "## Anforderungen\n\nrequirements ergänzen",
+      );
+      expect(result.passed).toBe(false);
+    });
+
+    it("fails on 'verify ergänzen' text", () => {
+      const result = validateOptimizedPromptQuality(
+        "Original",
+        "## Verifikation\n\nverify ergänzen",
+      );
+      expect(result.passed).toBe(false);
+    });
+
+    it("fails on empty sections", () => {
+      const result = validateOptimizedPromptQuality(
+        "Original",
+        "## Anforderungen\n\n\n\n## Ziel\n\n",
+      );
+      expect(result.passed).toBe(false);
+      expect(result.empty_sections.length).toBeGreaterThan(0);
+    });
+
+    it("passes sections with actual content", () => {
+      const result = validateOptimizedPromptQuality(
+        "Original",
+        "## Anforderungen\n\n- Funktion muss sauber sein\n- Tests müssen laufen",
+      );
+      expect(result.passed).toBe(true);
+      expect(result.empty_sections).toHaveLength(0);
+    });
+
+    it("passes output without any placeholder patterns", () => {
+      const result = validateOptimizedPromptQuality(
+        "Original",
+        "## Rolle\n\nDu bist ein Entwickler.\n\n## Ziel\n\nSchreibe Code.\n\n## Anforderungen\n\n- Anforderung 1\n- Anforderung 2",
+      );
+      expect(result.passed).toBe(true);
     });
   });
 });

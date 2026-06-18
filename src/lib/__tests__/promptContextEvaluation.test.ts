@@ -923,3 +923,150 @@ Implement a REST API.
     expect(constraintCriteria?.score).toBeGreaterThanOrEqual(1);
   });
 });
+
+// =============================================================================
+// 14. Placeholder Hardening — Score Model Tests
+// =============================================================================
+
+describe("Score model: placeholder-only sections do NOT inflate scores", () => {
+  it("'## Anforderungen <!-- TODO -->' does NOT fulfill Requirements criteria", () => {
+    // A prompt with a placeholder-only requirements section should
+    // not score better than one without any requirements section
+    const withoutReqs = evalPrompt("You are a developer. Write some code.");
+    const withPlaceholderReqs = evalPrompt(`## Rolle
+You are a developer.
+
+## Anforderungen
+<!-- TODO: requirements ergänzen -->
+
+## Ziel
+Write some code.`);
+
+    // The placeholder-only section should not significantly increase PE score
+    const delta =
+      withPlaceholderReqs.prompt_engineering_score -
+      withoutReqs.prompt_engineering_score;
+    // Max allowed delta: 5 points (could come from having a heading structure)
+    expect(delta).toBeLessThanOrEqual(5);
+  });
+
+  it("'## Verifikation <!-- TODO -->' does NOT fulfill Verification criteria", () => {
+    const result = evalPrompt(`## Rolle
+You are a developer.
+
+## Verifikation
+<!-- TODO: verify ergänzen -->
+
+## Ziel
+Write code.`);
+
+    // Verification criteria should score 0 since content is just a placeholder
+    const verifyCriterion = result.criteria.find(
+      (c) => c.name === "Verification" || c.name === "Verifikation",
+    );
+    if (verifyCriterion) {
+      expect(verifyCriterion.score).toBe(0);
+    }
+  });
+
+  it("'## Acceptance Criteria TBD' does NOT fulfill acceptance criteria", () => {
+    const withTBD = evalPrompt(`## Rolle
+Developer
+
+## Acceptance Criteria
+TBD
+
+## Ziel
+Write code.`);
+    const withoutAC = evalPrompt(`## Rolle
+Developer
+
+## Ziel
+Write code.`);
+
+    // Having a TBD acceptance criteria section should not boost score
+    // (the placeholder section is stripped before scoring)
+    const delta = Math.abs(
+      withTBD.prompt_engineering_score - withoutAC.prompt_engineering_score,
+    );
+    expect(delta).toBeLessThanOrEqual(5);
+  });
+
+  it("real requirements section properly improves score", () => {
+    const withoutReqs = evalPrompt(`## Rolle
+Developer
+
+## Ziel
+Write code.`);
+
+    const withRealReqs = evalPrompt(`## Rolle
+Developer
+
+## Anforderungen
+- Code must be TypeScript
+- Must have unit tests
+- No external dependencies
+
+## Ziel
+Write code.`);
+
+    // Real requirements should improve the score
+    expect(withRealReqs.prompt_engineering_score).toBeGreaterThan(
+      withoutReqs.prompt_engineering_score,
+    );
+  });
+
+  it("real verification section properly improves score", () => {
+    const withoutVerify = evalPrompt(`## Rolle
+Developer
+
+## Ziel
+Write code.`);
+
+    const withRealVerify = evalPrompt(`## Rolle
+Developer
+
+## Ziel
+Write code.
+
+## Verifikation
+- Run pnpm test
+- Confirm all tests pass
+- Check lint output`);
+
+    // Real verification should improve score
+    expect(withRealVerify.prompt_engineering_score).toBeGreaterThan(
+      withoutVerify.prompt_engineering_score,
+    );
+  });
+
+  it("placeholder content does NOT prevent risk flags from firing", () => {
+    // A longer prompt with placeholder-only sections should still get
+    // appropriate risk flags for missing real content
+    const result = evalPrompt(`## Rolle
+Developer
+
+## Kontext
+Working on a large codebase with multiple services running in production.
+The system processes user data and requires careful error handling.
+
+## Ziel
+Write code for the payment module.
+
+## Anforderungen
+<!-- TODO: requirements ergänzen -->
+
+## Verifikation
+TBD
+
+## Einschränkungen
+Cannot use external APIs.`);
+
+    // The placeholder verification section is stripped, so the evaluator
+    // sees no real verification content
+    const hasFakeVerification = result.criteria.some(
+      (c) => c.name === "Verification" && c.score > 0,
+    );
+    expect(hasFakeVerification).toBe(false);
+  });
+});
