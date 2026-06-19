@@ -49,7 +49,6 @@ All gates pass. The project is stable and functional.
 | ------------------------------------- | ---------------------------------------------------- |
 | NAS-Mounted Markdown Folder Ingestion | PR #145 open (feature/nas-markdown-folder-ingestion) |
 | Settings Modal                        | Planned (#63), not started                           |
-| Blueprint Detection & Analysis        | Planned (#49–59), not started                        |
 
 ---
 

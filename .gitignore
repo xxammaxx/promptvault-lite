@@ -54,3 +54,4 @@ site/
 
 # Python cache
 __pycache__/
+.worktrees/

@@ -1448,7 +1448,7 @@ export function evaluatePromptContext(
         details: [] as ContextCriterion[],
       };
 
-  // 5. Detect risk flags (use evalContent for scoring, but content for risk detection)
+  // 5. Detect risk flags on evalContent (placeholder-stripped) to avoid flagging stripped sections
   const detectedFlags = RISK_FLAG_DEFS.filter((def) =>
     def.detect(evalContent, isAgentic),
   ).map(
