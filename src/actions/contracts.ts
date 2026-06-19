@@ -333,6 +333,103 @@ function validateCompareScoreOutput(output: unknown): ValidationResult {
 }
 
 // =============================================================================
+// blueprints.detect
+// =============================================================================
+
+function validateBlueprintDetectInput(input: unknown): ValidationResult {
+  if (!isObject(input)) return fail("Input must be an object");
+  if (typeof input.content !== "string") {
+    return fail("content: required string");
+  }
+  return ok();
+}
+
+function validateBlueprintDetectOutput(output: unknown): ValidationResult {
+  if (!isObject(output)) return fail("Output must be an object");
+  const obj = output;
+  const errs: string[] = [];
+  const validClasses = [
+    "PROMPT",
+    "BLUEPRINT",
+    "PROMPT_BLUEPRINT_HYBRID",
+    "NOTE",
+    "DOC",
+    "CODE_FRAGMENT",
+    "UNKNOWN_NEEDS_REVIEW",
+  ];
+  if (!validClasses.includes(obj.content_class as string))
+    errs.push("content_class: must be a valid ContentClass");
+  if (typeof obj.confidence !== "number")
+    errs.push("confidence: must be number");
+  if (!Array.isArray(obj.prompt_signals))
+    errs.push("prompt_signals: must be array");
+  if (!Array.isArray(obj.blueprint_signals))
+    errs.push("blueprint_signals: must be array");
+  if (!Array.isArray(obj.contamination_signals))
+    errs.push("contamination_signals: must be array");
+  return errs.length ? fail(...errs) : ok();
+}
+
+// =============================================================================
+// blueprints.evaluate
+// =============================================================================
+
+function validateBlueprintEvaluateInput(input: unknown): ValidationResult {
+  if (!isObject(input)) return fail("Input must be an object");
+  if (typeof input.content !== "string") {
+    return fail("content: required string");
+  }
+  return ok();
+}
+
+function validateBlueprintEvaluateOutput(output: unknown): ValidationResult {
+  if (!isObject(output)) return fail("Output must be an object");
+  if (!isObject(output.evaluation)) return fail("evaluation: must be object");
+  const eval_ = output.evaluation;
+  if (typeof eval_.overall_score !== "number")
+    return fail("evaluation.overall_score: must be number");
+  if (typeof eval_.content_class !== "string")
+    return fail("evaluation.content_class: must be string");
+  return ok();
+}
+
+// =============================================================================
+// blueprints.optimize
+// =============================================================================
+
+const VALID_BLUEPRINT_MODES = ["conservative", "balanced", "aggressive"];
+
+function validateBlueprintOptimizeInput(input: unknown): ValidationResult {
+  if (!isObject(input)) return fail("Input must be an object");
+  const obj = input;
+  const errs: string[] = [];
+
+  if (typeof obj.content !== "string") {
+    errs.push("content: required string");
+  }
+
+  if (!isString(obj.mode) || !VALID_BLUEPRINT_MODES.includes(obj.mode)) {
+    errs.push("mode: must be 'conservative' | 'balanced' | 'aggressive'");
+  }
+
+  return errs.length ? fail(...errs) : ok();
+}
+
+function validateBlueprintOptimizeOutput(output: unknown): ValidationResult {
+  if (!isObject(output)) return fail("Output must be an object");
+  const obj = output;
+  const errs: string[] = [];
+  if (typeof obj.original !== "string") errs.push("original: must be string");
+  if (typeof obj.optimized !== "string") errs.push("optimized: must be string");
+  if (!Array.isArray(obj.changes)) errs.push("changes: must be array");
+  if (!isObject(obj.before_evaluation))
+    errs.push("before_evaluation: must be object");
+  if (!isObject(obj.after_evaluation))
+    errs.push("after_evaluation: must be object");
+  return errs.length ? fail(...errs) : ok();
+}
+
+// =============================================================================
 // Full Action Contract Registry
 // =============================================================================
 
@@ -446,6 +543,42 @@ export const ACTION_CONTRACTS: Record<ActionName, ActionContract> = {
     evidenceRequired: true,
     validateInput: validateCompareScoreInput,
     validateOutput: validateCompareScoreOutput,
+  },
+  "blueprints.detect": {
+    name: "blueprints.detect",
+    description:
+      "Detect and classify content as prompt, blueprint, hybrid, note, doc, code, or unknown",
+    risk: "low",
+    access: "read",
+    uiStateImpact: "none",
+    approvalRequired: false,
+    evidenceRequired: true,
+    validateInput: validateBlueprintDetectInput,
+    validateOutput: validateBlueprintDetectOutput,
+  },
+  "blueprints.evaluate": {
+    name: "blueprints.evaluate",
+    description:
+      "Evaluate blueprint quality across 10 dimensions (goal, scope, architecture, etc.)",
+    risk: "low",
+    access: "read",
+    uiStateImpact: "none",
+    approvalRequired: false,
+    evidenceRequired: true,
+    validateInput: validateBlueprintEvaluateInput,
+    validateOutput: validateBlueprintEvaluateOutput,
+  },
+  "blueprints.optimize": {
+    name: "blueprints.optimize",
+    description:
+      "Optimize blueprint structure in conservative, balanced, or aggressive mode",
+    risk: "low",
+    access: "read",
+    uiStateImpact: "none",
+    approvalRequired: false,
+    evidenceRequired: true,
+    validateInput: validateBlueprintOptimizeInput,
+    validateOutput: validateBlueprintOptimizeOutput,
   },
 };
 

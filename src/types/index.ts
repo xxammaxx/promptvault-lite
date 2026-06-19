@@ -251,6 +251,9 @@ export type ActionName =
   | "prompts.score"
   | "prompts.detect_artifacts"
   | "prompts.optimize"
+  | "blueprints.detect"
+  | "blueprints.evaluate"
+  | "blueprints.optimize"
   | "collections.list"
   | "qa.load_fixture"
   | "qa.compare_score";
@@ -428,6 +431,157 @@ export interface CompareScoreOutput {
   b: { overall_score: number; prompt_engineering_score: number };
   delta: number;
   better: "a" | "b" | "tie";
+}
+
+// =============================================================================
+// Blueprint Classification, Evaluation & Optimization Types
+// =============================================================================
+
+/** Content classification: what kind of document is this? */
+export type ContentClass =
+  | "PROMPT"
+  | "BLUEPRINT"
+  | "PROMPT_BLUEPRINT_HYBRID"
+  | "NOTE"
+  | "DOC"
+  | "CODE_FRAGMENT"
+  | "UNKNOWN_NEEDS_REVIEW";
+
+/** Blueprint sub-type for more granular classification */
+export type BlueprintType =
+  | "architecture_blueprint"
+  | "product_blueprint"
+  | "implementation_blueprint"
+  | "agent_workflow_blueprint"
+  | "security_blueprint"
+  | "compliance_blueprint"
+  | "deployment_blueprint"
+  | "generic_blueprint";
+
+/** Contamination status for blueprint content */
+export type BlueprintContamination =
+  | "CLEAN"
+  | "POSSIBLE_CONTAMINATION"
+  | "CONTAMINATED_NEEDS_REVIEW"
+  | "BLOCKING_SENSITIVE_CONTENT";
+
+/** Blueprint dimension scores */
+export interface BlueprintDimensionScore {
+  dimension: string;
+  name: string;
+  score: number; // 0, 1, or 2
+  max_score: number; // always 2
+  details: string;
+}
+
+/** Blueprint improvement suggestion */
+export interface BlueprintImprovement {
+  dimension: string;
+  criterion: string;
+  message: string;
+  priority: "high" | "medium" | "low";
+}
+
+/** Full blueprint evaluation result */
+export interface BlueprintEvaluation {
+  // Classification
+  content_class: ContentClass;
+  blueprint_type: BlueprintType | null;
+  contamination_status: BlueprintContamination;
+
+  // Scores (0-100, higher is better)
+  goal_clarity_score: number;
+  scope_sharpness_score: number;
+  architecture_score: number;
+  feasibility_score: number;
+  risk_coverage_score: number;
+  security_privacy_score: number;
+  testability_score: number;
+  evidence_readiness_score: number;
+  context_purity_score: number;
+  overall_score: number;
+
+  // Structured findings
+  dimensions: BlueprintDimensionScore[];
+  strengths: string[];
+  warnings: string[];
+  missing_elements: string[];
+  suggested_improvements: BlueprintImprovement[];
+
+  // Metadata
+  confidence: number; // 0.0-1.0
+  evaluated_at: string;
+}
+
+/** Blueprint optimization modes */
+export type BlueprintOptimizationMode =
+  | "conservative"
+  | "balanced"
+  | "aggressive";
+
+/** Blueprint optimization diff */
+export interface BlueprintOptimizationDiff {
+  original: string;
+  optimized: string;
+  changes: OptimizationChange[];
+  warnings: string[];
+  contamination_cleaned: boolean;
+}
+
+/** Blueprint optimization quality result */
+export interface BlueprintOptimizationQualityResult {
+  passed: boolean;
+  unresolved_placeholders: string[];
+  empty_sections: string[];
+  warnings: string[];
+  structural_improvement_confirmed: boolean;
+  contamination_resolved: boolean;
+}
+
+// ---- Blueprint Action Input/Output Types ----
+
+/** Input type for blueprints.detect */
+export interface BlueprintDetectInput {
+  content: string;
+}
+
+/** Output type for blueprints.detect */
+export interface BlueprintDetectOutput {
+  content_class: ContentClass;
+  blueprint_type: BlueprintType | null;
+  contamination_status: BlueprintContamination;
+  confidence: number;
+  // Classification signals found
+  prompt_signals: string[];
+  blueprint_signals: string[];
+  contamination_signals: string[];
+}
+
+/** Input type for blueprints.evaluate */
+export interface BlueprintEvaluateInput {
+  content: string;
+}
+
+/** Output type for blueprints.evaluate */
+export interface BlueprintEvaluateOutput {
+  evaluation: BlueprintEvaluation;
+}
+
+/** Input type for blueprints.optimize */
+export interface BlueprintOptimizeInput {
+  content: string;
+  mode: BlueprintOptimizationMode;
+}
+
+/** Output type for blueprints.optimize */
+export interface BlueprintOptimizeOutput {
+  original: string;
+  optimized: string;
+  changes: OptimizationChange[];
+  warnings: string[];
+  contamination_cleaned: boolean;
+  before_evaluation: BlueprintEvaluation;
+  after_evaluation: BlueprintEvaluation;
 }
 
 /** Action dispatch result */
