@@ -3,7 +3,7 @@
 > Living Software Portfolio. Updated with every significant agent run.
 > No marketing claims — only evidence-backed facts.
 
-**Last evidence run:** 2026-06-19 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator)
+**Last evidence run:** 2026-06-19 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator, CI-validated)
 **Blueprint detection run:** 2026-06-19 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator)
 
 ---
@@ -36,10 +36,11 @@
 
 ## New Capabilities Since v1.6.0
 
-| Capability                           | PR/Issue       | Status                    |
-| ------------------------------------ | -------------- | ------------------------- |
-| NAS-mounted markdown folder scanning | #145           | In PR review              |
-| Optimizer placeholder hardening      | Current branch | Review-ready (2026-06-18) |
+| Capability                                     | PR/Issue       | Status                    |
+| ---------------------------------------------- | -------------- | ------------------------- |
+| NAS-mounted markdown folder scanning           | #145           | In PR review              |
+| Optimizer placeholder hardening                | Current branch | Review-ready (2026-06-18) |
+| Blueprint detection, evaluation & optimization | #148           | CI-validated (2026-06-19) |
 
 ---
 
