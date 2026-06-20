@@ -17,30 +17,30 @@ All gates pass. The project is stable and functional.
 
 ## Implemented
 
-| Feature                                             | Evidence                                     | Since      |
-| --------------------------------------------------- | -------------------------------------------- | ---------- |
-| Local Prompt Archive (recursive .md scan)           | Rust tests: `scanner/file_scanner`           | v1.0       |
-| YAML Frontmatter Parser                             | Rust tests: `parser/frontmatter`             | v1.0       |
-| Quality Analysis (10 criteria)                      | Rust tests: `analysis/quality`               | v1.0       |
-| Hygiene Analysis (18 artifact categories)           | Rust tests: `analysis/hygiene`               | v1.6.0     |
-| Prompt Optimizer (conservative/balanced/aggressive) | Frontend tests: `promptOptimizer.test.ts`    | v1.6.0     |
-| Dark Mode (light/dark/auto)                         | Frontend tests: `ThemeToggle.test.tsx`       | v1.6.0     |
-| Resizable Explorer                                  | Frontend tests: `FileTree.test.tsx`          | v1.6.0     |
-| Export (JSON, Markdown, ZIP)                        | Rust tests: `commands/export`                | v1.0       |
-| Typed Local Action Layer (13 actions)               | Frontend tests: `red-tests.test.ts`          | v1.6.0     |
-| Blueprint Detection & Classification                | Frontend tests: `blueprintDetection.test.ts` | v1.7.0-dev |
-| Blueprint Quality Evaluation (10 dimensions)        | Frontend tests: `blueprintDetection.test.ts` | v1.7.0-dev |
-| Blueprint Optimization (3 modes)                    | Frontend tests: `blueprintDetection.test.ts` | v1.7.0-dev |
-| Blueprint Contamination Detection                   | Frontend tests: `blueprintDetection.test.ts` | v1.7.0-dev |
-| Favorites Backend (SQLite persistence)              | Rust integration tests                       | v1.5.0     |
-| Score Filter                                        | Frontend store logic                         | v1.5.0     |
-| Tauri Desktop App (1400×900 window)                 | Tauri config, local verification             | v1.0       |
-| Windows Path Normalization                          | Rust tests: `scanner/file_scanner`           | v1.6.0     |
-| Symlink Containment                                 | Rust tests: `scanner/file_scanner`           | v1.6.0     |
-| Path-Traversal Protection                           | Rust tests: export commands                  | v1.4.0     |
-| File Watcher (500ms debounce)                       | Rust: `scanner/file_scanner`                 | v1.0       |
-| MIT License                                         | LICENSE file, SPDX                           | v1.6.0     |
-| CI Pipeline (frontend + rust + secret scan)         | .github/workflows/ci.yml                     | v1.6.0     |
+| Feature                                                | Evidence                                                     | Since      |
+| ------------------------------------------------------ | ------------------------------------------------------------ | ---------- |
+| Local Prompt Archive (recursive .md scan)              | Rust tests: `scanner/file_scanner`                           | v1.0       |
+| YAML Frontmatter Parser                                | Rust tests: `parser/frontmatter`                             | v1.0       |
+| Quality Analysis (10 criteria)                         | Rust tests: `analysis/quality`                               | v1.0       |
+| Hygiene Analysis (18 artifact categories)              | Rust tests: `analysis/hygiene`                               | v1.6.0     |
+| Prompt Optimizer (conservative/balanced/aggressive)    | Frontend tests: `promptOptimizer.test.ts`                    | v1.6.0     |
+| Dark Mode (light/dark/auto)                            | Frontend tests: `ThemeToggle.test.tsx`                       | v1.6.0     |
+| Resizable Explorer                                     | Frontend tests: `FileTree.test.tsx`                          | v1.6.0     |
+| Export (JSON, Markdown, ZIP)                           | Rust tests: `commands/export`                                | v1.0       |
+| Typed Local Action Layer (13 actions)                  | Frontend tests: `red-tests.test.ts`                          | v1.6.0     |
+| Blueprint Detection & Classification                   | Frontend tests: `blueprintDetection.test.ts`                 | v1.7.0-dev |
+| Blueprint Quality Evaluation (10 dimensions)           | Frontend tests: `blueprintDetection.test.ts`                 | v1.7.0-dev |
+| Blueprint Optimization (3 modes)                       | Frontend tests: `blueprintDetection.test.ts`                 | v1.7.0-dev |
+| Blueprint Contamination Detection                      | Frontend tests: `blueprintDetection.test.ts`                 | v1.7.0-dev |
+| Favorites Backend (SQLite persistence)                 | Rust integration tests                                       | v1.5.0     |
+| Score Filter                                           | Frontend store logic                                         | v1.5.0     |
+| Tauri Desktop App (1400×900 window)                    | Tauri config, local verification                             | v1.0       |
+| Windows Path Normalization                             | Rust tests: `scanner/file_scanner`                           | v1.6.0     |
+| Symlink Containment                                    | Rust tests: `scanner/file_scanner`                           | v1.6.0     |
+| Path-Traversal Protection                              | Rust tests: export commands                                  | v1.4.0     |
+| File Watcher (500ms debounce)                          | Rust: `scanner/file_scanner`                                 | v1.0       |
+| MIT License                                            | LICENSE file, SPDX                                           | v1.6.0     |
+| CI Pipeline definition (frontend + rust + secret scan) | .github/workflows/ci.yml (currently infra-blocked, see #154) | v1.6.0     |
 
 ---
 
@@ -77,18 +77,19 @@ All gates pass. The project is stable and functional.
 
 ## Test Summary (2026-06-19)
 
-| Suite                             | Tests | Result                        |
-| --------------------------------- | ----- | ----------------------------- |
-| Frontend (Vitest)                 | 376   | PASS (11 files)               |
-| Rust Unit (lib)                   | 102   | PASS (+1 ignored)             |
-| Rust Integration (command_errors) | 17    | PASS                          |
-| ESLint                            | —     | PASS (0 errors, 0 warnings)   |
-| TypeScript                        | —     | PASS (tsc --noEmit, 0 errors) |
-| cargo fmt                         | —     | PASS                          |
-| cargo clippy                      | —     | PASS (0 warnings)             |
-| cargo build                       | —     | PASS                          |
-| pnpm build                        | —     | PASS                          |
-| CI (master, last 5 runs)          | 5/5   | SUCCESS                       |
+| Suite                             | Tests | Result                          |
+| --------------------------------- | ----- | ------------------------------- |
+| Frontend (Vitest)                 | 650   | PASS (22 files)                 |
+| Rust Unit (lib)                   | 117   | PASS (+1 ignored)               |
+| Rust Integration (command_errors) | 17    | PASS                            |
+| ESLint                            | —     | PASS (0 errors, 0 warnings)     |
+| TypeScript                        | —     | PASS (tsc --noEmit, 0 errors)   |
+| cargo fmt                         | —     | PASS                            |
+| cargo clippy                      | —     | PASS (0 warnings)               |
+| cargo build                       | —     | PASS                            |
+| pnpm build                        | —     | PASS                            |
+| Local CI (8 gates, master)        | 8/8   | PASS (local-CI-first, see #154) |
+| Remote CI (GitHub Actions)        | —     | REMOTE_CI_INFRA_BLOCKED         |
 
 ---
 
