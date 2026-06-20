@@ -21,6 +21,7 @@ function App() {
   const {
     scanFolder,
     analyzeAll,
+    batchClassifyBlueprints,
     isLoading,
     isAnalyzing,
     error,
@@ -151,11 +152,15 @@ function App() {
       if (selected && typeof selected === "string") {
         setFolderPath(selected);
         await scanFolder(selected);
+        // Issue #150: Batch classify blueprint content after scan so
+        // Explorer badges appear immediately. Fire-and-forget to avoid
+        // blocking the UI; lazy-on-select (T8) remains as fallback.
+        void batchClassifyBlueprints();
       }
     } catch (err) {
       console.error("Ordner-Auswahl fehlgeschlagen:", err);
     }
-  }, [isTauri, scanFolder]);
+  }, [isTauri, scanFolder, batchClassifyBlueprints]);
 
   const handleAnalyzeAll = useCallback(async () => {
     await analyzeAll();
