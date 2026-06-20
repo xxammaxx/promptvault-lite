@@ -1668,3 +1668,94 @@ body {
   border-radius: 0;
   -webkit-overflow-scrolling: touch;
 }
+
+/* ============================================================
+   Blueprint Evaluation Panel (Issue #149 - T5)
+   ============================================================ */
+
+.blueprint-evaluation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.blueprint-eval-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* Dimension row — reuses .criterion-row but scoped */
+.blueprint-dimension-row {
+  /* additional scoping if needed */
+}
+
+/* Strengths list */
+.blueprint-strengths-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.blueprint-strength-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-success);
+  padding: 3px 0;
+  line-height: 1.5;
+}
+
+.blueprint-strength-icon {
+  flex-shrink: 0;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+/* Warnings list */
+.blueprint-warnings-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.blueprint-warning-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-warning);
+  padding: 3px 0;
+  line-height: 1.5;
+}
+
+.blueprint-warning-icon {
+  flex-shrink: 0;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+/* Missing elements list */
+.blueprint-missing-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.blueprint-missing-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  padding: 3px 0;
+  line-height: 1.5;
+}
+
+.blueprint-missing-icon {
+  flex-shrink: 0;
+  font-weight: 700;
+  margin-top: 1px;
+}
