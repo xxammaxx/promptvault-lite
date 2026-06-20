@@ -42,6 +42,7 @@ describe("AnalysisPanel", () => {
           selectedEvaluation: () => evaluation,
           selectedHygiene: () => hygiene,
           selectedContextEvaluation: () => contextEval,
+          selectedBlueprintEvaluation: () => null,
           isAnalyzing,
           analyzeSelected: mockAnalyzeSelected,
         };

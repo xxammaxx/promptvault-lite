@@ -1,5 +1,5 @@
 // =============================================================================
-// Action Handlers — Implementations for all 10 registered actions
+// Action Handlers — Implementations for all 13 registered actions
 // =============================================================================
 // Handlers receive typed input (already validated) and return typed output.
 // They access the app store and Tauri backend through a handler context.
@@ -27,9 +27,17 @@ import type {
   CompareScoreInput,
   CompareScoreOutput,
   ArtifactCategory,
+  BlueprintDetectInput,
+  BlueprintDetectOutput,
+  BlueprintEvaluateInput,
+  BlueprintEvaluateOutput,
+  BlueprintOptimizeInput,
+  BlueprintOptimizeOutput,
 } from "@/types";
 import { optimizePrompt } from "@/lib/promptOptimizer";
 import { evaluatePromptContext } from "@/lib/promptContextEvaluation";
+import { classifyContent, evaluateBlueprint } from "@/lib/blueprintDetection";
+import { optimizeBlueprint } from "@/lib/blueprintOptimizer";
 
 // =============================================================================
 // Handler Context — provides access to app state and backend
@@ -408,4 +416,68 @@ export function handleCompareScore(input: unknown): CompareScoreOutput {
   else better = "tie";
 
   return { a, b, delta, better };
+}
+
+// =============================================================================
+// blueprints.detect
+// =============================================================================
+
+export function handleBlueprintDetect(input: unknown): BlueprintDetectOutput {
+  const { content } = input as BlueprintDetectInput;
+
+  if (!content || content.trim().length === 0) {
+    return {
+      content_class: "UNKNOWN_NEEDS_REVIEW",
+      blueprint_type: null,
+      contamination_status: "CLEAN",
+      confidence: 0.95,
+      prompt_signals: [],
+      blueprint_signals: [],
+      contamination_signals: [],
+    };
+  }
+
+  return classifyContent(content);
+}
+
+// =============================================================================
+// blueprints.evaluate
+// =============================================================================
+
+export function handleBlueprintEvaluate(
+  input: unknown,
+): BlueprintEvaluateOutput {
+  const { content } = input as BlueprintEvaluateInput;
+  const evaluation = evaluateBlueprint(content, new Date().toISOString());
+  return { evaluation };
+}
+
+// =============================================================================
+// blueprints.optimize
+// =============================================================================
+
+export function handleBlueprintOptimize(
+  input: unknown,
+): BlueprintOptimizeOutput {
+  const { content, mode } = input as BlueprintOptimizeInput;
+
+  // Run optimization
+  const diff = optimizeBlueprint(content, mode);
+
+  // Compute before/after evaluations
+  const beforeEvaluation = evaluateBlueprint(content, new Date().toISOString());
+  const afterEvaluation =
+    diff.optimized.trim().length > 0
+      ? evaluateBlueprint(diff.optimized, new Date().toISOString())
+      : beforeEvaluation;
+
+  return {
+    original: diff.original,
+    optimized: diff.optimized,
+    changes: diff.changes,
+    warnings: diff.warnings,
+    contamination_cleaned: diff.contamination_cleaned,
+    before_evaluation: beforeEvaluation,
+    after_evaluation: afterEvaluation,
+  };
 }

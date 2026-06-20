@@ -13,6 +13,9 @@ import {
   handleScore,
   handleDetectArtifacts,
   handleOptimize,
+  handleBlueprintDetect,
+  handleBlueprintEvaluate,
+  handleBlueprintOptimize,
   handleCollectionsList,
   handleLoadFixture,
   handleCompareScore,
@@ -110,7 +113,7 @@ export async function dispatch<T = unknown>(
     );
     return {
       success: false,
-      error: `Unknown action: "${actionName}". Valid actions include: prompts.search, prompts.get, prompts.create, prompts.update, prompts.score, prompts.detect_artifacts, prompts.optimize, collections.list, qa.load_fixture, qa.compare_score.`,
+      error: `Unknown action: "${actionName}". Valid actions include: prompts.search, prompts.get, prompts.create, prompts.update, prompts.score, prompts.detect_artifacts, prompts.optimize, blueprints.detect, blueprints.evaluate, blueprints.optimize, collections.list, qa.load_fixture, qa.compare_score.`,
     };
   }
 
@@ -293,6 +296,12 @@ async function executeHandler(
       return handleDetectArtifacts(input);
     case "prompts.optimize":
       return handleOptimize(input);
+    case "blueprints.detect":
+      return handleBlueprintDetect(input);
+    case "blueprints.evaluate":
+      return handleBlueprintEvaluate(input);
+    case "blueprints.optimize":
+      return handleBlueprintOptimize(input);
     case "collections.list":
       return handleCollectionsList();
     case "qa.load_fixture":

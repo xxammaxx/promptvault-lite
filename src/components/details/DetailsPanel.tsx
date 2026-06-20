@@ -2,6 +2,13 @@ import React, { useCallback, useState } from "react";
 import { useAppStore } from "@/stores/appStore";
 import ReactMarkdown from "react-markdown";
 import { OptimizationPanel } from "@/components/optimization/OptimizationPanel";
+import { BlueprintOptimizationPanel } from "@/components/optimization/BlueprintOptimizationPanel";
+import ContentClassBadge from "@/components/common/ContentClassBadge";
+import type { BlueprintContamination } from "@/types";
+
+// ---------------------------------------------------------------------------
+// PromptContent — renders markdown for the selected prompt
+// ---------------------------------------------------------------------------
 
 export const PromptContent: React.FC = () => {
   const prompt = useAppStore((s) => s.selectedPrompt)();
@@ -15,8 +22,13 @@ export const PromptContent: React.FC = () => {
   );
 };
 
+// ---------------------------------------------------------------------------
+// PromptMeta — metadata row with optional ContentClassBadge
+// ---------------------------------------------------------------------------
+
 export const PromptMeta: React.FC = () => {
   const prompt = useAppStore((s) => s.selectedPrompt)();
+  const detection = useAppStore((s) => s.selectedBlueprintDetection)();
 
   if (!prompt) return null;
 
@@ -30,6 +42,12 @@ export const PromptMeta: React.FC = () => {
         <span className="meta-label">Kategorie</span>
         <span className="meta-value">
           <span className="badge">{prompt.category}</span>
+          {detection?.content_class != null && (
+            <ContentClassBadge
+              contentClass={detection.content_class}
+              size="sm"
+            />
+          )}
         </span>
       </div>
       {prompt.tags.length > 0 && (
@@ -60,10 +78,107 @@ export const PromptMeta: React.FC = () => {
   );
 };
 
-export const ActionBar: React.FC<{ onOptimize?: () => void }> = ({
-  onOptimize,
-}) => {
+// ---------------------------------------------------------------------------
+// ContaminationWarning — shows contamination status bar
+// ---------------------------------------------------------------------------
+
+/** Configuration for each contamination level */
+const CONTAMINATION_CONFIG: Record<
+  Exclude<BlueprintContamination, "CLEAN">,
+  { cssModifier: string; icon: string; message: string }
+> = {
+  POSSIBLE_CONTAMINATION: {
+    cssModifier: "contamination-possible",
+    icon: "⚠️",
+    message:
+      "Mögliche Kontamination erkannt — dieser Inhalt enthält möglicherweise veraltete oder fremde Artefakte.",
+  },
+  CONTAMINATED_NEEDS_REVIEW: {
+    cssModifier: "contamination-review",
+    icon: "🚫",
+    message:
+      "Kontaminiert — manuelle Überprüfung auf ungewollte Änderungen empfohlen.",
+  },
+  BLOCKING_SENSITIVE_CONTENT: {
+    cssModifier: "contamination-blocked",
+    icon: "🔒",
+    message:
+      "Vertraulicher Inhalt — die Anzeige wurde aus Sicherheitsgründen blockiert.",
+  },
+};
+
+/**
+ * ContaminationWarning
+ *
+ * Reads the selected blueprint detection from the store and displays a
+ * contamination warning bar when the status is not CLEAN.
+ * - POSSIBLE_CONTAMINATION → yellow/orange warning bar
+ * - CONTAMINATED_NEEDS_REVIEW → red warning bar
+ * - BLOCKING_SENSITIVE_CONTENT → prominent red blocking bar
+ * - CLEAN or no detection → renders nothing
+ *
+ * NEVER renders secret values, token fragments, or original content lines.
+ */
+export const ContaminationWarning: React.FC = () => {
+  const detection = useAppStore((s) => s.selectedBlueprintDetection)();
+
+  if (!detection) return null;
+
+  const status = detection.contamination_status;
+  if (status === "CLEAN") return null;
+
+  const config = CONTAMINATION_CONFIG[status];
+
+  return (
+    <div
+      className={`contamination-bar ${config.cssModifier}`}
+      role="alert"
+      aria-live="polite"
+    >
+      <span className="contamination-icon" aria-hidden="true">
+        {config.icon}
+      </span>
+      <span className="contamination-message">{config.message}</span>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// BlockingMessage — shown when content is blocked for security
+// ---------------------------------------------------------------------------
+
+/**
+ * BlockingMessage
+ *
+ * Displayed in place of PromptContent when contamination_status is
+ * BLOCKING_SENSITIVE_CONTENT. Shows a safe, generic message without any
+ * reference to the original secret values.
+ */
+export const BlockingMessage: React.FC = () => (
+  <div className="blocking-message" role="alert" aria-live="assertive">
+    <span className="blocking-message-icon" aria-hidden="true">
+      🔒
+    </span>
+    <span className="blocking-message-text">
+      Dieser Inhalt kann aus Sicherheitsgründen nicht angezeigt werden.
+    </span>
+    <span className="blocking-message-hint">
+      Der Inhalt enthält vertrauliche Daten. Bitte prüfen Sie die Quelldatei
+      direkt.
+    </span>
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// ActionBar — button bar with optional Blueprint-Optimize button
+// ---------------------------------------------------------------------------
+
+export const ActionBar: React.FC<{
+  onOptimize?: () => void;
+  onBlueprintOptimize?: () => void;
+}> = ({ onOptimize, onBlueprintOptimize }) => {
   const prompt = useAppStore((s) => s.selectedPrompt)();
+  const detection = useAppStore((s) => s.selectedBlueprintDetection)();
   const toggleFavorite = useAppStore((s) => s.toggleFavorite);
   const analyzeSelected = useAppStore((s) => s.analyzeSelected);
   const isAnalyzing = useAppStore((s) => s.isAnalyzing);
@@ -73,7 +188,6 @@ export const ActionBar: React.FC<{ onOptimize?: () => void }> = ({
     try {
       await navigator.clipboard.writeText(prompt.content);
     } catch {
-      // Fallback: Tauri clipboard
       try {
         const { writeText } =
           await import("@tauri-apps/plugin-clipboard-manager");
@@ -95,6 +209,13 @@ export const ActionBar: React.FC<{ onOptimize?: () => void }> = ({
   }, [prompt]);
 
   if (!prompt) return null;
+
+  // Determine blueprint button visibility and state
+  const contentClass = detection?.content_class ?? null;
+  const contaminationStatus = detection?.contamination_status ?? null;
+  const showBlueprintBtn =
+    contentClass === "BLUEPRINT" || contentClass === "PROMPT_BLUEPRINT_HYBRID";
+  const blueprintBlocked = contaminationStatus === "BLOCKING_SENSITIVE_CONTENT";
 
   return (
     <div className="action-bar">
@@ -149,19 +270,52 @@ export const ActionBar: React.FC<{ onOptimize?: () => void }> = ({
       >
         {isAnalyzing ? "⏳" : "🔄"} Analysieren
       </button>
+      {showBlueprintBtn && (
+        <button
+          className="btn btn-primary"
+          onClick={onBlueprintOptimize}
+          disabled={!onBlueprintOptimize || blueprintBlocked}
+          title={
+            blueprintBlocked
+              ? "Blueprint-Optimierung für blockierte Inhalte nicht verfügbar"
+              : "Blueprint optimieren"
+          }
+          aria-label="Blueprint optimieren"
+        >
+          🔷 BP optimieren
+        </button>
+      )}
     </div>
   );
 };
 
+// ---------------------------------------------------------------------------
+// DetailsPanel — orchestrates all detail view components
+// ---------------------------------------------------------------------------
+
 export const DetailsPanel: React.FC = () => {
   const prompt = useAppStore((s) => s.selectedPrompt)();
+  const detection = useAppStore((s) => s.selectedBlueprintDetection)();
   const [showOptimizer, setShowOptimizer] = useState(false);
+  const [showBlueprintOptimizer, setShowBlueprintOptimizer] = useState(false);
 
   const handleOpenOptimizer = useCallback(() => {
     if (prompt) {
       setShowOptimizer(true);
     }
   }, [prompt]);
+
+  // Determine if content should be blocked (must be declared before handleBlueprintOptimize)
+  const isBlocked =
+    detection?.contamination_status === "BLOCKING_SENSITIVE_CONTENT";
+
+  // Blueprint optimize — opens the optimization modal for BLUEPRINT/HYBRID content.
+  // Disabled when BLOCKING_SENSITIVE_CONTENT (button stays disabled at the ActionBar level).
+  const handleBlueprintOptimize = useCallback(() => {
+    if (prompt && !isBlocked) {
+      setShowBlueprintOptimizer(true);
+    }
+  }, [prompt, isBlocked]);
 
   if (!prompt) {
     return (
@@ -187,8 +341,12 @@ export const DetailsPanel: React.FC = () => {
       </div>
       <div className="panel-content">
         <PromptMeta />
-        <ActionBar onOptimize={handleOpenOptimizer} />
-        <PromptContent />
+        <ContaminationWarning />
+        <ActionBar
+          onOptimize={handleOpenOptimizer}
+          onBlueprintOptimize={handleBlueprintOptimize}
+        />
+        {isBlocked ? <BlockingMessage /> : <PromptContent />}
       </div>
       {showOptimizer && (
         <OptimizationPanel
@@ -198,9 +356,28 @@ export const DetailsPanel: React.FC = () => {
           }}
         />
       )}
+      {showBlueprintOptimizer && (
+        <BlueprintOptimizationPanel
+          content={prompt.content}
+          onClose={() => {
+            setShowBlueprintOptimizer(false);
+          }}
+          onApply={(optimizedContent) => {
+            // Safe onApply: copies result to clipboard as default action.
+            // Auto-saving optimized content back to disk is a follow-up feature —
+            // the app currently has no direct file-write mechanism for prompt content.
+            navigator.clipboard.writeText(optimizedContent).catch(() => {});
+            setShowBlueprintOptimizer(false);
+          }}
+        />
+      )}
     </div>
   );
 };
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function formatDate(dateStr: string): string {
   try {

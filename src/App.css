@@ -469,6 +469,60 @@ body {
   border: 1px solid var(--color-border);
 }
 
+/* Content Class Badge */
+.content-class-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+.content-class-badge-sm {
+  padding: 0 4px;
+  font-size: 8px;
+  border-radius: 6px;
+}
+.badge-blueprint {
+  background: #1d76db20;
+  color: #1d76db;
+  border: 1px solid #1d76db40;
+}
+.badge-prompt {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+.badge-hybrid {
+  background: #8250df20;
+  color: #8250df;
+  border: 1px solid #8250df40;
+}
+.badge-review {
+  background: #fbca0420;
+  color: #fbca04;
+  border: 1px solid #fbca0440;
+}
+.badge-note {
+  background: #64748b20;
+  color: #64748b;
+  border: 1px solid #64748b40;
+}
+.badge-doc {
+  background: #14b8a620;
+  color: #14b8a6;
+  border: 1px solid #14b8a640;
+}
+.badge-code {
+  background: #f59e0b20;
+  color: #f59e0b;
+  border: 1px solid #f59e0b40;
+}
+
 /* Action Bar */
 .action-bar {
   display: flex;
@@ -1142,6 +1196,85 @@ body {
 }
 
 /* ============================================================
+   Contamination Warning Bars (Issue #149 - T4 DetailsPanel)
+   ============================================================ */
+
+.contamination-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.contamination-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.contamination-message {
+  flex: 1;
+}
+
+.contamination-possible {
+  background: var(--color-warning-light);
+  border: 1px solid var(--color-warning);
+  color: var(--color-warning);
+}
+
+.contamination-review {
+  background: var(--color-danger-light);
+  border: 1px solid var(--color-danger);
+  color: var(--color-danger);
+}
+
+.contamination-blocked {
+  background: var(--color-danger-light);
+  border: 2px solid var(--color-danger);
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+/* ============================================================
+   Blocking Message (Issue #149 - T4 Content Masking)
+   ============================================================ */
+
+.blocking-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  margin-top: 12px;
+  text-align: center;
+  gap: 12px;
+  border: 2px dashed var(--color-danger);
+  border-radius: var(--radius);
+  background: var(--color-danger-light);
+}
+
+.blocking-message-icon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.blocking-message-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-danger);
+}
+
+.blocking-message-hint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  max-width: 300px;
+}
+
+/* ============================================================
    Theme Toggle Button
    ============================================================ */
 .theme-toggle {
@@ -1534,4 +1667,168 @@ body {
   border: none;
   border-radius: 0;
   -webkit-overflow-scrolling: touch;
+}
+
+/* ============================================================
+   Blueprint Evaluation Panel (Issue #149 - T5)
+   ============================================================ */
+
+.blueprint-evaluation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.blueprint-eval-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* Dimension row — reuses .criterion-row but scoped */
+.blueprint-dimension-row {
+  /* additional scoping if needed */
+}
+
+/* Strengths list */
+.blueprint-strengths-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.blueprint-strength-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-success);
+  padding: 3px 0;
+  line-height: 1.5;
+}
+
+.blueprint-strength-icon {
+  flex-shrink: 0;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+/* Warnings list */
+.blueprint-warnings-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.blueprint-warning-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-warning);
+  padding: 3px 0;
+  line-height: 1.5;
+}
+
+.blueprint-warning-icon {
+  flex-shrink: 0;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+/* Missing elements list */
+.blueprint-missing-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.blueprint-missing-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  padding: 3px 0;
+  line-height: 1.5;
+}
+
+.blueprint-missing-icon {
+  flex-shrink: 0;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+/* ============================================================
+   Blueprint Optimization Panel — Score & Loading States (T6)
+   ============================================================ */
+
+/* Score improvement indicator */
+.optimizer-score-change {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--color-bg);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
+.score-change-label {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.score-change-before {
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.score-change-arrow {
+  color: var(--color-text-muted);
+  font-weight: 600;
+  margin: 0 2px;
+}
+
+.score-change-after {
+  font-weight: 700;
+}
+
+.score-change-after.score-improved {
+  color: var(--color-success);
+}
+
+.score-change-after.score-decreased {
+  color: var(--color-danger);
+}
+
+/* Contamination cleaned badge in results */
+.contamination-cleaned-badge {
+  margin-left: auto;
+  font-size: 11px;
+}
+
+/* Loading state within optimizer */
+.optimizer-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+/* Error state within optimizer */
+.optimizer-error {
+  padding: 12px 16px;
+  background: var(--color-danger-light);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius);
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+.optimizer-error p {
+  margin: 0;
 }

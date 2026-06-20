@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useAppStore } from "@/stores/appStore";
+import { BlueprintEvaluationPanel } from "@/components/analysis/BlueprintEvaluationPanel";
 import type { RiskFlagType } from "@/types";
 
 const scoreColor = (score: number) =>
@@ -162,6 +163,7 @@ export const AnalysisPanel: React.FC = () => {
   const evaluation = useAppStore((s) => s.selectedEvaluation)();
   const hygiene = useAppStore((s) => s.selectedHygiene)();
   const contextEval = useAppStore((s) => s.selectedContextEvaluation)();
+  const blueprintEval = useAppStore((s) => s.selectedBlueprintEvaluation)();
   const isAnalyzing = useAppStore((s) => s.isAnalyzing);
   const analyzeSelected = useAppStore((s) => s.analyzeSelected);
 
@@ -197,7 +199,7 @@ export const AnalysisPanel: React.FC = () => {
     );
   }
 
-  if (!evaluation && !hygiene) {
+  if (!evaluation && !hygiene && !blueprintEval) {
     return (
       <div className="panel panel-analysis">
         <div className="panel-header">Analyse</div>
@@ -232,6 +234,13 @@ export const AnalysisPanel: React.FC = () => {
     <div className="panel panel-analysis">
       <div className="panel-header">Analyse</div>
       <div className="panel-content">
+        {/* ── Blueprint Evaluation ── */}
+        {blueprintEval && (
+          <div className="analysis-section analysis-section-blueprint">
+            <BlueprintEvaluationPanel evaluation={blueprintEval} />
+          </div>
+        )}
+
         {/* Qualitäts-Score */}
         {evaluation && (
           <div className="analysis-section">

@@ -1,6 +1,7 @@
 import React, { useCallback } from "react";
 import { useAppStore } from "@/stores/appStore";
 import type { FileTreeNode } from "@/types";
+import ContentClassBadge from "@/components/common/ContentClassBadge";
 
 interface TreeNodeProps {
   node: FileTreeNode;
@@ -27,6 +28,11 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
     node.prompt_id !== undefined
       ? s.selectedPromptId === node.prompt_id
       : false,
+  );
+  const blueprintDetection = useAppStore((s) =>
+    node.prompt_id !== undefined
+      ? s.blueprintDetections[node.prompt_id]
+      : undefined,
   );
 
   const isExpanded = propExpanded ?? storeExpanded;
@@ -103,6 +109,10 @@ const TreeNodeComponent: React.FC<TreeNodeProps> = ({
       >
         {node.is_favorite ? "⭐" : "📄"}
       </span>
+      <ContentClassBadge
+        contentClass={blueprintDetection?.content_class ?? null}
+        size="sm"
+      />
       <span className="tree-name" title={node.name}>
         {node.name.replace(".md", "")}
       </span>
