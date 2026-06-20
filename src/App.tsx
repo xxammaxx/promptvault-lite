@@ -12,6 +12,7 @@ import { ApprovalDialog } from "./components/settings/ApprovalDialog";
 import { setApprovalProvider } from "./actions";
 import type { ApprovalRequest } from "./actions";
 import { classifyContent, evaluateBlueprint } from "./lib/blueprintDetection";
+import { rememberProcessedFingerprint } from "./lib/cacheUtils";
 import "./App.css";
 
 const MIN_EXPLORER_WIDTH = 240;
@@ -122,7 +123,7 @@ function App() {
     try {
       const detection = classifyContent(prompt.content);
       state.setBlueprintDetection(prompt.id, detection);
-      processedFingerprints.current.set(selectedPromptId, contentFingerprint);
+      rememberProcessedFingerprint(processedFingerprints.current, selectedPromptId, contentFingerprint);
 
       // Auto-evaluate only for BLUEPRINT and HYBRID content classes
       if (
