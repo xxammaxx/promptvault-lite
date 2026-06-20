@@ -44,11 +44,21 @@ function makePrompt(overrides: Partial<PromptItem> = {}): PromptItem {
 /** Create a minimal PromptEvaluation for tests */
 function makePromptEval(): PromptEvaluation {
   return {
+    id: "eval-001",
+    prompt_id: "test-prompt-1",
     overall_score: 75,
     criteria: [
-      { name: "Clarity", score: 8, max_score: 10, details: "Clear enough" },
+      {
+        name: "Clarity",
+        score: 8,
+        max_score: 10,
+        weight: 1,
+        details: "Clear enough",
+      },
     ],
+    missing_sections: [],
     recommendations: ["Improve structure"],
+    evaluated_at: "2024-01-02T00:00:00Z",
   };
 }
 
@@ -56,10 +66,22 @@ function makePromptEval(): PromptEvaluation {
 function makeBlueprintEval(
   overrides: Partial<BlueprintEvaluation> = {},
 ): BlueprintEvaluation {
-  return {
-    overall_score: 68,
+  const base: BlueprintEvaluation = {
+    content_class: "BLUEPRINT",
     blueprint_type: "architecture_blueprint",
+    contamination_status: "CLEAN",
+    goal_clarity_score: 70,
+    scope_sharpness_score: 65,
+    architecture_score: 60,
+    feasibility_score: 75,
+    risk_coverage_score: 50,
+    security_privacy_score: 80,
+    testability_score: 55,
+    evidence_readiness_score: 45,
+    context_purity_score: 85,
+    overall_score: 68,
     confidence: 0.88,
+    evaluated_at: "2024-01-02T00:00:00Z",
     dimensions: [
       {
         name: "Goal Clarity",
@@ -79,7 +101,7 @@ function makeBlueprintEval(
         max_score: 2,
         details: "Moderate fidelity.",
       } as BlueprintDimensionScore,
-    ] as BlueprintDimensionScore[],
+    ],
     strengths: ["Well-structured", "Clear goals"],
     warnings: ["Missing evidence gates"],
     missing_elements: ["Deployment section"],
@@ -93,8 +115,8 @@ function makeBlueprintEval(
         message: "Improve risk coverage",
       } as BlueprintImprovement,
     ],
-    ...overrides,
   };
+  return { ...base, ...overrides } as BlueprintEvaluation;
 }
 
 /** Mock store helper — mirrors the existing AnalysisPanel.test.tsx pattern */
