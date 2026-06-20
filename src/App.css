@@ -1759,3 +1759,76 @@ body {
   font-weight: 700;
   margin-top: 1px;
 }
+
+/* ============================================================
+   Blueprint Optimization Panel — Score & Loading States (T6)
+   ============================================================ */
+
+/* Score improvement indicator */
+.optimizer-score-change {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--color-bg);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
+.score-change-label {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.score-change-before {
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.score-change-arrow {
+  color: var(--color-text-muted);
+  font-weight: 600;
+  margin: 0 2px;
+}
+
+.score-change-after {
+  font-weight: 700;
+}
+
+.score-change-after.score-improved {
+  color: var(--color-success);
+}
+
+.score-change-after.score-decreased {
+  color: var(--color-danger);
+}
+
+/* Contamination cleaned badge in results */
+.contamination-cleaned-badge {
+  margin-left: auto;
+  font-size: 11px;
+}
+
+/* Loading state within optimizer */
+.optimizer-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+/* Error state within optimizer */
+.optimizer-error {
+  padding: 12px 16px;
+  background: var(--color-danger-light);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius);
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+.optimizer-error p {
+  margin: 0;
+}
