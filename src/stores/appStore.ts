@@ -21,6 +21,7 @@ import {
   updatePrompt as tauriUpdatePrompt,
 } from "@/lib/tauri";
 import { evaluatePromptContext } from "@/lib/promptContextEvaluation";
+import { classifyContent } from "@/lib/blueprintDetection";
 import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { HandlerContext } from "@/actions/handlers";
@@ -257,6 +258,7 @@ interface AppState {
   scanFolder: (path: string) => Promise<void>;
   analyzeSelected: () => Promise<void>;
   analyzeAll: () => Promise<void>;
+  batchClassifyBlueprints: () => Promise<void>;
 }
 
 const defaultFilters: PromptFilters = {
@@ -773,6 +775,52 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
     } catch (err) {
       set({ error: String(err), isAnalyzing: false });
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // batchClassifyBlueprints — Issue #150
+  // Batch classifies content after scan/import so Explorer badges appear
+  // immediately. Uses chunked/yielded processing to keep UI responsive.
+  // Only classifies; evaluation remains lazy-on-select (T8).
+  // ---------------------------------------------------------------------------
+  batchClassifyBlueprints: async () => {
+    const CHUNK_SIZE = 25;
+    const prompts = get().prompts;
+
+    for (let i = 0; i < prompts.length; i += CHUNK_SIZE) {
+      const chunk = prompts.slice(i, i + CHUNK_SIZE);
+      const newDetections: Record<string, BlueprintDetectOutput> = {};
+
+      for (const item of chunk) {
+        // Skip items without content or whitespace-only content
+        if (!item.content || item.content.trim().length === 0) continue;
+
+        try {
+          newDetections[item.id] = classifyContent(item.content);
+        } catch (_err) {
+          // Error-safe: don't crash the batch, don't log content or secrets
+          console.error("Batch classification failed for item");
+        }
+      }
+
+      // Update all detections for this chunk in a single set call to
+      // minimize React re-renders and Zustand subscriber notifications.
+      if (Object.keys(newDetections).length > 0) {
+        set((state) => ({
+          blueprintDetections: {
+            ...state.blueprintDetections,
+            ...newDetections,
+          },
+        }));
+      }
+
+      // Yield to the event loop between chunks to keep UI responsive.
+      // setTimeout(0) places the callback on the macrotask queue, allowing
+      // the WebView to process pending renders and user interactions.
+      if (i + CHUNK_SIZE < prompts.length) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
     }
   },
 }));
