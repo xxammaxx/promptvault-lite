@@ -2,6 +2,7 @@ import type {
   OptimizationDiff,
   OptimizationChange,
   OptimizationMode,
+  OptimizationQualityResult,
 } from "@/types";
 
 // =============================================================================
@@ -298,21 +299,12 @@ function balancedOptimize(input: string): OptimizationDiff {
     }
   }
 
-  // Add missing canonical sections with TODO placeholders
+  // Add missing canonical sections — warn instead of injecting TODO placeholders
   for (const cs of CANONICAL_SECTIONS) {
     if (!foundKeys.has(cs.key)) {
-      const heading = getCanonicalSectionName(cs.key);
-      const placeholderSec: Section = {
-        heading,
-        headingLine: -1,
-        key: cs.key,
-        contentLines: [`<!-- TODO: ${cs.key} ergänzen -->`, ""],
-      };
-      keyedSections.set(cs.key, placeholderSec);
-      changes.push({
-        type: "add_section",
-        description: `Fehlende Sektion ergänzt: ${heading}`,
-      });
+      warnings.push(
+        `Fehlende Sektion "${getCanonicalSectionName(cs.key)}" nicht ergänzt — keine automatische TODO-Platzhalter-Injektion. Bitte manuell ergänzen.`,
+      );
     }
   }
 
@@ -411,7 +403,7 @@ function aggressiveOptimize(input: string): OptimizationDiff {
   // Extract code blocks before appending
   const { processed, blocks } = extractCodeBlocks(base.optimized);
 
-  // Build agentic scaffolding sections
+  // Build agentic scaffolding sections (no TODO placeholders)
   const scaffoldingSections = [
     {
       heading: "## Agenten-Workflow",
@@ -432,19 +424,19 @@ function aggressiveOptimize(input: string): OptimizationDiff {
       heading: "## Kontext-Engineering-Profil",
       content: [
         "### Cold Context",
-        "<!-- TODO: Hintergrundwissen beschreiben, das der Agent voraussetzen muss -->",
+        "_(Bitte ausfüllen: Hintergrundwissen, das der Agent voraussetzen muss)_",
         "",
         "### Warm Context",
-        "<!-- TODO: Spezifische Umgebungsdetails, Tools, Versionen -->",
+        "_(Bitte ausfüllen: Spezifische Umgebungsdetails, Tools, Versionen)_",
         "",
         "### Hot Context",
-        "<!-- TODO: Aktuelle Session-Details, was jetzt gerade passiert -->",
+        "_(Bitte ausfüllen: Aktuelle Session-Details, was jetzt gerade passiert)_",
         "",
         "### Excluded Context",
-        "<!-- TODO: Was der Agent NICHT tun soll, verbotene Aktionen -->",
+        "_(Bitte ausfüllen: Was der Agent NICHT tun soll, verbotene Aktionen)_",
         "",
         "### Source of Truth",
-        "<!-- TODO: Wo die endgültige Wahrheit liegt (Issue, Repo, API-Doc) -->",
+        "_(Bitte ausfüllen: Wo die endgültige Wahrheit liegt — Issue, Repo, API-Doc)_",
         "",
         "### Confidence",
         "Der Agent muss bei jeder Aussage das Confidence-Level angeben: HIGH / MEDIUM / LOW",
@@ -502,7 +494,7 @@ function aggressiveOptimize(input: string): OptimizationDiff {
 
   warnings.push(
     "Hinweis: Aggressive Optimierung fügt umfangreiche Struktur hinzu. " +
-      'Alle "<!-- TODO -->" Marker vor Verwendung überprüfen und anpassen.',
+      "Kontext-Engineering-Profil-Platzhalter bitte vor Verwendung mit konkreten Projektdetails ausfüllen.",
   );
 
   return {
@@ -510,6 +502,146 @@ function aggressiveOptimize(input: string): OptimizationDiff {
     optimized: result,
     changes,
     warnings,
+  };
+}
+
+// =============================================================================
+// Quality Validation — blocks placeholder-only optimized outputs
+// =============================================================================
+
+/** Patterns that indicate an unresolved placeholder in the optimized output */
+const PLACEHOLDER_PATTERNS: RegExp[] = [
+  /<!--\s*TODO/i,
+  /\bTODO\s*:/i,
+  /\bTBD\b/i,
+  /requirements?\s+ergänzen/i,
+  /verify\s+ergänzen/i,
+  /Anforderungen?\s+ergänzen/i,
+  /Acceptance\s+Criteria\s+ergänzen/i,
+  /Verifikation\s+ergänzen/i,
+  /\bplaceholder\b/i,
+  /\bPlatzhalter\b/i,
+];
+
+/**
+ * Check if a markdown string contains any unresolved placeholder pattern.
+ * Used as a gate before writing optimized files.
+ */
+export function containsUnresolvedPlaceholder(markdown: string): boolean {
+  for (const pattern of PLACEHOLDER_PATTERNS) {
+    if (pattern.test(markdown)) return true;
+  }
+  return false;
+}
+
+/**
+ * Extract specific unresolved placeholder occurrences from a markdown string.
+ * Returns the matched strings for diagnostic purposes.
+ */
+export function extractPlaceholders(markdown: string): string[] {
+  const found: string[] = [];
+  for (const pattern of PLACEHOLDER_PATTERNS) {
+    pattern.lastIndex = 0;
+    const match = markdown.match(pattern);
+    if (match) {
+      found.push(match[0]);
+    }
+  }
+  return [...new Set(found)]; // deduplicate
+}
+
+/**
+ * Check if a section's content is effectively empty (only whitespace,
+ * comments, or placeholder text). Only flags sections whose headings
+ * match known canonical section patterns — arbitrary heading-only
+ * sections are not considered "empty" for quality purposes.
+ */
+function isSectionContentEmpty(
+  heading: string,
+  contentLines: string[],
+): boolean {
+  // Only check sections that appear to be canonical/structural sections
+  const sectionKey = detectSectionFromHeading(heading);
+  if (!sectionKey) return false; // Unknown headings are fine
+
+  const nonEmptyLines = contentLines.filter((line) => {
+    const trimmed = line.trim();
+    if (trimmed === "") return false;
+    if (/^<!--/.test(trimmed)) return false;
+    if (PLACEHOLDER_PATTERNS.some((p) => p.test(trimmed))) return false;
+    return true;
+  });
+  return nonEmptyLines.length === 0;
+}
+
+/**
+ * Validate that an optimized prompt output does not contain unresolved
+ * placeholders, empty required sections, or placeholder-only sections.
+ *
+ * This is the central quality gate for optimized outputs.
+ */
+export function validateOptimizedPromptQuality(
+  original: string,
+  optimized: string,
+): OptimizationQualityResult {
+  const unresolved_placeholders = extractPlaceholders(optimized);
+  const empty_sections: string[] = [];
+  const warnings: string[] = [];
+
+  // 1. Check for unresolved placeholders
+  if (unresolved_placeholders.length > 0) {
+    warnings.push(
+      `Optimierte Ausgabe enthält ${unresolved_placeholders.length} unresolved Placeholder: ${unresolved_placeholders.join(", ")}`,
+    );
+  }
+
+  // 2. Check if sections with canonical headings have empty content
+  const sectionRegex = /^##\s+(.+)$/gm;
+  let match;
+  const sections: { heading: string; startIndex: number }[] = [];
+  while ((match = sectionRegex.exec(optimized)) !== null) {
+    sections.push({ heading: match[1], startIndex: match.index });
+  }
+
+  for (let i = 0; i < sections.length; i++) {
+    const current = sections[i];
+    const nextStart =
+      i + 1 < sections.length ? sections[i + 1].startIndex : optimized.length;
+    const sectionContent = optimized.slice(
+      current.startIndex + current.heading.length + 4, // +4 for "## " + heading
+      nextStart,
+    );
+
+    const contentLines = sectionContent.split("\n");
+    if (isSectionContentEmpty(`## ${current.heading}`, contentLines)) {
+      empty_sections.push(current.heading);
+    }
+  }
+
+  if (empty_sections.length > 0) {
+    warnings.push(
+      `Optimierte Ausgabe enthält ${empty_sections.length} leere Sektionen: ${empty_sections.join(", ")}`,
+    );
+  }
+
+  // 3. Confirm structural improvement: optimized should not just be
+  //    headings without substance compared to the original
+  const originalLength = original.replace(/\s/g, "").length;
+  const optimizedLength = optimized.replace(/\s/g, "").length;
+  const structural_improvement_confirmed =
+    optimizedLength >= originalLength &&
+    unresolved_placeholders.length === 0 &&
+    empty_sections.length === 0;
+
+  const passed =
+    unresolved_placeholders.length === 0 && empty_sections.length === 0;
+
+  return {
+    passed,
+    unresolved_placeholders,
+    empty_sections,
+    warnings,
+    structural_improvement_confirmed,
   };
 }
 

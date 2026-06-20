@@ -229,6 +229,15 @@ export interface OptimizationChange {
   description: string;
 }
 
+/** Result of optimized prompt quality validation */
+export interface OptimizationQualityResult {
+  passed: boolean;
+  unresolved_placeholders: string[];
+  empty_sections: string[];
+  warnings: string[];
+  structural_improvement_confirmed: boolean;
+}
+
 // =============================================================================
 // Typed Local Action Layer Types
 // =============================================================================
