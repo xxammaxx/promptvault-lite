@@ -6,6 +6,8 @@ import type {
   PromptFilters,
   FileTreeNode,
   PromptContextEvaluation,
+  BlueprintDetectOutput,
+  BlueprintEvaluation,
 } from "@/types";
 import {
   scanDirectory,
@@ -177,6 +179,8 @@ interface AppState {
   evaluations: Record<string, PromptEvaluation>;
   hygiene: Record<string, PromptHygiene>;
   contextEvaluations: Record<string, PromptContextEvaluation>;
+  blueprintDetections: Record<string, BlueprintDetectOutput>;
+  blueprintEvaluations: Record<string, BlueprintEvaluation>;
 
   // UI
   isLoading: boolean;
@@ -208,6 +212,14 @@ interface AppState {
     promptId: string,
     evaluation: PromptContextEvaluation,
   ) => void;
+  setBlueprintDetection: (
+    promptId: string,
+    detection: BlueprintDetectOutput,
+  ) => void;
+  setBlueprintEvaluation: (
+    promptId: string,
+    evaluation: BlueprintEvaluation,
+  ) => void;
   toggleFavorite: (promptId: string) => Promise<void>;
   setFilters: (filters: Partial<PromptFilters>) => void;
   resetFilters: () => void;
@@ -235,6 +247,8 @@ interface AppState {
   selectedEvaluation: () => PromptEvaluation | null;
   selectedHygiene: () => PromptHygiene | null;
   selectedContextEvaluation: () => PromptContextEvaluation | null;
+  selectedBlueprintDetection: () => BlueprintDetectOutput | null;
+  selectedBlueprintEvaluation: () => BlueprintEvaluation | null;
   fileTree: () => FileTreeNode[];
   allCategories: () => string[];
   allTags: () => string[];
@@ -262,6 +276,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   evaluations: {},
   hygiene: {},
   contextEvaluations: {},
+  blueprintDetections: {},
+  blueprintEvaluations: {},
   isLoading: false,
   isAnalyzing: false,
   error: null,
@@ -313,6 +329,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({
       contextEvaluations: {
         ...state.contextEvaluations,
+        [promptId]: evaluation,
+      },
+    }));
+  },
+
+  setBlueprintDetection: (promptId, detection) => {
+    set((state) => ({
+      blueprintDetections: {
+        ...state.blueprintDetections,
+        [promptId]: detection,
+      },
+    }));
+  },
+
+  setBlueprintEvaluation: (promptId, evaluation) => {
+    set((state) => ({
+      blueprintEvaluations: {
+        ...state.blueprintEvaluations,
         [promptId]: evaluation,
       },
     }));
@@ -516,6 +550,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { selectedPromptId, contextEvaluations } = get();
     if (!selectedPromptId) return null;
     return contextEvaluations[selectedPromptId] ?? null;
+  },
+
+  selectedBlueprintDetection: () => {
+    const { selectedPromptId, blueprintDetections } = get();
+    if (!selectedPromptId) return null;
+    return blueprintDetections[selectedPromptId] ?? null;
+  },
+
+  selectedBlueprintEvaluation: () => {
+    const { selectedPromptId, blueprintEvaluations } = get();
+    if (!selectedPromptId) return null;
+    return blueprintEvaluations[selectedPromptId] ?? null;
   },
 
   fileTree: () => {

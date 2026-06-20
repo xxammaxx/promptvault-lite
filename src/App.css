@@ -469,6 +469,60 @@ body {
   border: 1px solid var(--color-border);
 }
 
+/* Content Class Badge */
+.content-class-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+.content-class-badge-sm {
+  padding: 0 4px;
+  font-size: 8px;
+  border-radius: 6px;
+}
+.badge-blueprint {
+  background: #1d76db20;
+  color: #1d76db;
+  border: 1px solid #1d76db40;
+}
+.badge-prompt {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+.badge-hybrid {
+  background: #8250df20;
+  color: #8250df;
+  border: 1px solid #8250df40;
+}
+.badge-review {
+  background: #fbca0420;
+  color: #fbca04;
+  border: 1px solid #fbca0440;
+}
+.badge-note {
+  background: #64748b20;
+  color: #64748b;
+  border: 1px solid #64748b40;
+}
+.badge-doc {
+  background: #14b8a620;
+  color: #14b8a6;
+  border: 1px solid #14b8a640;
+}
+.badge-code {
+  background: #f59e0b20;
+  color: #f59e0b;
+  border: 1px solid #f59e0b40;
+}
+
 /* Action Bar */
 .action-bar {
   display: flex;
