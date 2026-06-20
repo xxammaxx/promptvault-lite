@@ -5,6 +5,7 @@
 
 **Last evidence run:** 2026-06-19 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator, CI-validated)
 **Blueprint detection run:** 2026-06-19 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator)
+**CodeRabbit removal run:** 2026-06-19 — confirmed: zero CodeRabbit files/references in repo; GitHub App integration noted at org level
 
 ---
 
@@ -54,6 +55,13 @@
 | Evaluation corpus calibration failures | #94        | v1.6.0 |
 
 ---
+
+## External Review Automation Status
+
+| Automation   | Status                                | Notes                                                                                          |
+| ------------ | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| CodeRabbit   | REMOVED from active repo (2026-06-19) | Zero repo-level files/configs. GitHub App at org level — uninstall via Settings → GitHub Apps. |
+| review-agent | ACTIVE (OpenCode subagent)            | Delegated code review, read-only.                                                              |
 
 ## Unchanged Limitations
 

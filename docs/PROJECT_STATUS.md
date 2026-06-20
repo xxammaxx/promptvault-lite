@@ -5,6 +5,7 @@
 **Branch:** feature/blueprint-detection-optimization (active)
 
 **Blueprint Detection added:** 2026-06-19
+**CodeRabbit:** Removed from active repo (2026-06-19). Zero repo-level references found. GitHub App at org level — uninstall via Settings → GitHub Apps.
 
 ---
 
@@ -110,8 +111,11 @@ All gates pass. The project is stable and functional.
 
 ## Next Steps (Recommended)
 
-1. Merge `feature/optimizer-placeholder-hardening` (PR #147) → **review-ready (2026-06-19)** → pending Human Approval
-2. Review and merge NAS folder PR (#145)
-3. Set GitHub repository topics and homepage
-4. Create first native binary release
-5. Add macOS/Windows CI runners (currently Linux-only)
+1. Merge `feature/optimizer-placeholder-hardening` (PR #147) → **review-ready (2026-06-19)** → pending Final Human Merge Confirmation
+2. Merge `feature/blueprint-detection-optimization` (PR #148) — stacked on PR #147 → rebase after #147 merge
+3. Begin Blueprint-UI implementation (new issue — see report)
+4. Review and merge NAS folder PR (#145)
+5. Uninstall CodeRabbit GitHub App from repo settings (Settings → GitHub Apps)
+6. Set GitHub repository topics and homepage
+7. Create first native binary release
+8. Add macOS/Windows CI runners (currently Linux-only)
