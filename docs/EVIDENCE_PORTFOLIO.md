@@ -29,9 +29,9 @@
 | Tauri IPC command layer                                            | 17 Rust integration tests PASS         | 2026-06-19    |
 | SQLite/FTS5 database layer                                         | 14 Rust tests PASS                     | 2026-06-19    |
 | Symlink containment & path traversal protection                    | 10 Rust tests PASS                     | 2026-06-19    |
-| CI: Frontend (tsc+lint+test+build)                                 | GitHub Actions — PASS                  | 2026-06-19    |
-| CI: Rust (fmt+clippy+test+build)                                   | GitHub Actions — PASS                  | 2026-06-19    |
-| CI: Secret Scan                                                    | GitHub Actions — PASS                  | 2026-06-19    |
+| CI: Frontend (tsc+lint+test+build)                                 | Local CI — PASS (see #154)             | 2026-06-20    |
+| CI: Rust (fmt+clippy+test+build)                                   | Local CI — PASS (see #154)             | 2026-06-20    |
+| CI: Secret Scan                                                    | NOT_RUN_TOOL_MISSING (local)           | 2026-06-20    |
 
 ---
 
@@ -123,14 +123,15 @@
 
 ## Gate Results (2026-06-19 Fresh Run)
 
-| Gate                   | Command                       | Result                      |
-| ---------------------- | ----------------------------- | --------------------------- |
-| Frontend Tests         | `pnpm test`                   | 376/376 PASS (11 files)     |
-| ESLint                 | `pnpm lint`                   | PASS (0 errors, 0 warnings) |
-| TypeScript             | `tsc --noEmit`                | PASS (0 errors)             |
-| Rust Unit Tests        | `cargo test`                  | 102/102 PASS (+1 ignored)   |
-| Rust Integration Tests | `cargo test` (command_errors) | 17/17 PASS                  |
-| cargo fmt              | `cargo fmt --check`           | PASS                        |
-| cargo clippy           | `cargo clippy -- -D warnings` | PASS                        |
-| Git diff check         | `git diff --check`            | PASS (no conflicts)         |
-| CI (master, last 5)    | `gh run list`                 | 5/5 SUCCESS                 |
+| Gate                       | Command                         | Result                      |
+| -------------------------- | ------------------------------- | --------------------------- |
+| Frontend Tests             | `pnpm test`                     | 650/650 PASS (22 files)     |
+| ESLint                     | `pnpm lint`                     | PASS (0 errors, 0 warnings) |
+| TypeScript                 | `tsc --noEmit`                  | PASS (0 errors)             |
+| Rust Unit Tests            | `cargo test`                    | 117/117 PASS (+1 ignored)   |
+| Rust Integration Tests     | `cargo test` (command_errors)   | 17/17 PASS                  |
+| cargo fmt                  | `cargo fmt --check`             | PASS                        |
+| cargo clippy               | `cargo clippy -- -D warnings`   | PASS                        |
+| Git diff check             | `git diff --check`              | PASS (no conflicts)         |
+| Local CI (8 gates)         | `pnpm test` + `cargo test` etc. | 8/8 PASS (see #154)         |
+| Remote CI (GitHub Actions) | `gh run list`                   | REMOTE_CI_INFRA_BLOCKED     |

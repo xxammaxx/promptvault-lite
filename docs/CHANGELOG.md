@@ -29,17 +29,17 @@ version: 1.6.0
 
 ### Quality Gates
 
-| Gate               | Ergebnis                                              |
-| ------------------ | ----------------------------------------------------- |
-| `pnpm test`        | **326 passed** (11 Dateien, 0 Failures)               |
-| `pnpm lint`        | **0 Errors, 0 Warnings**                              |
-| `npx tsc --noEmit` | **0 Errors**                                          |
-| `pnpm build`       | **PASS**                                              |
-| `cargo test`       | **119 passed** (102 Unit + 17 Integration), 1 Ignored |
-| `cargo build`      | **PASS**                                              |
-| Frontend CI        | SUCCESS                                               |
-| Rust/Tauri CI      | SUCCESS                                               |
-| Secret Scan        | SUCCESS                                               |
+| Gate               | Ergebnis                                                                                            |
+| ------------------ | --------------------------------------------------------------------------------------------------- |
+| `pnpm test`        | **326 passed** (11 Dateien, 0 Failures)                                                             |
+| `pnpm lint`        | **0 Errors, 0 Warnings**                                                                            |
+| `npx tsc --noEmit` | **0 Errors**                                                                                        |
+| `pnpm build`       | **PASS**                                                                                            |
+| `cargo test`       | **119 passed** (102 Unit + 17 Integration), 1 Ignored                                               |
+| `cargo build`      | **PASS**                                                                                            |
+| Frontend CI        | SUCCESS _(historical — GitHub Actions were passing at release time; later infra-blocked, see #154)_ |
+| Rust/Tauri CI      | SUCCESS _(historical — GitHub Actions were passing at release time; later infra-blocked, see #154)_ |
+| Secret Scan        | SUCCESS _(historical — GitHub Actions were passing at release time; later infra-blocked, see #154)_ |
 
 ### Known Limits
 
