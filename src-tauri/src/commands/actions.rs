@@ -109,13 +109,39 @@ pub async fn create_prompt(
     let tags = input.tags.clone().unwrap_or_default();
     let content = input.content.clone();
 
-    // Sanitize filename
+    // Sanitize filename (including null bytes to prevent path truncation)
     let safe_name = title
-        .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_")
+        .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|', '\0'], "_")
         .trim()
         .to_string();
     let file_name = format!("{}.md", safe_name);
     let full_path = PathBuf::from(&vault_path).join(&file_name);
+
+    // Defense-in-depth: verify the resolved path stays within the vault
+    let canonical_vault =
+        dunce::canonicalize(&vault_path).map_err(|e| format!("Invalid vault path: {}", e))?;
+
+    // Reject null bytes in filename (defense-in-depth; also covered by safe_name sanitization)
+    if file_name.contains('\0') {
+        return Err("Path contains null bytes".to_string());
+    }
+
+    // Reject path traversal segments in the final filename
+    if file_name.contains('/') || file_name.contains('\\') || file_name == ".." || file_name == "."
+    {
+        return Err("Filename contains path traversal characters".to_string());
+    }
+
+    // create_prompt writes a new file that does not exist yet.
+    // Canonicalize the parent directory (which must exist) and validate containment.
+    let parent = full_path
+        .parent()
+        .ok_or("Invalid file path: no parent directory")?;
+    let canonical_parent =
+        dunce::canonicalize(parent).map_err(|e| format!("Invalid parent path: {}", e))?;
+    if !canonical_parent.starts_with(&canonical_vault) {
+        return Err("Path traversal detected: file path escapes vault root".to_string());
+    }
 
     // Build frontmatter
     let frontmatter = format!(
@@ -249,4 +275,124 @@ pub async fn update_prompt(
         updated: true,
         changed_fields,
     })
+}
+
+// =============================================================================
+// Tests: create_prompt path containment validation
+// =============================================================================
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+    use tempfile::TempDir;
+
+    /// Mirror of the create_prompt path validation logic for isolated unit testing.
+    /// Validates that a file at `full_path` can be safely created within `vault_path`.
+    fn validate_create_file_path(vault_path: &Path, full_path: &Path) -> Result<(), String> {
+        let canonical_vault =
+            dunce::canonicalize(vault_path).map_err(|e| format!("Invalid vault path: {}", e))?;
+
+        let file_name = full_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .ok_or("Invalid filename")?;
+
+        if file_name.contains('\0') {
+            return Err("Path contains null bytes".to_string());
+        }
+        if file_name.contains('/')
+            || file_name.contains('\\')
+            || file_name == ".."
+            || file_name == "."
+        {
+            return Err("Filename contains path traversal characters".to_string());
+        }
+
+        let parent = full_path.parent().ok_or("No parent directory")?;
+        let canonical_parent =
+            dunce::canonicalize(parent).map_err(|e| format!("Invalid parent path: {}", e))?;
+        if !canonical_parent.starts_with(&canonical_vault) {
+            return Err("Path traversal detected".to_string());
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_prompt_new_file_inside_vault_allowed() {
+        let dir = TempDir::new().unwrap();
+        let vault = dir.path();
+        let full_path = vault.join("new-prompt.md");
+
+        let result = validate_create_file_path(vault, &full_path);
+        assert!(
+            result.is_ok(),
+            "Creating new file inside vault should be allowed"
+        );
+    }
+
+    #[test]
+    fn test_create_prompt_parent_traversal_blocked() {
+        let dir = TempDir::new().unwrap();
+        let vault = dir.path().join("vault");
+        std::fs::create_dir(&vault).unwrap();
+
+        // Construct a path that tries to escape via parent traversal
+        let escape_path = vault.join("../outside.md");
+
+        let result = validate_create_file_path(&vault, &escape_path);
+        assert!(result.is_err(), "Parent traversal should be blocked");
+        assert!(
+            result.unwrap_err().contains("traversal"),
+            "Error should mention traversal"
+        );
+    }
+
+    #[test]
+    fn test_create_prompt_absolute_escape_blocked() {
+        let dir = TempDir::new().unwrap();
+        let vault = dir.path();
+
+        // Absolute path to a file outside the vault
+        let escape_path = std::path::PathBuf::from("/etc/outside.md");
+
+        let result = validate_create_file_path(vault, &escape_path);
+        assert!(
+            result.is_err(),
+            "Absolute path outside vault should be blocked"
+        );
+    }
+
+    #[test]
+    fn test_create_prompt_null_byte_blocked() {
+        let dir = TempDir::new().unwrap();
+        let vault = dir.path();
+        // Path with null byte in filename
+        let null_path = vault.join("safe\0malicious.md");
+
+        let result = validate_create_file_path(vault, &null_path);
+        assert!(result.is_err(), "Null byte in path should be blocked");
+        assert!(
+            result.unwrap_err().contains("null"),
+            "Error should mention null bytes"
+        );
+    }
+
+    #[test]
+    fn test_create_prompt_filename_traversal_chars_blocked() {
+        let dir = TempDir::new().unwrap();
+        let vault = dir.path();
+
+        // Filename containing slash (path separator)
+        let result = validate_create_file_path(vault, &vault.join("sub/dir.md"));
+        assert!(result.is_err(), "Filename with '/' should be blocked");
+
+        // Filename that is exactly ".."
+        let result = validate_create_file_path(vault, &vault.join(".."));
+        assert!(result.is_err(), "Filename '..' should be blocked");
+
+        // Filename that is exactly "."
+        let result = validate_create_file_path(vault, &vault.join("."));
+        assert!(result.is_err(), "Filename '.' should be blocked");
+    }
 }

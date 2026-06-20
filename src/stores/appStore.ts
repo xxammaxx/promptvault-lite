@@ -682,6 +682,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       await startFileWatcher(path);
 
       // Set up event listener for watcher:changed
+      // Capture the folder path at registration time (defense-in-depth:
+      // avoid race where currentFolderPath changes before the event fires)
+      const watchedPath = path;
       const unlisten = await listen<ChangedPayload>(
         "watcher:changed",
         (event) => {
@@ -697,10 +700,9 @@ export const useAppStore = create<AppState>((set, get) => ({
               set({ watcherNotification: null });
             }, 3000);
 
-            // Re-scan the current folder
-            const folderPath = get().currentFolderPath;
-            if (folderPath) {
-              scanDirectory(folderPath)
+            // Re-scan the folder (use captured path for safety)
+            if (watchedPath) {
+              scanDirectory(watchedPath)
                 .then((updatedPrompts) => {
                   set({ prompts: updatedPrompts });
                 })

@@ -4,6 +4,15 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
+/// Canonicalize a path using dunce. On Windows, this strips the `\\?\` verbatim
+/// prefix before canonicalizing. On non-Windows platforms, it behaves like
+/// `std::fs::canonicalize`. Requires the path to exist (returns Err for
+/// non-existent paths).
+fn canonicalize(path: &Path) -> Result<PathBuf, std::io::Error> {
+    let canonical = dunce::canonicalize(path)?;
+    Ok(canonical)
+}
+
 /// Gescannter Datei-Eintrag vor dem Parsing
 #[derive(Debug, Clone)]
 struct ScannedFile {
@@ -25,6 +34,11 @@ struct ScannedFile {
 /// # Errors
 /// * Unlesbare Verzeichnisse/Dateien werden geloggt aber nicht als Fehler zurückgegeben
 pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
+    // Reject null bytes in path (security: prevents path truncation attacks)
+    if dir_path.contains('\0') {
+        return Err("Pfad enthält ungültige Null-Bytes".to_string());
+    }
+
     let root = Path::new(dir_path);
 
     if !root.exists() {
@@ -36,7 +50,7 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
     }
 
     // Canonicalize root for symlink containment checks
-    let canonical_root = match std::fs::canonicalize(root) {
+    let canonical_root = match canonicalize(root) {
         Ok(cr) => cr,
         Err(e) => {
             return Err(format!(
@@ -87,7 +101,7 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
         let path = entry.path();
 
         // Symlink-Containment: canonicalize and verify file is within vault root
-        let canonical_file = match std::fs::canonicalize(path) {
+        let canonical_file = match canonicalize(path) {
             Ok(cf) => cf,
             Err(e) => {
                 log::warn!(
@@ -108,7 +122,10 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
         }
 
         // Use canonical_file for all subsequent operations (TOCTOU-safe after containment check)
-        if canonical_file.extension().is_some_and(|ext| ext == "md") {
+        if canonical_file
+            .extension()
+            .is_some_and(|ext| ext == "md" || ext == "markdown")
+        {
             match fs::metadata(&canonical_file) {
                 Ok(meta) => {
                     let modified = meta
@@ -155,7 +172,7 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
             Ok(content) => {
                 let frontmatter_result = parse_frontmatter(&content);
 
-                // Titel: Frontmatter > Dateiname (ohne .md)
+                // Titel: Frontmatter > Dateiname (ohne .md / .markdown)
                 let title = frontmatter_result
                     .metadata
                     .get("title")
@@ -164,6 +181,7 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
                     .unwrap_or_else(|| {
                         file.file_name
                             .strip_suffix(".md")
+                            .or_else(|| file.file_name.strip_suffix(".markdown"))
                             .unwrap_or(&file.file_name)
                             .to_string()
                     });
@@ -610,6 +628,259 @@ mod tests {
         assert!(
             !secret_found,
             "Externes Verzeichnis via Symlink wurde traversiert — Containment sollte blockieren"
+        );
+    }
+
+    // =========================================================================
+    // Phase 5: NAS markdown folder ingestion tests
+    // =========================================================================
+
+    #[test]
+    fn test_null_byte_in_path_blocked() {
+        let result = scan_directory("/valid/path\0hidden");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("Null-Bytes"),
+            "Expected null-byte rejection, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_markdown_extension_supported() {
+        let dir = TempDir::new().unwrap();
+        create_test_md(dir.path(), "prompt.markdown", "# Markdown Extension");
+        create_test_md(dir.path(), "regular.md", "# Regular MD");
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(
+            result.len(),
+            2,
+            "Both .md and .markdown files should be scanned"
+        );
+        let names: Vec<&str> = result.iter().map(|p| p.file_name.as_str()).collect();
+        assert!(names.contains(&"prompt.markdown"));
+        assert!(names.contains(&"regular.md"));
+    }
+
+    #[test]
+    fn test_markdown_extension_title_fallback() {
+        // .md and .markdown files without frontmatter title should
+        // derive the title from the filename with extension stripped.
+        let dir = TempDir::new().unwrap();
+        create_test_md(dir.path(), "example.md", "# No frontmatter title");
+        create_test_md(dir.path(), "example.markdown", "# Also no title");
+        create_test_md(dir.path(), "nested.markdown", "# Nested markdown");
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 3);
+
+        // Find each prompt by file_name and verify title
+        let md_prompt = result.iter().find(|p| p.file_name == "example.md").unwrap();
+        assert_eq!(md_prompt.title, "example");
+
+        let markdown_prompt = result
+            .iter()
+            .find(|p| p.file_name == "example.markdown")
+            .unwrap();
+        assert_eq!(markdown_prompt.title, "example");
+
+        let nested_prompt = result
+            .iter()
+            .find(|p| p.file_name == "nested.markdown")
+            .unwrap();
+        assert_eq!(nested_prompt.title, "nested");
+    }
+
+    #[test]
+    fn test_ignores_markdown_extension_case_sensitively() {
+        // Extension check is exact ― ".MD" or ".MARKDOWN" are not matched
+        let dir = TempDir::new().unwrap();
+        create_test_md(dir.path(), "prompt.md", "# Lowercase");
+        // Create file with uppercase extension
+        let mut file = fs::File::create(dir.path().join("UPPERCASE.MD")).unwrap();
+        file.write_all(b"# Uppercase extension").unwrap();
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 1, "Only lowercase .md should match");
+        assert_eq!(result[0].file_name, "prompt.md");
+    }
+
+    #[test]
+    fn test_unreadable_file_in_readable_dir_no_crash() {
+        // Verify that a readable directory with one problematic file
+        // does not cause a crash. The problematic file may be skipped
+        // (Unix: unreadable) or scanned (Windows: read-only is still readable).
+        let dir = TempDir::new().unwrap();
+        create_test_md(dir.path(), "good.md", "# Good prompt");
+
+        let bad_path = dir.path().join("bad.md");
+        {
+            let mut f = fs::File::create(&bad_path).unwrap();
+            f.write_all(b"# Problematic").unwrap();
+        }
+
+        // Make the file unreadable (Unix) or read-only (Windows)
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&bad_path).unwrap().permissions();
+            perms.set_mode(0o000); // No permissions — file becomes unreadable
+            fs::set_permissions(&bad_path, perms).unwrap();
+        }
+        #[cfg(not(unix))]
+        {
+            // Windows: read-only files are still readable, so the scanner
+            // will return both files. This verifies no crash, not a count.
+            let mut perms = fs::metadata(&bad_path).unwrap().permissions();
+            perms.set_readonly(true);
+            fs::set_permissions(&bad_path, perms).unwrap();
+        }
+
+        let result = scan_directory(dir.path().to_str().unwrap());
+        // The scan must complete without Err (no crash)
+        assert!(result.is_ok(), "Scan should not crash on problematic files");
+        let prompts = result.unwrap();
+
+        // Good file should always be scanned
+        assert!(
+            prompts.iter().any(|p| p.file_name == "good.md"),
+            "Good file should always be scanned"
+        );
+
+        // On Unix, unreadable file is skipped (1 prompt).
+        // On Windows, read-only file is still readable (2 prompts).
+        #[cfg(unix)]
+        {
+            assert_eq!(prompts.len(), 1, "Unix: unreadable file should be skipped");
+        }
+        #[cfg(not(unix))]
+        {
+            assert_eq!(
+                prompts.len(),
+                2,
+                "Windows: read-only file is still readable"
+            );
+        }
+
+        // Restore permissions for cleanup
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&bad_path).unwrap().permissions();
+            perms.set_mode(0o644);
+            let _ = fs::set_permissions(&bad_path, perms);
+        }
+    }
+
+    #[test]
+    fn test_large_folder_robustness() {
+        // Verify that scanning 500+ .md files completes without error
+        let dir = TempDir::new().unwrap();
+
+        for i in 0..550 {
+            let name = format!("prompt_{:04}.md", i);
+            let content = format!("# Prompt {}\n\nContent for prompt {}", i, i);
+            create_test_md(dir.path(), &name, &content);
+        }
+        // Also add some non-md files to filter
+        for i in 0..50 {
+            let name = format!("notes_{:04}.txt", i);
+            let mut file = fs::File::create(dir.path().join(&name)).unwrap();
+            file.write_all(b"Not a prompt").unwrap();
+        }
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(
+            result.len(),
+            550,
+            "All 550 .md files should be scanned, non-md files ignored"
+        );
+
+        // Verify sorting: prompts should be sorted by file_path
+        let sorted: Vec<&str> = result.iter().map(|p| p.file_name.as_str()).collect();
+        let mut expected: Vec<String> = (0..550).map(|i| format!("prompt_{:04}.md", i)).collect();
+        expected.sort();
+        assert_eq!(
+            sorted,
+            expected.iter().map(|s| s.as_str()).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_unc_like_path_handled() {
+        // UNC paths (\\server\share\folder) should work on Windows.
+        // On non-Windows, UNC-like paths behave as regular paths.
+        let dir = TempDir::new().unwrap();
+        create_test_md(dir.path(), "prompt.md", "# UNC Test");
+
+        // Use the temp dir path directly — UNC handling is verified
+        // by the dunce::canonicalize integration which normalizes paths
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].file_name, "prompt.md");
+
+        // Verify the stored path does NOT contain verbatim prefix (\\?\)
+        let path = &result[0].file_path;
+        assert!(
+            !path.starts_with(r"\\?\"),
+            "Path should not contain verbatim \\\\?\\ prefix: {}",
+            path
+        );
+    }
+
+    #[test]
+    fn test_hidden_and_temp_files_ignored() {
+        // Hidden files (starting with .) and temp files (~*) should be
+        // passed through WalkDir but filtered by the extension check
+        let dir = TempDir::new().unwrap();
+
+        // Hidden .md file — has .md extension, should be scanned
+        create_test_md(dir.path(), ".hidden.md", "# Hidden but md");
+        // Temp file without .md extension — should be ignored
+        let mut tmp = fs::File::create(dir.path().join("temp~file.txt")).unwrap();
+        tmp.write_all(b"Not a prompt").unwrap();
+        // Backup file without .md extension
+        let mut bak = fs::File::create(dir.path().join("prompt.md.bak")).unwrap();
+        bak.write_all(b"Backup").unwrap();
+        // Regular .md file
+        create_test_md(dir.path(), "visible.md", "# Visible");
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(
+            result.len(),
+            2,
+            "Only files ending with .md should be scanned"
+        );
+        let names: Vec<&str> = result.iter().map(|p| p.file_name.as_str()).collect();
+        assert!(
+            names.contains(&".hidden.md"),
+            "Hidden .md files should be scanned"
+        );
+        assert!(names.contains(&"visible.md"));
+    }
+
+    #[test]
+    fn test_offline_mount_error_message() {
+        // Simulates an offline NAS mount: the directory doesn't exist
+        let result = scan_directory("/mnt/offline-nas-mount");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("existiert nicht"),
+            "Expected 'existiert nicht' error for offline mount, got: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_empty_folder_returns_empty_vec() {
+        let dir = TempDir::new().unwrap();
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert!(
+            result.is_empty(),
+            "Empty folder should return empty Vec, not error"
         );
     }
 }

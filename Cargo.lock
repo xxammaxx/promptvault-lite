@@ -2888,6 +2888,7 @@ name = "promptvault-lite"
 version = "1.6.0"
 dependencies = [
  "chrono",
+ "dunce",
  "env_logger",
  "log",
  "notify",
