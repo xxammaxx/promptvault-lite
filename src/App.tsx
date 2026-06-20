@@ -11,6 +11,7 @@ import { SettingsPanel } from "./components/settings/SettingsPanel";
 import { ApprovalDialog } from "./components/settings/ApprovalDialog";
 import { setApprovalProvider } from "./actions";
 import type { ApprovalRequest } from "./actions";
+import { classifyContent, evaluateBlueprint } from "./lib/blueprintDetection";
 import "./App.css";
 
 const MIN_EXPLORER_WIDTH = 240;
@@ -97,6 +98,44 @@ function App() {
       mq.removeEventListener("change", handleChange);
     };
   }, [theme]);
+
+  // T8: Auto-Detection & Auto-Evaluation for Blueprint Content
+  // When the selected prompt changes, automatically classify the content
+  // and evaluate if it's a BLUEPRINT or PROMPT_BLUEPRINT_HYBRID.
+  const selectedPromptId = useAppStore((s) => s.selectedPromptId);
+  const processedFingerprints = useRef<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    if (!selectedPromptId) return;
+
+    const state = useAppStore.getState();
+    const prompt = state.prompts.find((p) => p.id === selectedPromptId);
+    if (!prompt || !prompt.content) return;
+
+    // Simple content fingerprint to avoid re-processing unchanged content.
+    // Uses content length and first 64 characters as a lightweight hash.
+    const contentFingerprint = `${prompt.content.length}:${prompt.content.slice(0, 64)}`;
+    const lastFingerprint = processedFingerprints.current.get(selectedPromptId);
+    if (lastFingerprint === contentFingerprint) return;
+
+    try {
+      const detection = classifyContent(prompt.content);
+      state.setBlueprintDetection(prompt.id, detection);
+      processedFingerprints.current.set(selectedPromptId, contentFingerprint);
+
+      // Auto-evaluate only for BLUEPRINT and HYBRID content classes
+      if (
+        detection.content_class === "BLUEPRINT" ||
+        detection.content_class === "PROMPT_BLUEPRINT_HYBRID"
+      ) {
+        const evaluation = evaluateBlueprint(prompt.content);
+        state.setBlueprintEvaluation(prompt.id, evaluation);
+      }
+    } catch (_err) {
+      // Error-safe: don't crash the UI, don't log content or secrets.
+      console.error("Blueprint auto-detection failed");
+    }
+  }, [selectedPromptId]);
 
   const handleSelectFolder = useCallback(async () => {
     if (!isTauri) return;
