@@ -55,3 +55,6 @@ site/
 # Python cache
 __pycache__/
 .worktrees/
+
+# Local Playwright/MCP runtime artifacts
+.playwright-mcp/
