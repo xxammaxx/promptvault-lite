@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import {
   DetailsPanel,
   PromptMeta,
@@ -378,15 +378,50 @@ describe("ActionBar — Blueprint Optimize Button", () => {
     expect(btn.getAttribute("title")).toContain("nicht verfügbar");
   });
 
-  it("blueprint button is disabled (placeholder until T6)", () => {
+  it("blueprint button is disabled when no onBlueprintOptimize callback provided", () => {
     const prompt = makePrompt();
     setupStore(prompt, makeDetection("BLUEPRINT", "CLEAN"));
 
-    render(<ActionBar />);
+    render(<ActionBar />); // no onBlueprintOptimize prop
 
     const btn = screen.getByText("🔷 BP optimieren");
     expect(btn).toBeDisabled();
-    expect(btn.getAttribute("title")).toContain("in Kürze verfügbar");
+    expect(btn.getAttribute("title")).toContain("Blueprint optimieren");
+  });
+
+  it("blueprint button is ENABLED when onBlueprintOptimize callback provided for BLUEPRINT", () => {
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("BLUEPRINT", "CLEAN"));
+
+    render(<ActionBar onBlueprintOptimize={vi.fn()} />);
+
+    const btn = screen.getByText("🔷 BP optimieren");
+    expect(btn).not.toBeDisabled();
+    expect(btn.getAttribute("title")).toContain("Blueprint optimieren");
+  });
+
+  it("blueprint button is ENABLED when onBlueprintOptimize callback provided for HYBRID", () => {
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT_BLUEPRINT_HYBRID", "CLEAN"));
+
+    render(<ActionBar onBlueprintOptimize={vi.fn()} />);
+
+    const btn = screen.getByText("🔷 BP optimieren");
+    expect(btn).not.toBeDisabled();
+  });
+
+  it("blueprint button remains disabled for BLOCKING_SENSITIVE_CONTENT even with callback", () => {
+    const prompt = makePrompt();
+    setupStore(
+      prompt,
+      makeDetection("BLUEPRINT", "BLOCKING_SENSITIVE_CONTENT"),
+    );
+
+    render(<ActionBar onBlueprintOptimize={vi.fn()} />);
+
+    const btn = screen.getByText("🔷 BP optimieren");
+    expect(btn).toBeDisabled();
+    expect(btn.getAttribute("title")).toContain("nicht verfügbar");
   });
 
   it("existing 'Optimieren' button still visible", () => {
@@ -594,5 +629,112 @@ describe("DetailsPanel — no regression for existing Prompt behavior", () => {
 
     expect(screen.getByText("react")).toBeInTheDocument();
     expect(screen.getByText("typescript")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T7 — DetailsPanel BlueprintOptimizationPanel Modal Integration
+// ---------------------------------------------------------------------------
+
+describe("DetailsPanel — BlueprintOptimizationPanel Modal", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetStore();
+  });
+
+  it("opens BlueprintOptimizationPanel modal when BP optimieren is clicked", () => {
+    const prompt = makePrompt({
+      content: "Blueprint content for optimization",
+    });
+    setupStore(prompt, makeDetection("BLUEPRINT", "CLEAN"));
+
+    render(<DetailsPanel />);
+
+    // Click the BP optimieren button
+    const bpBtn = screen.getByText("🔷 BP optimieren");
+    expect(bpBtn).not.toBeDisabled();
+    fireEvent.click(bpBtn);
+
+    // BlueprintOptimizationPanel modal should be visible
+    expect(screen.getByText("🔷 Blueprint-Optimierung")).toBeInTheDocument();
+    // Mode selector should be visible
+    expect(screen.getByText("Conservative")).toBeInTheDocument();
+    expect(screen.getByText("Balanced")).toBeInTheDocument();
+    expect(screen.getByText("Aggressive")).toBeInTheDocument();
+  });
+
+  it("closes BlueprintOptimizationPanel modal via close button", () => {
+    const prompt = makePrompt({ content: "Blueprint content" });
+    setupStore(prompt, makeDetection("BLUEPRINT", "CLEAN"));
+
+    render(<DetailsPanel />);
+
+    // Open the modal
+    const bpBtn = screen.getByText("🔷 BP optimieren");
+    fireEvent.click(bpBtn);
+
+    // Modal should be visible
+    expect(screen.getByText("🔷 Blueprint-Optimierung")).toBeInTheDocument();
+
+    // Click the close button (✕)
+    const closeBtn = screen.getByLabelText("Schließen");
+    fireEvent.click(closeBtn);
+
+    // Modal should be gone
+    expect(
+      screen.queryByText("🔷 Blueprint-Optimierung"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("closes BlueprintOptimizationPanel modal via overlay click", () => {
+    const prompt = makePrompt({ content: "Blueprint content" });
+    setupStore(prompt, makeDetection("BLUEPRINT", "CLEAN"));
+
+    render(<DetailsPanel />);
+
+    // Open the modal
+    fireEvent.click(screen.getByText("🔷 BP optimieren"));
+    expect(screen.getByText("🔷 Blueprint-Optimierung")).toBeInTheDocument();
+
+    // Click the modal overlay (the outermost div with className "modal-overlay")
+    const overlay = document.querySelector(".modal-overlay");
+    expect(overlay).not.toBeNull();
+    if (overlay) {
+      fireEvent.click(overlay);
+    }
+
+    // Modal should be gone
+    expect(
+      screen.queryByText("🔷 Blueprint-Optimierung"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does NOT open blueprint optimizer for PROMPT content", () => {
+    const prompt = makePrompt({ content: "A regular prompt" });
+    setupStore(prompt, makeDetection("PROMPT", "CLEAN"));
+
+    render(<DetailsPanel />);
+
+    // BP optimieren button should not exist for PROMPT
+    expect(screen.queryByText("🔷 BP optimieren")).not.toBeInTheDocument();
+  });
+
+  it("BP optimieren button disabled when BLOCKING_SENSITIVE_CONTENT", () => {
+    const prompt = makePrompt({ content: "SENSITIVE DATA" });
+    setupStore(
+      prompt,
+      makeDetection("BLUEPRINT", "BLOCKING_SENSITIVE_CONTENT"),
+    );
+
+    render(<DetailsPanel />);
+
+    const bpBtn = screen.getByText("🔷 BP optimieren");
+    expect(bpBtn).toBeDisabled();
+
+    // Clicking should NOT open the modal
+    fireEvent.click(bpBtn);
+    expect(
+      screen.queryByText("🔷 Blueprint-Optimierung"),
+    ).not.toBeInTheDocument();
   });
 });

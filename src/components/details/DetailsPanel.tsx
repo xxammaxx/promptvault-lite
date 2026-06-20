@@ -2,6 +2,7 @@ import React, { useCallback, useState } from "react";
 import { useAppStore } from "@/stores/appStore";
 import ReactMarkdown from "react-markdown";
 import { OptimizationPanel } from "@/components/optimization/OptimizationPanel";
+import { BlueprintOptimizationPanel } from "@/components/optimization/BlueprintOptimizationPanel";
 import ContentClassBadge from "@/components/common/ContentClassBadge";
 import type { BlueprintContamination } from "@/types";
 
@@ -215,10 +216,6 @@ export const ActionBar: React.FC<{
   const showBlueprintBtn =
     contentClass === "BLUEPRINT" || contentClass === "PROMPT_BLUEPRINT_HYBRID";
   const blueprintBlocked = contaminationStatus === "BLOCKING_SENSITIVE_CONTENT";
-  // T6 (BlueprintOptimizationPanel) is not implemented yet.
-  // Until then the button is disabled with a descriptive tooltip.
-  // blueprintBlocked modifies only the tooltip message, not the disabled state
-  // since the button is a placeholder until T6 is implemented.
 
   return (
     <div className="action-bar">
@@ -277,11 +274,11 @@ export const ActionBar: React.FC<{
         <button
           className="btn btn-primary"
           onClick={onBlueprintOptimize}
-          disabled={true}
+          disabled={!onBlueprintOptimize || blueprintBlocked}
           title={
             blueprintBlocked
               ? "Blueprint-Optimierung für blockierte Inhalte nicht verfügbar"
-              : "Blueprint optimieren (in Kürze verfügbar)"
+              : "Blueprint optimieren"
           }
           aria-label="Blueprint optimieren"
         >
@@ -300,6 +297,7 @@ export const DetailsPanel: React.FC = () => {
   const prompt = useAppStore((s) => s.selectedPrompt)();
   const detection = useAppStore((s) => s.selectedBlueprintDetection)();
   const [showOptimizer, setShowOptimizer] = useState(false);
+  const [showBlueprintOptimizer, setShowBlueprintOptimizer] = useState(false);
 
   const handleOpenOptimizer = useCallback(() => {
     if (prompt) {
@@ -307,15 +305,17 @@ export const DetailsPanel: React.FC = () => {
     }
   }, [prompt]);
 
-  // Blueprint optimize — placeholder callback until T6 is implemented
-  const handleBlueprintOptimize = useCallback(() => {
-    // T6 will wire this to BlueprintOptimizationPanel modal
-    // For now: no-op (button is disabled)
-  }, []);
-
-  // Determine if content should be blocked
+  // Determine if content should be blocked (must be declared before handleBlueprintOptimize)
   const isBlocked =
     detection?.contamination_status === "BLOCKING_SENSITIVE_CONTENT";
+
+  // Blueprint optimize — opens the optimization modal for BLUEPRINT/HYBRID content.
+  // Disabled when BLOCKING_SENSITIVE_CONTENT (button stays disabled at the ActionBar level).
+  const handleBlueprintOptimize = useCallback(() => {
+    if (prompt && !isBlocked) {
+      setShowBlueprintOptimizer(true);
+    }
+  }, [prompt, isBlocked]);
 
   if (!prompt) {
     return (
@@ -353,6 +353,21 @@ export const DetailsPanel: React.FC = () => {
           promptContent={prompt.content}
           onClose={() => {
             setShowOptimizer(false);
+          }}
+        />
+      )}
+      {showBlueprintOptimizer && (
+        <BlueprintOptimizationPanel
+          content={prompt.content}
+          onClose={() => {
+            setShowBlueprintOptimizer(false);
+          }}
+          onApply={(optimizedContent) => {
+            // Safe onApply: copies result to clipboard as default action.
+            // Auto-saving optimized content back to disk is a follow-up feature —
+            // the app currently has no direct file-write mechanism for prompt content.
+            navigator.clipboard.writeText(optimizedContent).catch(() => {});
+            setShowBlueprintOptimizer(false);
           }}
         />
       )}
