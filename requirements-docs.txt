@@ -1,0 +1,7 @@
+# Docs-as-Code Requirements for PromptVault Lite
+# Install: pip install -r requirements-docs.txt
+# Used by: CI docs-quality workflow, local docs preview
+
+mkdocs>=1.6.0
+mkdocs-material>=9.5.0
+# mkdocs-llmstxt>=0.1.0  # Optional: KI/RAG-Optimierung (noch nicht stabil)
