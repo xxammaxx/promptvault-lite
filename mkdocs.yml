@@ -1,0 +1,155 @@
+# MkDocs Configuration for PromptVault Lite
+# Docs-as-Code platform following Diátaxis framework
+# See: docs/adr/ADR-002-docs-as-code-platform.md
+
+site_name: PromptVault Lite
+site_description: Lokales Prompt-Management-System mit Qualitäts- und Hygieneanalyse
+site_author: PromptVault Team
+repo_url: https://github.com/xxammaxx/promptvault-lite
+repo_name: xxammaxx/promptvault-lite
+edit_uri: edit/master/docs/
+
+# Copyright
+copyright: >
+  PromptVault Lite · Dokumentation unterliegt den Projektregeln ·
+  <a href="#__consent">Cookie-Einstellungen</a>
+
+# Theme
+theme:
+  name: material
+  language: de
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+    - toc.integrate
+
+# Plugins
+plugins:
+  - search:
+      lang: de
+  # Note: mermaid support via markdown_extensions below
+  # Note: mkdocs-llmstxt plugin requires pip install mkdocs-llmstxt
+  # Enable after installing: pip install mkdocs-llmstxt
+  # - llmstxt:
+  #     full_output: llms-full.txt
+  #     sections_output: llms.txt
+
+# Markdown Extensions
+markdown_extensions:
+  # Python Markdown built-in extensions
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      toc_depth: 4
+
+  # PyMdown Extensions (bundled with mkdocs-material)
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.details
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator:
+        !!python/name:material.extensions.emoji.to_svg # Navigation structure (Diátaxis framework)
+
+
+nav:
+  - Start: index.md
+  - Tutorials:
+      - Erste Schritte: getting-started/index.md
+  - How-to Guides:
+      - Aufgabenübersicht: how-to/index.md
+  - Referenz:
+      - Projektstruktur: reference/project-structure.md
+      - Glossar: glossary.md
+  - Erklärungen:
+      - Erklärungen (Übersicht): explanation/index.md
+  - Entwicklung:
+      - Development-Runbook: runbooks/development.md
+
+# Extra configuration
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/xxammaxx/promptvault-lite
+  version:
+    provider: mike
+    default: latest
+
+# Exclude files that would conflict with the new structure
+# or are not yet migrated to the MkDocs build
+exclude_docs: |
+  README.md
+  GOVERNANCE.md
+  agent/*
+  architecture/*
+  adr/*
+  audits/*
+  evidence/*
+  CANONICAL_PROMPT_STANDARD.md
+  specs/*
+  DECISIONS.md
+  NAS_PROMPT_FOLDER.md
+  EVIDENCE_PORTFOLIO.md
+  PROJECT_STATUS.md
+  ROADMAP.md
+  CHANGELOG.md
+  INSTALL.md
+  USER_GUIDE.md
+  TESTING.md
+  ARCHITECTURE.md
+  SECURITY_GATES.md
+  AI_HANDBUCH.md
+  AI_WORKFLOW.md
+  EVIDENCE_STANDARD.md
+  CONTEXT_ENGINEERING_STANDARD.md
+  GITHUB_REPOSITORY_SETTINGS_CHECKLIST.md
+
+# Strict mode: warn on broken links
+# Use --strict flag during CI builds
+strict: false
