@@ -23,7 +23,7 @@ struct ScannedFile {
     modified: String,
 }
 
-/// Rekursives Scannen eines Verzeichnisses nach Markdown-Dateien
+/// Rekursives Scannen eines Verzeichnisses nach Prompt-Textdateien (.md, .markdown, .txt)
 ///
 /// # Arguments
 /// * `dir_path` - Absoluter Pfad zum zu scannenden Verzeichnis
@@ -93,7 +93,7 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
             }
         })
     {
-        // Nur Markdown-Dateien (.md)
+        // Nur unterstuetzte Textdateien (.md, .markdown, .txt) — case-insensitive
         if !entry.file_type().is_file() {
             continue;
         }
@@ -122,10 +122,10 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
         }
 
         // Use canonical_file for all subsequent operations (TOCTOU-safe after containment check)
-        if canonical_file
-            .extension()
-            .is_some_and(|ext| ext == "md" || ext == "markdown")
-        {
+        if canonical_file.extension().is_some_and(|ext| {
+            let ext_lower = ext.to_str().unwrap_or_default().to_ascii_lowercase();
+            ext_lower == "md" || ext_lower == "markdown" || ext_lower == "txt"
+        }) {
             match fs::metadata(&canonical_file) {
                 Ok(meta) => {
                     let modified = meta
@@ -172,18 +172,24 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
             Ok(content) => {
                 let frontmatter_result = parse_frontmatter(&content);
 
-                // Titel: Frontmatter > Dateiname (ohne .md / .markdown)
+                // Titel: Frontmatter > Dateiname (ohne .md / .markdown / .txt)
                 let title = frontmatter_result
                     .metadata
                     .get("title")
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string())
                     .unwrap_or_else(|| {
-                        file.file_name
-                            .strip_suffix(".md")
-                            .or_else(|| file.file_name.strip_suffix(".markdown"))
-                            .unwrap_or(&file.file_name)
-                            .to_string()
+                        let name = &file.file_name;
+                        let lower = name.to_ascii_lowercase();
+                        if lower.ends_with(".markdown") {
+                            name[..name.len() - ".markdown".len()].to_string()
+                        } else if lower.ends_with(".md") {
+                            name[..name.len() - ".md".len()].to_string()
+                        } else if lower.ends_with(".txt") {
+                            name[..name.len() - ".txt".len()].to_string()
+                        } else {
+                            name.to_string()
+                        }
                     });
 
                 // Kategorie: Frontmatter > Ordnername
@@ -384,12 +390,12 @@ mod tests {
     }
 
     #[test]
-    fn test_ignores_non_md_files() {
+    fn test_ignores_unsupported_file_types() {
         let dir = TempDir::new().unwrap();
         create_test_md(dir.path(), "prompt.md", "# Prompt");
-        // Erstelle eine nicht-.md Datei
-        let mut txt_file = fs::File::create(dir.path().join("notes.txt")).unwrap();
-        txt_file.write_all(b"Not a prompt").unwrap();
+        // Erstelle eine nicht-unterstützte Datei (kein .md/.markdown/.txt)
+        let mut tmp_file = fs::File::create(dir.path().join("notes.tmp")).unwrap();
+        tmp_file.write_all(b"Not a prompt").unwrap();
 
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
         assert_eq!(result.len(), 1);
@@ -694,17 +700,30 @@ mod tests {
     }
 
     #[test]
-    fn test_ignores_markdown_extension_case_sensitively() {
-        // Extension check is exact ― ".MD" or ".MARKDOWN" are not matched
+    fn test_extension_case_insensitive_matching() {
+        // Extension check is case-insensitive — .MD, .MARKDOWN, .TXT are all matched
         let dir = TempDir::new().unwrap();
         create_test_md(dir.path(), "prompt.md", "# Lowercase");
-        // Create file with uppercase extension
-        let mut file = fs::File::create(dir.path().join("UPPERCASE.MD")).unwrap();
-        file.write_all(b"# Uppercase extension").unwrap();
+        let mut file_upper_md = fs::File::create(dir.path().join("UPPERCASE.MD")).unwrap();
+        file_upper_md
+            .write_all(b"# Uppercase MD extension")
+            .unwrap();
+        let mut file_upper_markdown = fs::File::create(dir.path().join("NOTES.MARKDOWN")).unwrap();
+        file_upper_markdown
+            .write_all(b"# Uppercase MARKDOWN extension")
+            .unwrap();
+        let mut file_upper_txt = fs::File::create(dir.path().join("README.TXT")).unwrap();
+        file_upper_txt
+            .write_all(b"# Uppercase TXT extension")
+            .unwrap();
 
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
-        assert_eq!(result.len(), 1, "Only lowercase .md should match");
-        assert_eq!(result[0].file_name, "prompt.md");
+        assert_eq!(result.len(), 4, "All case variations should be matched");
+        let names: Vec<&str> = result.iter().map(|p| p.file_name.as_str()).collect();
+        assert!(names.contains(&"prompt.md"));
+        assert!(names.contains(&"UPPERCASE.MD"));
+        assert!(names.contains(&"NOTES.MARKDOWN"));
+        assert!(names.contains(&"README.TXT"));
     }
 
     #[test]
@@ -784,9 +803,9 @@ mod tests {
             let content = format!("# Prompt {}\n\nContent for prompt {}", i, i);
             create_test_md(dir.path(), &name, &content);
         }
-        // Also add some non-md files to filter
+        // Also add some unsupported files to filter
         for i in 0..50 {
-            let name = format!("notes_{:04}.txt", i);
+            let name = format!("notes_{:04}.tmp", i);
             let mut file = fs::File::create(dir.path().join(&name)).unwrap();
             file.write_all(b"Not a prompt").unwrap();
         }
@@ -795,7 +814,7 @@ mod tests {
         assert_eq!(
             result.len(),
             550,
-            "All 550 .md files should be scanned, non-md files ignored"
+            "All 550 .md files should be scanned, unsupported files ignored"
         );
 
         // Verify sorting: prompts should be sorted by file_path
@@ -838,8 +857,8 @@ mod tests {
 
         // Hidden .md file — has .md extension, should be scanned
         create_test_md(dir.path(), ".hidden.md", "# Hidden but md");
-        // Temp file without .md extension — should be ignored
-        let mut tmp = fs::File::create(dir.path().join("temp~file.txt")).unwrap();
+        // Temp file with unsupported extension — should be ignored
+        let mut tmp = fs::File::create(dir.path().join("temp~file.tmp")).unwrap();
         tmp.write_all(b"Not a prompt").unwrap();
         // Backup file without .md extension
         let mut bak = fs::File::create(dir.path().join("prompt.md.bak")).unwrap();
@@ -882,5 +901,179 @@ mod tests {
             result.is_empty(),
             "Empty folder should return empty Vec, not error"
         );
+    }
+
+    // =========================================================================
+    // .txt support tests (Issue #167)
+    // =========================================================================
+
+    #[test]
+    fn test_scans_txt_prompt_file() {
+        let dir = TempDir::new().unwrap();
+        create_test_md(
+            dir.path(),
+            "prompt.txt",
+            "# A Text Prompt\n\nThis is content.",
+        );
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].file_name, "prompt.txt");
+        assert_eq!(result[0].title, "prompt");
+        assert!(result[0].content.contains("# A Text Prompt"));
+    }
+
+    #[test]
+    fn test_scans_uppercase_txt_extension() {
+        let dir = TempDir::new().unwrap();
+        let mut file = fs::File::create(dir.path().join("UPPERCASE.TXT")).unwrap();
+        file.write_all(b"# Uppercase TXT extension test\n\nContent.")
+            .unwrap();
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].file_name, "UPPERCASE.TXT");
+        assert_eq!(result[0].title, "UPPERCASE");
+    }
+
+    #[test]
+    fn test_scans_mixed_markdown_and_txt_folder() {
+        let dir = TempDir::new().unwrap();
+        create_test_md(dir.path(), "prompt.md", "# MD Prompt");
+        create_test_md(dir.path(), "notes.markdown", "# Markdown Notes");
+        create_test_md(dir.path(), "instructions.txt", "# TXT Instructions");
+        let mut file = fs::File::create(dir.path().join("README.TXT")).unwrap();
+        file.write_all(b"# README").unwrap();
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(
+            result.len(),
+            4,
+            "All .md, .markdown, .txt, .TXT should be scanned"
+        );
+        let names: Vec<&str> = result.iter().map(|p| p.file_name.as_str()).collect();
+        assert!(names.contains(&"prompt.md"));
+        assert!(names.contains(&"notes.markdown"));
+        assert!(names.contains(&"instructions.txt"));
+        assert!(names.contains(&"README.TXT"));
+    }
+
+    #[test]
+    fn test_empty_txt_consistent_with_empty_md() {
+        // Empty .txt and .md files are both scanned (treated consistently).
+        // The scanner does not filter by file size — both produce PromptItems
+        // with empty content.
+        let dir = TempDir::new().unwrap();
+        create_test_md(dir.path(), "empty.txt", "");
+        create_test_md(dir.path(), "empty.md", "");
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(
+            result.len(),
+            2,
+            "Both empty .txt and .md should be included"
+        );
+        let names: Vec<&str> = result.iter().map(|p| p.file_name.as_str()).collect();
+        assert!(names.contains(&"empty.txt"));
+        assert!(names.contains(&"empty.md"));
+        // Both have empty content
+        for prompt in &result {
+            assert!(
+                prompt.content.is_empty(),
+                "Empty file '{}' should have empty content",
+                prompt.file_name
+            );
+        }
+    }
+
+    #[test]
+    fn test_large_txt_scanned_like_large_md() {
+        // Large .txt files are scanned — same behavior as large .md files.
+        // Note: explicit size limits (<1MB) are not yet implemented in the
+        // scanner. This test documents current expected behavior.
+        let dir = TempDir::new().unwrap();
+        let large_content = "x".repeat(1024 * 1024 + 100); // ~1MB + 100 bytes
+        create_test_md(dir.path(), "large.txt", &large_content);
+        create_test_md(dir.path(), "large.md", &large_content);
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 2, "Both large .txt and .md should be scanned");
+    }
+
+    #[test]
+    fn test_title_fallback_strips_txt_extension() {
+        // .txt and .TXT files without frontmatter title should derive the
+        // title from the filename with extension stripped (case-insensitive).
+        let dir = TempDir::new().unwrap();
+        create_test_md(
+            dir.path(),
+            "lowercase.txt",
+            "# No Frontmatter\n\nJust content.",
+        );
+        // Use different base names — Windows filesystem is case-insensitive
+        let mut file = fs::File::create(dir.path().join("UPPERCASE.TXT")).unwrap();
+        file.write_all(b"# Uppercase extension test").unwrap();
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 2);
+
+        let prompt = result
+            .iter()
+            .find(|p| p.file_name == "lowercase.txt")
+            .unwrap();
+        assert_eq!(prompt.title, "lowercase", "lowercase .txt title fallback");
+
+        let uppercase = result
+            .iter()
+            .find(|p| p.file_name == "UPPERCASE.TXT")
+            .unwrap();
+        assert_eq!(
+            uppercase.title, "UPPERCASE",
+            "uppercase .TXT title fallback"
+        );
+    }
+
+    #[test]
+    fn test_txt_does_not_break_existing_md_scan() {
+        // Adding .txt support must not change existing .md scan behavior.
+        let dir = TempDir::new().unwrap();
+        let md_content = "---\ntitle: My MD Prompt\ncategory: rust\ntags:\n  - example\n---\n\n# MD Content\n\nHello world.";
+        create_test_md(dir.path(), "existing.md", md_content);
+        create_test_md(
+            dir.path(),
+            "new.txt",
+            "# A TXT Prompt\n\nThis is text content.",
+        );
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 2);
+
+        // Verify .md behavior unchanged
+        let md_prompt = result
+            .iter()
+            .find(|p| p.file_name == "existing.md")
+            .unwrap();
+        assert_eq!(md_prompt.title, "My MD Prompt");
+        assert_eq!(md_prompt.category, "rust");
+        assert_eq!(md_prompt.tags, vec!["example"]);
+        assert!(!md_prompt.content.contains("---"));
+        assert!(md_prompt.content.contains("# MD Content"));
+
+        // Verify .txt is scanned correctly alongside
+        let txt_prompt = result.iter().find(|p| p.file_name == "new.txt").unwrap();
+        assert_eq!(txt_prompt.title, "new");
+        assert!(txt_prompt.content.contains("# A TXT Prompt"));
+        assert!(!txt_prompt.content.contains("---"));
+    }
+
+    #[test]
+    fn test_txt_in_nested_subdirectory() {
+        // .txt files in nested directories should be found via recursive scan.
+        let dir = TempDir::new().unwrap();
+        let sub = dir.path().join("nested").join("deep");
+        fs::create_dir_all(&sub).unwrap();
+        create_test_md(&sub, "deep_prompt.txt", "# Deep nested prompt");
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].file_name, "deep_prompt.txt");
+        assert!(result[0].file_path.contains("nested"));
+        assert!(result[0].file_path.contains("deep"));
     }
 }

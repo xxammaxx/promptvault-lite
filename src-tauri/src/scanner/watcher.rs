@@ -56,12 +56,14 @@ impl DebouncedWatcher {
         let mut watcher = notify::recommended_watcher(move |res: Result<Event, notify::Error>| {
             match res {
                 Ok(event) => {
-                    // Only care about .md and .markdown files
-                    let is_md = event.paths.iter().any(|p| {
-                        p.extension()
-                            .is_some_and(|ext| ext == "md" || ext == "markdown")
+                    // Only care about .md, .markdown, and .txt files
+                    let is_supported = event.paths.iter().any(|p| {
+                        p.extension().is_some_and(|ext| {
+                            let ext_lower = ext.to_str().unwrap_or_default().to_ascii_lowercase();
+                            ext_lower == "md" || ext_lower == "markdown" || ext_lower == "txt"
+                        })
                     });
-                    if !is_md {
+                    if !is_supported {
                         return;
                     }
 
@@ -72,11 +74,11 @@ impl DebouncedWatcher {
                     for path in &event.paths {
                         let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
 
-                        // Skip non-md files
-                        if canonical
-                            .extension()
-                            .map_or(true, |ext| ext != "md" && ext != "markdown")
-                        {
+                        // Skip non-supported files
+                        if canonical.extension().map_or(true, |ext| {
+                            let ext_lower = ext.to_str().unwrap_or_default().to_ascii_lowercase();
+                            ext_lower != "md" && ext_lower != "markdown" && ext_lower != "txt"
+                        }) {
                             continue;
                         }
 
