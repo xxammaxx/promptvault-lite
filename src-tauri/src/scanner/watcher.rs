@@ -5,6 +5,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
+use super::file_scanner::is_supported_prompt_extension;
+
 /// Payload für watcher:changed Tauri Event
 #[derive(Clone, serde::Serialize)]
 pub struct ChangedPayload {
@@ -57,12 +59,7 @@ impl DebouncedWatcher {
             match res {
                 Ok(event) => {
                     // Only care about .md, .markdown, and .txt files
-                    let is_supported = event.paths.iter().any(|p| {
-                        p.extension().is_some_and(|ext| {
-                            let ext_lower = ext.to_str().unwrap_or_default().to_ascii_lowercase();
-                            ext_lower == "md" || ext_lower == "markdown" || ext_lower == "txt"
-                        })
-                    });
+                    let is_supported = event.paths.iter().any(|p| is_supported_prompt_extension(p));
                     if !is_supported {
                         return;
                     }
@@ -75,10 +72,7 @@ impl DebouncedWatcher {
                         let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
 
                         // Skip non-supported files
-                        if canonical.extension().map_or(true, |ext| {
-                            let ext_lower = ext.to_str().unwrap_or_default().to_ascii_lowercase();
-                            ext_lower != "md" && ext_lower != "markdown" && ext_lower != "txt"
-                        }) {
+                        if !is_supported_prompt_extension(&canonical) {
                             continue;
                         }
 
