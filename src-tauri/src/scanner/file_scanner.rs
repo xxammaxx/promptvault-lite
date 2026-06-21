@@ -13,6 +13,12 @@ fn canonicalize(path: &Path) -> Result<PathBuf, std::io::Error> {
     Ok(canonical)
 }
 
+/// Maximum file size (in bytes) for supported prompt files.
+/// Files exceeding this limit are skipped with a warning to avoid
+/// accidentally ingesting model files, archives, exports, or oversized
+/// prompt dumps.
+const MAX_PROMPT_FILE_SIZE_BYTES: u64 = 1_048_576; // 1 MiB
+
 /// Check if a file path has a supported prompt extension (.md, .markdown, .txt).
 /// Matching is case-insensitive. This is the single source of truth for
 /// extension filtering used by both the scanner and file watcher.
@@ -135,6 +141,21 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
         if is_supported_prompt_extension(&canonical_file) {
             match fs::metadata(&canonical_file) {
                 Ok(meta) => {
+                    let file_size = meta.len();
+
+                    // Skip very large prompt files to avoid accidentally
+                    // ingesting model files, archives, exports, or oversized
+                    // prompt dumps.
+                    if file_size > MAX_PROMPT_FILE_SIZE_BYTES {
+                        log::warn!(
+                            "Prompt-Datei zu groß ({} bytes, Limit: {} bytes), überspringe: {}",
+                            file_size,
+                            MAX_PROMPT_FILE_SIZE_BYTES,
+                            canonical_file.display()
+                        );
+                        continue;
+                    }
+
                     let modified = meta
                         .modified()
                         .ok()
@@ -156,7 +177,7 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
                             .unwrap_or_default()
                             .to_string_lossy()
                             .to_string(),
-                        size: meta.len(),
+                        size: file_size,
                         modified,
                     });
                 }
@@ -990,17 +1011,91 @@ mod tests {
         }
     }
 
+    // =========================================================================
+    // File-size limit tests (Issue #171)
+    // =========================================================================
+
     #[test]
-    fn test_large_txt_scanned_like_large_md() {
-        // Large .txt files are scanned — same behavior as large .md files.
-        // Note: explicit size limits (<1MB) are not yet implemented in the
-        // scanner. This test documents current expected behavior.
+    fn test_skips_large_md_file() {
+        // Large .md files exceeding MAX_PROMPT_FILE_SIZE_BYTES are skipped
+        // with a warning log — no crash, no content read.
         let dir = TempDir::new().unwrap();
-        let large_content = "x".repeat(1024 * 1024 + 100); // ~1MB + 100 bytes
-        create_test_file(dir.path(), "large.txt", &large_content);
+        let large_content = "x".repeat(MAX_PROMPT_FILE_SIZE_BYTES as usize + 100);
         create_test_file(dir.path(), "large.md", &large_content);
+        // Normal file alongside to verify scan still works
+        create_test_file(dir.path(), "normal.md", "# Small prompt");
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
-        assert_eq!(result.len(), 2, "Both large .txt and .md should be scanned");
+        assert_eq!(result.len(), 1, "Large .md should be skipped");
+        assert_eq!(result[0].file_name, "normal.md");
+    }
+
+    #[test]
+    fn test_skips_large_markdown_file() {
+        // Large .markdown files are skipped — same limit as .md and .txt.
+        let dir = TempDir::new().unwrap();
+        let large_content = "x".repeat(MAX_PROMPT_FILE_SIZE_BYTES as usize + 100);
+        create_test_file(dir.path(), "large.markdown", &large_content);
+        create_test_file(dir.path(), "normal.markdown", "# Small markdown");
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 1, "Large .markdown should be skipped");
+        assert_eq!(result[0].file_name, "normal.markdown");
+    }
+
+    #[test]
+    fn test_skips_large_txt_file() {
+        // Large .txt files are skipped — same limit as .md and .markdown.
+        let dir = TempDir::new().unwrap();
+        let large_content = "x".repeat(MAX_PROMPT_FILE_SIZE_BYTES as usize + 100);
+        create_test_file(dir.path(), "large.txt", &large_content);
+        create_test_file(dir.path(), "normal.txt", "# Small text");
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 1, "Large .txt should be skipped");
+        assert_eq!(result[0].file_name, "normal.txt");
+    }
+
+    #[test]
+    fn test_scans_file_at_size_limit() {
+        // Files exactly at the limit are still scanned.
+        let dir = TempDir::new().unwrap();
+        let content = "x".repeat(MAX_PROMPT_FILE_SIZE_BYTES as usize);
+        create_test_file(dir.path(), "at_limit.md", &content);
+        create_test_file(dir.path(), "at_limit.txt", &content);
+        create_test_file(dir.path(), "at_limit.markdown", &content);
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 3, "All files at size limit should be scanned");
+        let names: Vec<&str> = result.iter().map(|p| p.file_name.as_str()).collect();
+        assert!(names.contains(&"at_limit.md"));
+        assert!(names.contains(&"at_limit.txt"));
+        assert!(names.contains(&"at_limit.markdown"));
+    }
+
+    #[test]
+    fn test_large_unsupported_file_remains_unsupported() {
+        // Large files with unsupported extensions must NOT be treated as
+        // prompt files — they are ignored by extension filter, not by size.
+        let dir = TempDir::new().unwrap();
+        let large_content = "x".repeat(MAX_PROMPT_FILE_SIZE_BYTES as usize + 100);
+        let mut f = fs::File::create(dir.path().join("large.gguf")).unwrap();
+        f.write_all(large_content.as_bytes()).unwrap();
+        create_test_file(dir.path(), "normal.md", "# Small prompt");
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 1, "Large unsupported files should be ignored");
+        assert_eq!(result[0].file_name, "normal.md");
+    }
+
+    #[test]
+    fn test_size_limit_does_not_change_empty_file_behavior() {
+        // Empty (0-byte) supported files still appear in scan results.
+        let dir = TempDir::new().unwrap();
+        create_test_file(dir.path(), "empty.md", "");
+        create_test_file(dir.path(), "empty.txt", "");
+        create_test_file(dir.path(), "empty.markdown", "");
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 3, "Empty files should still be scanned");
+        let names: Vec<&str> = result.iter().map(|p| p.file_name.as_str()).collect();
+        assert!(names.contains(&"empty.md"));
+        assert!(names.contains(&"empty.txt"));
+        assert!(names.contains(&"empty.markdown"));
     }
 
     #[test]
