@@ -13,6 +13,16 @@ fn canonicalize(path: &Path) -> Result<PathBuf, std::io::Error> {
     Ok(canonical)
 }
 
+/// Check if a file path has a supported prompt extension (.md, .markdown, .txt).
+/// Matching is case-insensitive. This is the single source of truth for
+/// extension filtering used by both the scanner and file watcher.
+pub fn is_supported_prompt_extension(path: &Path) -> bool {
+    path.extension().is_some_and(|ext| {
+        let ext_lower = ext.to_str().unwrap_or_default().to_ascii_lowercase();
+        ext_lower == "md" || ext_lower == "markdown" || ext_lower == "txt"
+    })
+}
+
 /// Gescannter Datei-Eintrag vor dem Parsing
 #[derive(Debug, Clone)]
 struct ScannedFile {
@@ -122,10 +132,7 @@ pub fn scan_directory(dir_path: &str) -> Result<Vec<PromptItem>, String> {
         }
 
         // Use canonical_file for all subsequent operations (TOCTOU-safe after containment check)
-        if canonical_file.extension().is_some_and(|ext| {
-            let ext_lower = ext.to_str().unwrap_or_default().to_ascii_lowercase();
-            ext_lower == "md" || ext_lower == "markdown" || ext_lower == "txt"
-        }) {
+        if is_supported_prompt_extension(&canonical_file) {
             match fs::metadata(&canonical_file) {
                 Ok(meta) => {
                     let modified = meta
@@ -326,7 +333,7 @@ mod tests {
     use std::io::Write;
     use tempfile::TempDir;
 
-    fn create_test_md(dir: &Path, name: &str, content: &str) {
+    fn create_test_file(dir: &Path, name: &str, content: &str) {
         let file_path = dir.join(name);
         let mut file = fs::File::create(&file_path).unwrap();
         file.write_all(content.as_bytes()).unwrap();
@@ -343,7 +350,7 @@ mod tests {
     #[test]
     fn test_scan_single_md_file() {
         let dir = TempDir::new().unwrap();
-        create_test_md(dir.path(), "test.md", "# Test Prompt\n\nHello World");
+        create_test_file(dir.path(), "test.md", "# Test Prompt\n\nHello World");
 
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
         assert_eq!(result.len(), 1);
@@ -359,7 +366,7 @@ mod tests {
     fn test_scan_with_frontmatter() {
         let dir = TempDir::new().unwrap();
         let content = "---\ntitle: My Prompt\ncategory: coding\nversion: \"2.0\"\ntags:\n  - rust\n  - testing\ndescription: A test prompt\n---\n\n# Prompt\n\nContent here";
-        create_test_md(dir.path(), "prompt.md", content);
+        create_test_file(dir.path(), "prompt.md", content);
 
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
         assert_eq!(result.len(), 1);
@@ -378,8 +385,8 @@ mod tests {
         let sub_dir = dir.path().join("sub");
         fs::create_dir(&sub_dir).unwrap();
 
-        create_test_md(dir.path(), "root.md", "# Root");
-        create_test_md(&sub_dir, "nested.md", "# Nested");
+        create_test_file(dir.path(), "root.md", "# Root");
+        create_test_file(&sub_dir, "nested.md", "# Nested");
 
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
         assert_eq!(result.len(), 2);
@@ -392,7 +399,7 @@ mod tests {
     #[test]
     fn test_ignores_unsupported_file_types() {
         let dir = TempDir::new().unwrap();
-        create_test_md(dir.path(), "prompt.md", "# Prompt");
+        create_test_file(dir.path(), "prompt.md", "# Prompt");
         // Erstelle eine nicht-unterstützte Datei (kein .md/.markdown/.txt)
         let mut tmp_file = fs::File::create(dir.path().join("notes.tmp")).unwrap();
         tmp_file.write_all(b"Not a prompt").unwrap();
@@ -412,7 +419,7 @@ mod tests {
     fn test_missing_frontmatter_fallback() {
         let dir = TempDir::new().unwrap();
         let content = "# Just a prompt\n\nNo frontmatter here";
-        create_test_md(dir.path(), "simple.md", content);
+        create_test_file(dir.path(), "simple.md", content);
 
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
         assert_eq!(result.len(), 1);
@@ -434,7 +441,7 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let sub = dir.path().join("sub");
         fs::create_dir(&sub).unwrap();
-        create_test_md(&sub, "inside.md", "# Inside");
+        create_test_file(&sub, "inside.md", "# Inside");
 
         // Construct a path with .. that resolves to the same temp dir
         let traversed = sub.join("..").join("sub");
@@ -452,7 +459,7 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let sub = dir.path().join("coding").join("rust");
         fs::create_dir_all(&sub).unwrap();
-        create_test_md(&sub, "advanced.md", "# Advanced Rust");
+        create_test_file(&sub, "advanced.md", "# Advanced Rust");
 
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
         assert_eq!(result.len(), 1);
@@ -472,7 +479,7 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let sub = dir.path().join("folder").join("nested");
         fs::create_dir_all(&sub).unwrap();
-        create_test_md(&sub, "prompt.md", "# Mixed test");
+        create_test_file(&sub, "prompt.md", "# Mixed test");
 
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
         assert_eq!(result.len(), 1);
@@ -492,7 +499,7 @@ mod tests {
             current = current.join(level);
             fs::create_dir(&current).unwrap();
         }
-        create_test_md(&current, "deep.md", "# Deep prompt");
+        create_test_file(&current, "deep.md", "# Deep prompt");
 
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
         assert_eq!(result.len(), 1);
@@ -513,7 +520,7 @@ mod tests {
         // Phase 4: Symlink-Containment — external symlinks are blocked
         let dir = TempDir::new().unwrap();
         let outside = TempDir::new().unwrap();
-        create_test_md(outside.path(), "secret.md", "# External file");
+        create_test_file(outside.path(), "secret.md", "# External file");
 
         // Create symlink inside vault pointing outside
         let link_path = dir.path().join("link_to_outside");
@@ -545,7 +552,7 @@ mod tests {
         fs::create_dir(&sub).unwrap();
 
         let prompt_path = sub.join("internal.md");
-        create_test_md(&sub, "internal.md", "# Internal prompt");
+        create_test_file(&sub, "internal.md", "# Internal prompt");
 
         // Create symlink inside vault pointing to another file inside vault
         let link_path = dir.path().join("link_to_internal");
@@ -577,7 +584,7 @@ mod tests {
         fs::create_dir(&sub_a).unwrap();
         fs::create_dir(&sub_b).unwrap();
 
-        create_test_md(&sub_a, "prompt_a.md", "# Prompt A");
+        create_test_file(&sub_a, "prompt_a.md", "# Prompt A");
 
         // Create cycle: A/link → B, B/link → A
         let link_a_to_b = sub_a.join("link_to_b");
@@ -613,7 +620,7 @@ mod tests {
         let outside = TempDir::new().unwrap();
         let outside_sub = outside.path().join("secrets");
         fs::create_dir(&outside_sub).unwrap();
-        create_test_md(&outside_sub, "secret.md", "# External secret");
+        create_test_file(&outside_sub, "secret.md", "# External secret");
 
         // Create symlink inside vault pointing to outside directory
         let link_path = dir.path().join("link_to_outside_dir");
@@ -656,8 +663,8 @@ mod tests {
     #[test]
     fn test_markdown_extension_supported() {
         let dir = TempDir::new().unwrap();
-        create_test_md(dir.path(), "prompt.markdown", "# Markdown Extension");
-        create_test_md(dir.path(), "regular.md", "# Regular MD");
+        create_test_file(dir.path(), "prompt.markdown", "# Markdown Extension");
+        create_test_file(dir.path(), "regular.md", "# Regular MD");
 
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
         assert_eq!(
@@ -675,9 +682,9 @@ mod tests {
         // .md and .markdown files without frontmatter title should
         // derive the title from the filename with extension stripped.
         let dir = TempDir::new().unwrap();
-        create_test_md(dir.path(), "example.md", "# No frontmatter title");
-        create_test_md(dir.path(), "example.markdown", "# Also no title");
-        create_test_md(dir.path(), "nested.markdown", "# Nested markdown");
+        create_test_file(dir.path(), "example.md", "# No frontmatter title");
+        create_test_file(dir.path(), "example.markdown", "# Also no title");
+        create_test_file(dir.path(), "nested.markdown", "# Nested markdown");
 
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
         assert_eq!(result.len(), 3);
@@ -703,7 +710,7 @@ mod tests {
     fn test_extension_case_insensitive_matching() {
         // Extension check is case-insensitive — .MD, .MARKDOWN, .TXT are all matched
         let dir = TempDir::new().unwrap();
-        create_test_md(dir.path(), "prompt.md", "# Lowercase");
+        create_test_file(dir.path(), "prompt.md", "# Lowercase");
         let mut file_upper_md = fs::File::create(dir.path().join("UPPERCASE.MD")).unwrap();
         file_upper_md
             .write_all(b"# Uppercase MD extension")
@@ -732,7 +739,7 @@ mod tests {
         // does not cause a crash. The problematic file may be skipped
         // (Unix: unreadable) or scanned (Windows: read-only is still readable).
         let dir = TempDir::new().unwrap();
-        create_test_md(dir.path(), "good.md", "# Good prompt");
+        create_test_file(dir.path(), "good.md", "# Good prompt");
 
         let bad_path = dir.path().join("bad.md");
         {
@@ -801,7 +808,7 @@ mod tests {
         for i in 0..550 {
             let name = format!("prompt_{:04}.md", i);
             let content = format!("# Prompt {}\n\nContent for prompt {}", i, i);
-            create_test_md(dir.path(), &name, &content);
+            create_test_file(dir.path(), &name, &content);
         }
         // Also add some unsupported files to filter
         for i in 0..50 {
@@ -832,7 +839,7 @@ mod tests {
         // UNC paths (\\server\share\folder) should work on Windows.
         // On non-Windows, UNC-like paths behave as regular paths.
         let dir = TempDir::new().unwrap();
-        create_test_md(dir.path(), "prompt.md", "# UNC Test");
+        create_test_file(dir.path(), "prompt.md", "# UNC Test");
 
         // Use the temp dir path directly — UNC handling is verified
         // by the dunce::canonicalize integration which normalizes paths
@@ -856,7 +863,7 @@ mod tests {
         let dir = TempDir::new().unwrap();
 
         // Hidden .md file — has .md extension, should be scanned
-        create_test_md(dir.path(), ".hidden.md", "# Hidden but md");
+        create_test_file(dir.path(), ".hidden.md", "# Hidden but md");
         // Temp file with unsupported extension — should be ignored
         let mut tmp = fs::File::create(dir.path().join("temp~file.tmp")).unwrap();
         tmp.write_all(b"Not a prompt").unwrap();
@@ -864,7 +871,7 @@ mod tests {
         let mut bak = fs::File::create(dir.path().join("prompt.md.bak")).unwrap();
         bak.write_all(b"Backup").unwrap();
         // Regular .md file
-        create_test_md(dir.path(), "visible.md", "# Visible");
+        create_test_file(dir.path(), "visible.md", "# Visible");
 
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
         assert_eq!(
@@ -910,7 +917,7 @@ mod tests {
     #[test]
     fn test_scans_txt_prompt_file() {
         let dir = TempDir::new().unwrap();
-        create_test_md(
+        create_test_file(
             dir.path(),
             "prompt.txt",
             "# A Text Prompt\n\nThis is content.",
@@ -937,9 +944,9 @@ mod tests {
     #[test]
     fn test_scans_mixed_markdown_and_txt_folder() {
         let dir = TempDir::new().unwrap();
-        create_test_md(dir.path(), "prompt.md", "# MD Prompt");
-        create_test_md(dir.path(), "notes.markdown", "# Markdown Notes");
-        create_test_md(dir.path(), "instructions.txt", "# TXT Instructions");
+        create_test_file(dir.path(), "prompt.md", "# MD Prompt");
+        create_test_file(dir.path(), "notes.markdown", "# Markdown Notes");
+        create_test_file(dir.path(), "instructions.txt", "# TXT Instructions");
         let mut file = fs::File::create(dir.path().join("README.TXT")).unwrap();
         file.write_all(b"# README").unwrap();
 
@@ -962,8 +969,8 @@ mod tests {
         // The scanner does not filter by file size — both produce PromptItems
         // with empty content.
         let dir = TempDir::new().unwrap();
-        create_test_md(dir.path(), "empty.txt", "");
-        create_test_md(dir.path(), "empty.md", "");
+        create_test_file(dir.path(), "empty.txt", "");
+        create_test_file(dir.path(), "empty.md", "");
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
         assert_eq!(
             result.len(),
@@ -990,8 +997,8 @@ mod tests {
         // scanner. This test documents current expected behavior.
         let dir = TempDir::new().unwrap();
         let large_content = "x".repeat(1024 * 1024 + 100); // ~1MB + 100 bytes
-        create_test_md(dir.path(), "large.txt", &large_content);
-        create_test_md(dir.path(), "large.md", &large_content);
+        create_test_file(dir.path(), "large.txt", &large_content);
+        create_test_file(dir.path(), "large.md", &large_content);
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
         assert_eq!(result.len(), 2, "Both large .txt and .md should be scanned");
     }
@@ -1001,7 +1008,7 @@ mod tests {
         // .txt and .TXT files without frontmatter title should derive the
         // title from the filename with extension stripped (case-insensitive).
         let dir = TempDir::new().unwrap();
-        create_test_md(
+        create_test_file(
             dir.path(),
             "lowercase.txt",
             "# No Frontmatter\n\nJust content.",
@@ -1034,8 +1041,8 @@ mod tests {
         // Adding .txt support must not change existing .md scan behavior.
         let dir = TempDir::new().unwrap();
         let md_content = "---\ntitle: My MD Prompt\ncategory: rust\ntags:\n  - example\n---\n\n# MD Content\n\nHello world.";
-        create_test_md(dir.path(), "existing.md", md_content);
-        create_test_md(
+        create_test_file(dir.path(), "existing.md", md_content);
+        create_test_file(
             dir.path(),
             "new.txt",
             "# A TXT Prompt\n\nThis is text content.",
@@ -1068,12 +1075,137 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let sub = dir.path().join("nested").join("deep");
         fs::create_dir_all(&sub).unwrap();
-        create_test_md(&sub, "deep_prompt.txt", "# Deep nested prompt");
+        create_test_file(&sub, "deep_prompt.txt", "# Deep nested prompt");
 
         let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].file_name, "deep_prompt.txt");
         assert!(result[0].file_path.contains("nested"));
         assert!(result[0].file_path.contains("deep"));
+    }
+
+    // =========================================================================
+    // Supported extension helper unit tests (Issue #169)
+    // =========================================================================
+
+    #[test]
+    fn test_is_supported_prompt_extension_accepts_expected_cases() {
+        // All supported lower/upper/mixed-case extensions should be accepted.
+        let dir = TempDir::new().unwrap();
+        let cases = [
+            ("prompt.md", true),
+            ("PROMPT.MD", true),
+            ("Prompt.Md", true),
+            ("notes.markdown", true),
+            ("NOTES.MARKDOWN", true),
+            ("Notes.Markdown", true),
+            ("instructions.txt", true),
+            ("INSTRUCTIONS.TXT", true),
+            ("Instructions.Txt", true),
+        ];
+        for (name, expected) in &cases {
+            let path = dir.path().join(name);
+            // Create the file so extension() can resolve
+            let mut f = fs::File::create(&path).unwrap();
+            f.write_all(b"test").unwrap();
+            assert_eq!(
+                is_supported_prompt_extension(&path),
+                *expected,
+                "Unexpected result for '{}'",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn test_is_supported_prompt_extension_rejects_unsupported_cases() {
+        // Non-prompt extensions must be rejected.
+        let dir = TempDir::new().unwrap();
+        let cases = [
+            "notes.pdf",
+            "document.docx",
+            "image.png",
+            "data.tmp",
+            "archive.zip",
+            "model.gguf",
+            "script.py",
+            "config.json",
+            "readme",
+            "backup.md.bak",
+        ];
+        for name in &cases {
+            let path = dir.path().join(name);
+            let mut f = fs::File::create(&path).unwrap();
+            f.write_all(b"test").unwrap();
+            assert!(
+                !is_supported_prompt_extension(&path),
+                "Extension for '{}' should be rejected",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn test_txt_with_yaml_frontmatter() {
+        // .txt files with YAML frontmatter should parse metadata correctly.
+        let dir = TempDir::new().unwrap();
+        let content = "---\ntitle: My TXT Prompt\ncategory: writing\nversion: \"3.0\"\ntags:\n  - prose\n  - creative\ndescription: A text prompt with frontmatter\ncreated: 2026-01-15\nupdated: 2026-06-01\n---\n\n# Prompt Content\n\nThis is the body.";
+        create_test_file(dir.path(), "creative.txt", content);
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].title, "My TXT Prompt");
+        assert_eq!(result[0].category, "writing");
+        assert_eq!(result[0].version, "3.0");
+        assert_eq!(result[0].tags, vec!["prose", "creative"]);
+        assert_eq!(result[0].description, "A text prompt with frontmatter");
+        assert_eq!(result[0].file_name, "creative.txt");
+        assert!(!result[0].content.contains("---"));
+        assert!(result[0].content.contains("# Prompt Content"));
+    }
+
+    #[test]
+    fn test_multi_dot_txt_title_fallback() {
+        // Multi-dot filenames like my.prompt.v1.txt should only strip
+        // the last extension segment for the title fallback.
+        let dir = TempDir::new().unwrap();
+        // No frontmatter — title falls back to filename minus extension
+        create_test_file(dir.path(), "my.prompt.v1.txt", "# Multi-dot test");
+        create_test_file(dir.path(), "config.v2.md", "# MD multi-dot test");
+        create_test_file(
+            dir.path(),
+            "template.final.markdown",
+            "# Markdown multi-dot test",
+        );
+
+        let result = scan_directory(dir.path().to_str().unwrap()).unwrap();
+        assert_eq!(result.len(), 3);
+
+        let txt = result
+            .iter()
+            .find(|p| p.file_name == "my.prompt.v1.txt")
+            .unwrap();
+        assert_eq!(
+            txt.title, "my.prompt.v1",
+            "Multi-dot .txt: only last extension should be stripped"
+        );
+
+        let md = result
+            .iter()
+            .find(|p| p.file_name == "config.v2.md")
+            .unwrap();
+        assert_eq!(
+            md.title, "config.v2",
+            "Multi-dot .md: only last extension should be stripped"
+        );
+
+        let markdown = result
+            .iter()
+            .find(|p| p.file_name == "template.final.markdown")
+            .unwrap();
+        assert_eq!(
+            markdown.title, "template.final",
+            "Multi-dot .markdown: only last extension should be stripped"
+        );
     }
 }
