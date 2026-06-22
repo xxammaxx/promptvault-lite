@@ -1,17 +1,19 @@
 # Project Status — PromptVault Lite
 
-**Last updated:** 2026-06-19
-**Current release:** v1.6.0
-**Branch:** feature/blueprint-detection-optimization (active)
+**Last updated:** 2026-06-22
+**Current release:** v1.7.0-dev
+**Branch:** master
 
-**Blueprint Detection added:** 2026-06-19
-**CodeRabbit:** Removed from active repo (2026-06-19). Zero repo-level references found. GitHub App at org level — uninstall via Settings → GitHub Apps.
+**Blueprint Detection merged:** 2026-06-19 (PR #148)
+**Scanner extensions:** `.md`, `.markdown`, `.txt` (1 MiB shared size limit, merged 2026-06-21 via PR #168, #170, #172)
+**CodeRabbit:** Removed from active repo (2026-06-19). Zero repo-level references found.
+**Real Corpus Pilot:** Completed 2026-06-21 (Issue #166). 118 sensitive-flagged files pending owner review before full import.
 
 ---
 
 ## Current Status: GREEN 🟢
 
-All gates pass. The project is stable and functional.
+All 10 local CI gates pass. Master is stable and functional. Remote-CI is `REMOTE_CI_INFRA_BLOCKED` (Issue #154).
 
 ---
 
@@ -46,10 +48,12 @@ All gates pass. The project is stable and functional.
 
 ## Partially Implemented
 
-| Feature                               | Status                                               |
-| ------------------------------------- | ---------------------------------------------------- |
-| NAS-Mounted Markdown Folder Ingestion | PR #145 open (feature/nas-markdown-folder-ingestion) |
-| Settings Modal                        | Planned (#63), not started                           |
+| Feature                                     | Status                                                |
+| ------------------------------------------- | ----------------------------------------------------- |
+| NAS-Mounted Markdown Folder Ingestion       | ✅ Merged (PR #145, 2026-06-20) — now on master       |
+| Scanner Extension Support (.txt, .markdown) | ✅ Merged (PR #168, #170, 2026-06-21) — now on master |
+| Shared File Size Limit (1 MiB)              | ✅ Merged (PR #172, 2026-06-21) — now on master       |
+| Settings Modal                              | Planned (#63), not started                            |
 
 ---
 
@@ -75,12 +79,12 @@ All gates pass. The project is stable and functional.
 
 ---
 
-## Test Summary (2026-06-19)
+## Test Summary (2026-06-22)
 
 | Suite                             | Tests | Result                          |
 | --------------------------------- | ----- | ------------------------------- |
 | Frontend (Vitest)                 | 650   | PASS (22 files)                 |
-| Rust Unit (lib)                   | 117   | PASS (+1 ignored)               |
+| Rust Unit (lib)                   | 134   | PASS (+1 ignored)               |
 | Rust Integration (command_errors) | 17    | PASS                            |
 | ESLint                            | —     | PASS (0 errors, 0 warnings)     |
 | TypeScript                        | —     | PASS (tsc --noEmit, 0 errors)   |
@@ -88,12 +92,13 @@ All gates pass. The project is stable and functional.
 | cargo clippy                      | —     | PASS (0 warnings)               |
 | cargo build                       | —     | PASS                            |
 | pnpm build                        | —     | PASS                            |
-| Local CI (8 gates, master)        | 8/8   | PASS (local-CI-first, see #154) |
+| mkdocs build --strict             | —     | PASS                            |
+| Local CI (10 gates, master)       | 10/10 | PASS (local-CI-first, see #154) |
 | Remote CI (GitHub Actions)        | —     | REMOTE_CI_INFRA_BLOCKED         |
 
 ---
 
-## OpenCode Agent Runtime (2026-06-19)
+## OpenCode Agent Runtime (2026-06-22)
 
 | Check      | Result                                  |
 | ---------- | --------------------------------------- |
@@ -105,18 +110,17 @@ All gates pass. The project is stable and functional.
 | Node       | v24.14.0                                |
 | pnpm       | 11.5.2                                  |
 | Git        | 2.47.0.windows.1                        |
+| Rust       | 1.94.0                                  |
 
-> Previous run (2026-06-18) used Hermes v0.16.0. Current runtime is OpenCode.
+> Previous run (2026-06-19) used deepseek-v4-pro / issue-orchestrator. Consistently OpenCode 1.15.0.
 
 ---
 
 ## Next Steps (Recommended)
 
-1. Merge `feature/optimizer-placeholder-hardening` (PR #147) → **review-ready (2026-06-19)** → pending Final Human Merge Confirmation
-2. Merge `feature/blueprint-detection-optimization` (PR #148) — stacked on PR #147 → rebase after #147 merge
-3. Begin Blueprint-UI implementation (new issue — see report)
-4. Review and merge NAS folder PR (#145)
-5. Uninstall CodeRabbit GitHub App from repo settings (Settings → GitHub Apps)
-6. Set GitHub repository topics and homepage
-7. Create first native binary release
-8. Add macOS/Windows CI runners (currently Linux-only)
+1. **Owner Review:** Review 118 sensitive-flagged corpus files before full import (Issue #166)
+2. **Owner Decision:** Review `docs/CANONICAL_PROMPT_STANDARD.md` (Issue #165) — commit or archive
+3. **MkDocs:** Regenerate `llms.txt` from current project state (Issue #164)
+4. **Defer after release:** Web/LAN Backend Adapter MVP (Issues #97–#142)
+5. **Backlog Cleanup:** P3 documentation issues (#40, #42, #43)
+6. **Settings Modal:** Implement post-release (#63)

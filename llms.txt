@@ -1,0 +1,181 @@
+# PromptVault Lite — KI/RAG-optimierte Projektdokumentation
+
+> **Zweck:** Diese Datei bietet KI-Agenten und RAG-Systemen eine strukturierte Uebersicht
+> ueber das PromptVault Lite Projekt. Sie ist fuer maschinelles Lesen optimiert.
+> **Source of Truth:** GitHub Issues → `xxammaxx/promptvault-lite`
+> **Letzte Aktualisierung:** 2026-06-22
+
+## Projektidentitaet
+
+PromptVault Lite ist ein lokales Desktop-Tool (Windows, macOS, Linux) zum Einlesen,
+Durchsuchen und Bewerten von Prompt-Dateien. Die App arbeitet vollstaendig offline
+— keine Cloud-Anbindung, keine Telemetrie, kein Tracking.
+
+- **Stack:** React 18 + TypeScript + Vite (Frontend), Rust + Tauri 2 (Backend), SQLite (Daten)
+- **Version:** v1.7.0-dev
+- **Lizenz:** MIT
+- **Repository:** https://github.com/xxammaxx/promptvault-lite
+- **CI Status:** REMOTE_CI_INFRA_BLOCKED (Issue #154) — Local-CI-first policy
+
+## Architekturueberblick
+
+```
+React/TS UI (Explorer, Details, Analyse, Blueprints)
+    ↕ Tauri IPC
+Rust Backend (Scan, Parse, Analyze, Blueprint Detection, Export)
+    ↕
+Filesystem (Vault) + SQLite (FTS5)
+```
+
+- **Scanner:** Rekursiver Scan von `.md`, `.markdown`, `.txt`-Dateien, Symlink-Containment,
+  case-insensitive Extension Matching, 1 MiB shared file size limit
+- **Parser:** YAML-Frontmatter + Markdown-Strukturanalyse
+- **Analyse:** Qualitaetsanalyse (10 gewichtete Kriterien, Score 0–100) +
+  Hygieneanalyse (18 Artefakt-Kategorien, Score 0–100)
+- **Blueprint Detection:** Auto-Erkennung von 7 Content-Klassen (PROMPT, BLUEPRINT,
+  PROMPT_BLUEPRINT_HYBRID, etc.), 10-Dimensionen-Evaluierung, 3-Modi-Optimierung
+- **Persistenz:** SQLite mit FTS5-Volltextindex + JSON-Cache-Fallback
+- **Export:** JSON, Markdown, ZIP (mit Path-Traversal-Schutz)
+
+## Wichtigste Einstiegspunkte
+
+| Ressource | Pfad | Beschreibung |
+|-----------|------|-------------|
+| README | `README.md` | Projektbeschreibung, Features, Quickstart |
+| Projektstatus | `docs/PROJECT_STATUS.md` | Aktueller Status, Test Summary, Known Limitations |
+| Evidence Portfolio | `docs/EVIDENCE_PORTFOLIO.md` | Evidence-backed capabilities, Gate Results |
+| Roadmap | `docs/ROADMAP.md` | Completed, Short-Term, Medium-Term Planung |
+| Changelog | `docs/CHANGELOG.md` | Vollstaendige Versionshistorie |
+| Architektur | `docs/ARCHITECTURE.md` | Detaillierte Architektur mit Modulen und Datenfluss |
+| Installationsanleitung | `docs/INSTALL.md` | Plattformspezifische Installation |
+| Development-Runbook | `docs/runbooks/development.md` | Dev-Setup, Commands, Workflows |
+| Glossar | `docs/glossary.md` | Fachbegriffe |
+| Projektstruktur | `docs/reference/project-structure.md` | Vollstaendige Dateireferenz |
+| ADRs | `docs/adr/` | Architecture Decision Records |
+| MkDocs Site | `mkdocs.yml` | Docs-as-Code Platform (Material for MkDocs) |
+
+## Relevante Dokumentationsseiten fuer KI-Agenten
+
+### Agentenregeln (verbindlich)
+- `AGENTS.md` — Vollstaendige Agentenregeln (OpenCode ecosystem)
+- `CONTRIBUTING.md` — Contribution Guidelines und Governance
+- `SECURITY.md` — Security Policy und Vulnerability Reporting
+
+### Policies (Immutable)
+- `.opencode/policies/evidence-gates.json` — Evidence-Gates
+- `.opencode/policies/mcp-trust-tiers.json` — MCP-Tool-Vertrauensstufen
+- `.opencode/policies/data-retention.json` — Datenaufbewahrung (DSGVO)
+
+### Templates (GitHub)
+- `.github/pull_request_template.md` — PR-Template
+- `.github/ISSUE_TEMPLATE/` — Issue Templates (ai-task, bug, feature, context-engineering)
+
+## Regeln fuer KI-Agenten
+
+1. **GitHub Issues sind die Single Source of Truth.** Kein Issue → keine Implementierung.
+2. **Spec-Driven Development:** Speckit-Workflow vor jeder Feature-Implementierung.
+3. **Evidence-Gated:** Keine Behauptung ohne Evidence (CVSS, PoC, Logs, Tests).
+4. **Local-CI-First:** Remote-CI ist `REMOTE_CI_INFRA_BLOCKED` (Issue #154). Lokale Gates sind Pflicht.
+5. **Human Approval** fuer: Merge, Deployment, Migrationen, Architektur-Aenderungen.
+6. **Keine Secrets, `.env`-Dateien, `*.db`-Dateien** committen.
+7. **Tests muessen gruen sein:** `pnpm test`, `cargo test`, `pnpm lint`, `tsc --noEmit`.
+8. **OS/Shell Detection:** Kein blindes Linux/PowerShell-Mixing. Pre-Flight erforderlich.
+
+## Lokale Datenschutz- und Sicherheitsregeln
+
+- **Keine Netzwerkaufrufe** in der Analyse-Engine
+- **Symlink-Containment:** Externe Symlinks ausserhalb des Vault-Roots werden blockiert
+- **Path-Traversal-Schutz** in allen Export-Commands via `canonicalize`
+- **Keine personenbezogenen Daten** in der Analyse (die App ist local-only)
+- **Secret-Erkennung** in der Hygieneanalyse (API-Keys, Tokens, Passwoerter, Private Keys)
+- **Alle Analysen sind deterministisch** — keine externen APIs, keine ML-Modelle
+- **Real Corpus Pilot:** 118 sensitive-flagged Dateien benoetigen Owner-Review vor Vollimport (Issue #166)
+
+## Build und Test
+
+```bash
+# Frontend
+pnpm install
+pnpm dev          # Dev-Server (Port 1420)
+pnpm test         # Vitest (650 Tests, 22 Dateien)
+pnpm lint         # ESLint (0 errors, 0 warnings)
+pnpm build        # TypeScript + Vite Build
+
+# Backend (Rust)
+cargo test --lib                    # 134 Unit-Tests (+1 ignored)
+cargo test --test "*"               # 17 Integration-Tests
+cargo fmt --check --all             # Format Check
+cargo clippy --workspace --all-targets -- -D warnings
+
+# Dokumentation
+mkdocs build --strict
+```
+
+## Aktuelle Test-Ergebnisse (2026-06-22)
+
+| Suite                             | Tests | Result |
+| --------------------------------- | ----- | ------ |
+| Frontend (Vitest)                 | 650   | PASS   |
+| Rust Unit (lib)                   | 134   | PASS   |
+| Rust Integration (command_errors) | 17    | PASS   |
+| ESLint                            | 0     | PASS   |
+| TypeScript (tsc --noEmit)        | 0     | PASS   |
+| cargo fmt                         | —     | PASS   |
+| cargo clippy                      | 0     | PASS   |
+| mkdocs build --strict            | —     | PASS   |
+| pnpm build                        | —     | PASS   |
+| Remote CI                         | —     | BLOCKED |
+
+## Offene Punkte
+
+- Remote-CI ist `REMOTE_CI_INFRA_BLOCKED` (Issue #154) — Local-CI-first Policy
+- 118 sensitive-flagged Corpus-Dateien benoetigen Owner-Review (Issue #166)
+- `docs/CANONICAL_PROMPT_STANDARD.md` benoetigt Owner-Entscheidung (Issue #165)
+- Web/LAN Backend Adapter MVP (Issues #97–#142) — deferred after release
+- Settings Modal (#63) — planned
+- P3 Documentation Backlog (#40, #42, #43) — low priority
+
+## Diataxis-Dokumentationsstruktur
+
+```
+docs/
+├── index.md                    # Startseite
+├── getting-started/            # Tutorials
+│   └── index.md
+├── how-to/                     # How-to Guides
+│   └── index.md
+├── reference/                  # Technische Referenz
+│   └── project-structure.md
+├── explanation/                # Hintergrunderklaerungen
+│   └── index.md
+├── runbooks/                   # Entwicklungs-Runbooks
+│   └── development.md
+├── adr/                        # Architecture Decision Records
+│   ├── ADR-001-ai-governance.md
+│   └── ADR-002-docs-as-code-platform.md
+├── specs/                      # Specifications
+└── assets/screenshots/         # App Screenshots
+```
+
+## Projektstruktur (vereinfacht)
+
+```text
+promptvault-lite/
+├── src/                    # React frontend
+│   ├── components/         # UI components (explorer, analysis, optimization, details, common)
+│   ├── stores/             # Zustand state management (appStore, blueprintStore)
+│   ├── lib/                # Tauri IPC wrapper, prompt optimizer, blueprint detection
+│   └── types/              # TypeScript type definitions
+├── src-tauri/              # Rust backend
+│   ├── src/
+│   │   ├── analysis/       # Quality, hygiene & blueprint quality analysis
+│   │   ├── commands/       # Tauri command handlers
+│   │   ├── database/       # SQLite & cache layer
+│   │   ├── models/         # Data models (prompt, blueprint)
+│   │   ├── parser/         # Markdown & frontmatter parser
+│   │   └── scanner/        # File scanner & watcher (.md, .markdown, .txt)
+│   └── tests/              # Rust integration tests
+├── docs/                   # Documentation (MkDocs)
+├── .opencode/              # OpenCode agent configuration & history
+└── .github/workflows/      # CI pipeline (currently REMOTE_CI_INFRA_BLOCKED)
+```
