@@ -20,7 +20,7 @@
 |      [![Optimizer](docs/assets/screenshots/promptvault-optimizer.png)](docs/assets/screenshots/promptvault-optimizer.png)       |
 |                                   **Prompt Optimizer** — Three-mode local optimization engine                                   |
 
-> **Note:** Screenshots show the web frontend (Vite dev server). Desktop QA completed for `v1.6.0` stable.
+> **Note:** Screenshots show the web frontend (Vite dev server) from v1.6.0 stable QA — representative of current v1.7.0-dev.
 
 ---
 

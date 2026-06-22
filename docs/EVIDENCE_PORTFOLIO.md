@@ -124,7 +124,7 @@
 | Agent Mode          | issue-orchestrator                                                                                                                                  |
 | Available Subagents | review-agent, research-agent, compliance-agent, migration-agent, playwright-agent, architecture-agent, security-agent, documentation-agent, explore |
 | Skills loaded       | github-source-of-truth, spec-driven-development, audit-trail-enforcer                                                                               |
-| Working Tree        | master (clean, 2 untracked: llms.txt, docs/CANONICAL_PROMPT_STANDARD.md)                                                                            |
+| Working Tree        | master (as of 2026-06-22 RC run: 5 modified + 1 untracked: docs/CANONICAL_PROMPT_STANDARD.md; llms.txt added by this PR)                            |
 | gh CLI              | 2.92.0 (available)                                                                                                                                  |
 | OS/Shell            | Windows 10, PowerShell 5.1                                                                                                                          |
 | Rust                | 1.94.0                                                                                                                                              |
