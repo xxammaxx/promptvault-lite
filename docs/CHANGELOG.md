@@ -1,10 +1,44 @@
 ---
 title: Changelog
 description: Versionshinweise für PromptVault Lite.
-version: 1.6.0
+version: 1.7.0-dev
 ---
 
 # Changelog
+
+## v1.7.0-dev — Scanner Extensions, Blueprint, Docs-as-Code
+
+**Datum:** 2026-06-22 (development, unreleased)
+
+### Highlights
+
+- **Multi-Extension Scanner:** `.md`, `.markdown`, `.txt` with case-insensitive matching, 1 MiB shared size limit per file. (PR #168, #170, #172)
+- **Blueprint Detection & Optimization:** Auto-detection of 7 content classes (prompt, blueprint, hybrid), 10-dimension quality evaluation, 3-mode deterministic optimization. (PR #148)
+- **NAS-Mounted Folder Support:** Windows/UNC path handling for network drives. (PR #145)
+- **MkDocs Docs-as-Code:** Material for MkDocs platform with Diátaxis framework. (PR #162)
+- **Real Prompt Corpus Pilot:** Controlled read-only scan of 547 files on Z-drive. 118 sensitive-flagged files pending owner review. (Issue #166)
+- **Historical Archive:** Evidence audit trail archived to `.opencode/history/`. (PR #163)
+- **Optimizer Placeholder Hardening:** Production-quality optimizer with all 3 modes. (PR #147)
+
+### Quality Gates
+
+| Gate                | Ergebnis                              |
+| ------------------- | ------------------------------------- |
+| `pnpm test`         | **650 passed** (22 files, 0 failures) |
+| `pnpm lint`         | **0 errors, 0 warnings**              |
+| `pnpm exec tsc`     | **0 errors**                          |
+| `pnpm build`        | **PASS**                              |
+| `cargo test --lib`  | **134 passed** (+1 ignored)           |
+| `cargo test --test` | **17 passed**                         |
+| `cargo fmt`         | **PASS**                              |
+| `cargo clippy`      | **0 warnings**                        |
+| `mkdocs build`      | **PASS**                              |
+
+### Remote CI
+
+Remote-CI (GitHub Actions) is `REMOTE_CI_INFRA_BLOCKED` (Issue #154). Local-CI-first policy in effect.
+
+---
 
 ## v1.6.0 — Stable Release: Prompt Optimization & Action Layer
 

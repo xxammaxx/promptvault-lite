@@ -2,8 +2,8 @@
 
 > **Local desktop app for managing, analyzing, and optimizing prompts — built with Tauri, React, TypeScript, and Rust.**
 
-[![CI](https://github.com/xxammaxx/promptvault-lite/actions/workflows/ci.yml/badge.svg)](https://github.com/xxammaxx/promptvault-lite/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/badge/release-v1.6.0-blue)](https://github.com/xxammaxx/promptvault-lite/releases/tag/v1.6.0)
+[![CI](https://img.shields.io/badge/CI-REMOTE_CI_INFRA_BLOCKED-red)](https://github.com/xxammaxx/promptvault-lite/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/badge/release-v1.7.0--dev-blue)](https://github.com/xxammaxx/promptvault-lite/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Stack](https://img.shields.io/badge/stack-Tauri%20%7C%20React%20%7C%20Rust-4444ff)](#tech-stack)
 
@@ -20,7 +20,7 @@
 |      [![Optimizer](docs/assets/screenshots/promptvault-optimizer.png)](docs/assets/screenshots/promptvault-optimizer.png)       |
 |                                   **Prompt Optimizer** — Three-mode local optimization engine                                   |
 
-> **Note:** Screenshots show the web frontend (Vite dev server). Desktop QA completed for `v1.6.0` stable.
+> **Note:** Screenshots show the web frontend (Vite dev server) from v1.6.0 stable QA — representative of current v1.7.0-dev.
 
 ---
 
@@ -32,7 +32,7 @@ PromptVault Lite is a **local-first desktop application** for managing prompt co
 
 ### Key Features
 
-- **📁 Local Prompt Archive** — Recursively scan directories of `.md` files with YAML frontmatter
+- **📁 Local Prompt Archive** — Recursively scan directories of `.md`, `.markdown`, and `.txt` files with YAML frontmatter (1 MiB shared size limit per file)
 - **🌳 Explorer with File Tree** — Browse prompts in a hierarchical tree with full-text search, category/tag filters, and favorites
 - **📊 Quality Analysis** — 10 weighted criteria scoring each prompt on role clarity, goal definition, context quality, and more
 - **🧹 Hygiene Analysis** — Detects 18 artifact categories including PII, secrets, log output, build artifacts, and evidence blocks
@@ -79,24 +79,23 @@ cargo test --manifest-path src-tauri/Cargo.toml   # Rust tests
 
 ## Release Status
 
-|                     |                                                                                                                                                                                                              |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Current Release** | `v1.6.0` — [Release Notes](https://github.com/xxammaxx/promptvault-lite/releases/tag/v1.6.0)                                                                                                                 |
-| **Status**          | 🟢 Stable — source-only release, post-release verified                                                                                                                                                       |
-| **Binaries**        | No native binaries distributed yet — install from source                                                                                                                                                     |
-| **CI**              | [![CI](https://github.com/xxammaxx/promptvault-lite/actions/workflows/ci.yml/badge.svg)](https://github.com/xxammaxx/promptvault-lite/actions/workflows/ci.yml) — 3 green jobs (Frontend, Rust, Secret Scan) |
+|                     |                                                                                                                                                                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Current Release** | `v1.7.0-dev` — Pre-release development on `master`                                                                                                                                                                            |
+| **Status**          | 🟢 Stable — local CI gates green (10/10)                                                                                                                                                                                      |
+| **Binaries**        | No native binaries distributed yet — install from source                                                                                                                                                                      |
+| **CI**              | [![CI](https://img.shields.io/badge/CI-REMOTE_CI_INFRA_BLOCKED-red)](https://github.com/xxammaxx/promptvault-lite/actions/workflows/ci.yml) — Local-CI-first policy (Issue #154). All remote workflow runs are infra-blocked. |
 
-### What's in v1.6.0
+### What's new since v1.6.0
 
-- Dark Mode with auto theme detection
-- Resizable explorer sidebar (mouse drag + keyboard)
-- Cross-platform file tree with Windows path normalization
-- Local Prompt Optimization Engine (conservative, balanced, aggressive)
-- Typed local action layer with batch processing support
-- Prompt and context engineering evaluation corpus
-- Expanded hygiene analysis (18 artifact categories including EvidenceBlock, RoleMismatch, MissingStructure)
-- MIT License with SPDX identifiers
-- Real Tauri release icons
+- Multi-extension scanner: `.md`, `.markdown`, `.txt` with 1 MiB shared size limit
+- Blueprint detection, 10-dimension quality evaluation, and 3-mode optimization
+- NAS-mounted markdown folder ingestion with Windows/UNC path support
+- MkDocs Docs-as-Code platform (Material for MkDocs)
+- Real prompt corpus pilot (Z-drive, 547 files)
+- Historical evidence archive (`.opencode/history/`)
+- Centralized scanner extension handling (case-insensitive)
+- Optimizer placeholder hardening
 
 ---
 
@@ -121,8 +120,9 @@ To report a security vulnerability, see [SECURITY.md](SECURITY.md).
 flowchart LR
   UI[Frontend<br/>React 18 + TypeScript + Zustand] -->|Tauri IPC| IPC[Tauri Commands]
 
-  IPC --> Scan[scan_directory<br/>start_file_watcher]
+  IPC --> Scan[scan_directory<br/>.md .markdown .txt<br/>1 MiB limit]
   IPC --> Analyze[evaluate_prompt<br/>analyze_hygiene<br/>analyze_all]
+  IPC --> Blueprint[detect_blueprint<br/>evaluate_blueprint<br/>optimize_blueprint]
   IPC --> Fav[toggle_favorite<br/>get_favorites]
   IPC --> Export[export_json<br/>export_markdown<br/>export_zip]
 
@@ -130,13 +130,17 @@ flowchart LR
   Scan --> Watcher[File Watcher<br/>500ms Debounce]
   Watcher -->|watcher:changed| UI
 
-  Scan --> Parser[Parser<br/>Frontmatter + Markdown]
+  Scan --> Parser[Parser<br/>YAML Frontmatter + Markdown]
   Analyze --> Quality[Quality Analysis<br/>10 criteria]
-  Analyze --> Hygiene[Hygiene Analysis<br/>12 artifact categories]
+  Analyze --> Hygiene[Hygiene Analysis<br/>18 artifact categories]
+  Blueprint --> BPDetect[Blueprint Detection<br/>7 content classes]
+  Blueprint --> BPEval[Blueprint Evaluation<br/>10 dimensions]
+  Blueprint --> BPOpt[Blueprint Optimization<br/>3 modes]
 
   Parser --> DB[(SQLite 3<br/>FTS5)]
   Quality --> DB
   Hygiene --> DB
+  Blueprint --> DB
   Fav --> DB
   Export --> DB
 
@@ -204,23 +208,23 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## Roadmap / Open Work
 
-These are **post-v1.6.0** enhancements — not release blockers.
+These are **post-v1.7.0-dev** enhancements — not release blockers.
 
 ### Planned (P1/P2)
 
 - Settings Modal (#63)
-- EVIDENCE_BLOCK hygiene category (#66) — implemented in v1.6.0
 - Prompt suggestions workflow (#45)
 - Agentic Browser Repair Kit (#71)
 
-### Large Feature (11 issues)
+### Large Feature (Deferred)
 
-- Blueprint detection and analysis (#49–#59)
+- Web/LAN Backend Adapter MVP for Docker/LXC deployment (#97–#142, ~44 issues)
 
 ### Documentation (P3)
 
 - Platform-specific INSTALL.md dependencies (#43)
 - Legacy docs cleanup (#42)
+- Screenshots (#40)
 
 ---
 
