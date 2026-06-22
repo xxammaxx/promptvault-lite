@@ -12,7 +12,7 @@ Durchsuchen und Bewerten von Prompt-Dateien. Die App arbeitet vollstaendig offli
 — keine Cloud-Anbindung, keine Telemetrie, kein Tracking.
 
 - **Stack:** React 18 + TypeScript + Vite (Frontend), Rust + Tauri 2 (Backend), SQLite (Daten)
-- **Version:** v1.7.0-dev
+- **Version:** v1.7.0
 - **Lizenz:** MIT
 - **Repository:** https://github.com/xxammaxx/promptvault-lite
 - **CI Status:** REMOTE_CI_INFRA_BLOCKED (Issue #154) — Local-CI-first policy
@@ -89,7 +89,7 @@ Filesystem (Vault) + SQLite (FTS5)
 - **Keine personenbezogenen Daten** in der Analyse (die App ist local-only)
 - **Secret-Erkennung** in der Hygieneanalyse (API-Keys, Tokens, Passwoerter, Private Keys)
 - **Alle Analysen sind deterministisch** — keine externen APIs, keine ML-Modelle
-- **Real Corpus Pilot:** 118 sensitive-flagged Dateien benoetigen Owner-Review vor Vollimport (Issue #166)
+- **Real Corpus Pilot:** 46 Dateien verbleiben unter manueller Owner-Review — 72 via Partial Approval freigegeben (Issue #166)
 
 ## Build und Test
 
@@ -129,7 +129,7 @@ mkdocs build --strict
 ## Offene Punkte
 
 - Remote-CI ist `REMOTE_CI_INFRA_BLOCKED` (Issue #154) — Local-CI-first Policy
-- 118 sensitive-flagged Corpus-Dateien benoetigen Owner-Review (Issue #166)
+- 46 Dateien verbleiben unter manueller Owner-Review — 72 via Partial Approval freigegeben (Issue #166)
 - `docs/CANONICAL_PROMPT_STANDARD.md` benoetigt Owner-Entscheidung (Issue #165)
 - Web/LAN Backend Adapter MVP (Issues #97–#142) — deferred after release
 - Settings Modal (#63) — planned

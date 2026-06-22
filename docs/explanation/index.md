@@ -1,7 +1,7 @@
 ---
 title: Erklärungen
 description: Hintergrundinformationen und Konzepte zu PromptVault Lite.
-version: 1.5.0
+version: 1.7.0
 ---
 
 # Erklärungen

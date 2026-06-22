@@ -71,15 +71,28 @@
 | CodeRabbit   | REMOVED from active repo (2026-06-19) | Zero repo-level files/configs. GitHub App at org level — uninstall via Settings → GitHub Apps. |
 | review-agent | ACTIVE (OpenCode subagent)            | Delegated code review, read-only.                                                              |
 
+## Issue #166 — Corpus Review Status (2026-06-22)
+
+| Category                           | Count | Decision            |
+| ---------------------------------- | ----: | ------------------- |
+| LIKELY_FALSE_POSITIVE_TEMPLATE     |    63 | ALLOW_IMPORT        |
+| LIKELY_FALSE_POSITIVE_ARCHITECTURE |     9 | ALLOW_IMPORT        |
+| POSSIBLE_SECRET_REFERENCE          |    41 | NEEDS_MANUAL_REVIEW |
+| POSSIBLE_REAL_SECRET               |     5 | NEEDS_MANUAL_REVIEW |
+
+- Dry-run: 72 files copied and text-validated (0 binary, 0 errors)
+- Full import: BLOCKED pending owner review of 46 remaining files
+- High-priority: RV-015, RV-032, RV-049, RV-083, RV-112
+
 ## Unchanged Limitations
 
-| Limitation                               | Since | Notes                                |
-| ---------------------------------------- | ----- | ------------------------------------ |
-| Source-only release (no native binaries) | v1.0  | No binary build pipeline yet         |
-| Linux-only CI                            | v1.0  | No macOS/Windows runners             |
-| Placeholder release icons                | v1.0  | #82 closed as completed (2026-06-12) |
-| Private GitHub repository                | v1.0  | Not publicly visible                 |
-| No Docker deployment                     | v1.0  | Issues #126–128 open                 |
+| Limitation                               | Since | Notes                                         |
+| ---------------------------------------- | ----- | --------------------------------------------- |
+| Source-only release (no native binaries) | v1.0  | No binary build pipeline yet                  |
+| Linux-only CI                            | v1.0  | No macOS/Windows runners                      |
+| Placeholder release icons                | v1.0  | #82 closed as completed (2026-06-12)          |
+| Repository visibility                    | v1.0  | Private — pending owner action to make public |
+| No Docker deployment                     | v1.0  | Issues #126–128 open                          |
 
 ---
 
@@ -108,7 +121,7 @@
 
 ## Next Step
 
-- **Immediate:** Owner review of 118 sensitive-flagged corpus files (Issue #166)
+- **Immediate:** Owner review of 46 remaining files — 72 ALLOW_IMPORT, 46 NEEDS_MANUAL_REVIEW, 5 POSSIBLE_REAL_SECRET priority (Issue #166)
 - **Next:** Owner decision on `docs/CANONICAL_PROMPT_STANDARD.md` (Issue #165)
 - **Deferred:** Web/LAN Backend Adapter MVP (Issues #97–#142), P3 documentation (#40, #42, #43)
 - **Governance:** Project completion RC review (2026-06-22 OpenCode 1.15.0 run)
@@ -124,7 +137,7 @@
 | Agent Mode          | issue-orchestrator                                                                                                                                  |
 | Available Subagents | review-agent, research-agent, compliance-agent, migration-agent, playwright-agent, architecture-agent, security-agent, documentation-agent, explore |
 | Skills loaded       | github-source-of-truth, spec-driven-development, audit-trail-enforcer                                                                               |
-| Working Tree        | master (as of 2026-06-22 RC run: 5 modified + 1 untracked: docs/CANONICAL_PROMPT_STANDARD.md; llms.txt added by this PR)                            |
+| Working Tree        | master (as of 2026-06-22 finalization: clean, except untracked docs/CANONICAL_PROMPT_STANDARD.md)                                                   |
 | gh CLI              | 2.92.0 (available)                                                                                                                                  |
 | OS/Shell            | Windows 10, PowerShell 5.1                                                                                                                          |
 | Rust                | 1.94.0                                                                                                                                              |

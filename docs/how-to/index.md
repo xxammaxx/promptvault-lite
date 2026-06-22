@@ -1,7 +1,7 @@
 ---
 title: How-to-Index
 description: Übersicht über typische Aufgaben in PromptVault Lite mit Verweisen auf die passenden Anleitungen.
-version: 1.5.0
+version: 1.7.0
 ---
 
 # How-to-Index
