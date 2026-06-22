@@ -1,7 +1,7 @@
 ---
 title: Installation
 description: Installationsanleitung für Linux, Windows und macOS.
-version: 1.5.0-rc.1
+version: 1.7.0
 ---
 
 # Installation

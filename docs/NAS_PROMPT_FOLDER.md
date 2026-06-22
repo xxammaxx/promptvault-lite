@@ -81,8 +81,8 @@ Nicht Teil des MVP. Schreibzugriff wird in einem späteren Release geprüft.
 
 ```text
 Windows Desktop:
-  Z:\PromptVault\Prompts
-  \\192.168.1.144\<share>\Prompts
+  &lt;DRIVE&gt;:\PromptVault\Prompts
+  \\192.168.1.144\&lt;share&gt;\Prompts
 
 Linux / LXC:
   /mnt/promptvault-prompts
@@ -195,7 +195,7 @@ Netzlaufwerk verbinden:
   \\192.168.1.144\<share_name>\<folder_with_md_files>
 
 Beispiel:
-  Z:\PromptVault\Prompts
+  &lt;DRIVE&gt;:\PromptVault\Prompts
 ```
 
 Oder direkt über den nativen Tauri-Dateidialog navigieren:

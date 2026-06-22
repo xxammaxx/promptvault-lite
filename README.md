@@ -3,7 +3,7 @@
 > **Local desktop app for managing, analyzing, and optimizing prompts — built with Tauri, React, TypeScript, and Rust.**
 
 [![CI](https://img.shields.io/badge/CI-REMOTE_CI_INFRA_BLOCKED-red)](https://github.com/xxammaxx/promptvault-lite/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/badge/release-v1.7.0--dev-blue)](https://github.com/xxammaxx/promptvault-lite/releases)
+[![Release](https://img.shields.io/badge/release-v1.7.0-blue)](https://github.com/xxammaxx/promptvault-lite/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Stack](https://img.shields.io/badge/stack-Tauri%20%7C%20React%20%7C%20Rust-4444ff)](#tech-stack)
 
@@ -20,7 +20,7 @@
 |      [![Optimizer](docs/assets/screenshots/promptvault-optimizer.png)](docs/assets/screenshots/promptvault-optimizer.png)       |
 |                                   **Prompt Optimizer** — Three-mode local optimization engine                                   |
 
-> **Note:** Screenshots show the web frontend (Vite dev server) from v1.6.0 stable QA — representative of current v1.7.0-dev.
+> **Note:** Screenshots show the web frontend (Vite dev server) from v1.6.0 stable QA — representative of current v1.7.0.
 
 ---
 
@@ -81,7 +81,7 @@ cargo test --manifest-path src-tauri/Cargo.toml   # Rust tests
 
 |                     |                                                                                                                                                                                                                               |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Current Release** | `v1.7.0-dev` — Pre-release development on `master`                                                                                                                                                                            |
+| **Current Release** | `v1.7.0` — Stable release on `master`                                                                                                                                                                                         |
 | **Status**          | 🟢 Stable — local CI gates green (10/10)                                                                                                                                                                                      |
 | **Binaries**        | No native binaries distributed yet — install from source                                                                                                                                                                      |
 | **CI**              | [![CI](https://img.shields.io/badge/CI-REMOTE_CI_INFRA_BLOCKED-red)](https://github.com/xxammaxx/promptvault-lite/actions/workflows/ci.yml) — Local-CI-first policy (Issue #154). All remote workflow runs are infra-blocked. |
@@ -208,7 +208,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## Roadmap / Open Work
 
-These are **post-v1.7.0-dev** enhancements — not release blockers.
+These are **post-v1.7.0** enhancements — not release blockers.
 
 ### Planned (P1/P2)
 

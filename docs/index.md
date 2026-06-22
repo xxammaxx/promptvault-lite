@@ -1,7 +1,7 @@
 ---
 title: PromptVault Lite Dokumentation
 description: Zentrale Dokumentations-Landing-Page für PromptVault Lite.
-version: 1.7.0-dev
+version: 1.7.0
 ---
 
 # PromptVault Lite Dokumentation
@@ -79,4 +79,4 @@ pnpm tauri dev
 
 ---
 
-_Zuletzt aktualisiert: 2026-06-20 · Version 1.7.0-dev_
+_Zuletzt aktualisiert: 2026-06-22 · Version 1.7.0_

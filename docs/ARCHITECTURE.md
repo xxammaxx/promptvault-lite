@@ -1,7 +1,7 @@
 ---
 title: Architektur
 description: Systemübersicht, Module und Datenfluss von PromptVault Lite.
-version: 1.0.0
+version: 1.7.0
 ---
 
 # Architektur

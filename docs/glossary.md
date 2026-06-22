@@ -1,7 +1,7 @@
 ---
 title: Glossar
 description: Zentrale Begriffe des PromptVault-Lite-Projekts, nach Domäne organisiert.
-version: 1.7.0-dev
+version: 1.7.0
 ---
 
 # Glossar

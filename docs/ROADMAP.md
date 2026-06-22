@@ -1,7 +1,7 @@
 # Roadmap — PromptVault Lite
 
 **Last updated:** 2026-06-22
-**Current version:** v1.7.0-dev (master)
+**Current version:** v1.7.0 (master)
 
 ---
 
@@ -61,16 +61,17 @@ Multiple speckit-labeled issues are open tracking larger feature workstreams:
 
 ## Documentation Debt
 
-| Priority | Task                                   | Issue              | Status                          |
-| -------- | -------------------------------------- | ------------------ | ------------------------------- |
-| P3       | Platform-specific INSTALL.md           | #43                | Backlog                         |
-| P3       | Legacy docs cleanup                    | #42                | Backlog                         |
-| P3       | Screenshots                            | #40                | Backlog                         |
-| ~~P0~~   | ~~AGENTS.md for OpenCode agent rules~~ | PR #160            | ✅ Merged (2026-06-20)          |
-| P0       | Evidence Portfolio docs                | Created 2026-06-18 | ✅ Updated 2026-06-22           |
-| P1       | Project Status doc                     | Created 2026-06-18 | ✅ Updated 2026-06-22           |
-| P0       | Regenerate llms.txt                    | #164               | In progress (RC run 2026-06-22) |
-| P0       | Review CANONICAL_PROMPT_STANDARD.md    | #165               | Pending owner decision          |
+| Priority | Task                                   | Issue              | Status                             |
+| -------- | -------------------------------------- | ------------------ | ---------------------------------- |
+| P3       | Platform-specific INSTALL.md           | #43                | Backlog                            |
+| P3       | Legacy docs cleanup                    | #42                | Backlog                            |
+| P3       | Screenshots                            | #40                | Backlog                            |
+| ~~P0~~   | ~~AGENTS.md for OpenCode agent rules~~ | PR #160            | ✅ Merged (2026-06-20)             |
+| P0       | Evidence Portfolio docs                | Created 2026-06-18 | ✅ Updated 2026-06-22              |
+| P1       | Project Status doc                     | Created 2026-06-18 | ✅ Updated 2026-06-22              |
+| P0       | Regenerate llms.txt                    | #164               | ✅ Closed (2026-06-22)             |
+| P0       | Review CANONICAL_PROMPT_STANDARD.md    | #165               | Pending owner decision             |
+| P0       | Corpus sensitive-file review           | #166               | PARTIAL: 72 approved, 46 remaining |
 
 ---
 

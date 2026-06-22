@@ -1,7 +1,7 @@
 ---
 title: Development-Runbook
 description: Entwicklungsumgebung, Commands, Workflows und Troubleshooting für PromptVault Lite.
-version: 1.5.0
+version: 1.7.0
 ---
 
 # Development-Runbook
