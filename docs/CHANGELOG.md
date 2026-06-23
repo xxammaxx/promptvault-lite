@@ -16,7 +16,7 @@ version: 1.7.0
 - **Blueprint Detection & Optimization:** Auto-detection of 7 content classes (prompt, blueprint, hybrid), 10-dimension quality evaluation, 3-mode deterministic optimization. (PR #148)
 - **NAS-Mounted Folder Support:** Windows/UNC path handling for network drives. (PR #145)
 - **MkDocs Docs-as-Code:** Material for MkDocs platform with Diátaxis framework. (PR #162)
-- **Real Prompt Corpus Pilot:** Controlled read-only scan of 547 files on Z-drive. 72 files approved for curated import via partial owner approval, 46 files remain under manual review. (Issue #166)
+- **Real Prompt Corpus Pilot:** Controlled read-only scan of 547 files on Z-drive. 72 files approved for curated import via partial owner approval. Review finalized: 114 ALLOW_IMPORT + 3 ALLOW_IMPORT_REDACTED + 1 EXCLUDE. Import deferred. (Issue #166)
 - **Historical Archive:** Evidence audit trail archived to `.opencode/history/`. (PR #163)
 - **Optimizer Placeholder Hardening:** Production-quality optimizer with all 3 modes. (PR #147)
 

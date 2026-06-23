@@ -32,4 +32,4 @@ See **[SECURITY.md](SECURITY.md)** for responsible disclosure.
 
 ## Current Status
 
-**v1.5.0-rc.1** is published as a pre-release. The stable release `v1.5.0` is pending manual desktop QA. No native binaries are distributed yet — install from source via `pnpm install && pnpm start`.
+**v1.7.0** is the current stable release (published 2026-06-23). No native binaries are distributed yet — install from source via `pnpm install && pnpm start`.

@@ -7,7 +7,7 @@
 **Blueprint Detection merged:** 2026-06-19 (PR #148)
 **Scanner extensions:** `.md`, `.markdown`, `.txt` (1 MiB shared size limit, merged 2026-06-21 via PR #168, #170, #172)
 **CodeRabbit:** Removed from active repo (2026-06-19). Zero repo-level references found.
-**Real Corpus Pilot:** Completed 2026-06-21 (Issue #166 — closed 2026-06-23). Pilot scan finished; 46 files flagged for manual owner review remain pending as a separate corpus import task.
+**Real Corpus Pilot:** Completed 2026-06-21 (Issue #166 — closed 2026-06-23). Pilot scan finished; 117/117 files scanned successfully. Corpus review finalized: 114 ALLOW_IMPORT + 3 ALLOW_IMPORT_REDACTED + 1 EXCLUDE. Open manual reviews: 0.
 
 ---
 
@@ -118,7 +118,7 @@ All 10 local CI gates pass. Master is stable and functional. Remote-CI is `REMOT
 
 ## Next Steps (Recommended)
 
-1. **Corpus Import (pending):** 46 sensitive-flagged corpus files remain under manual owner review — 72 approved via partial approval dry-run. Pilot scan (Issue #166) completed 2026-06-23.
+1. **Corpus Import (pending):** Corpus review completed (0 open manual reviews). Final decisions: 114 ALLOW_IMPORT + 3 ALLOW_IMPORT_REDACTED + 1 EXCLUDE. Import execution deferred pending owner approval.
 2. **CANONICAL_PROMPT_STANDARD.md:** ✅ CLOSED — Archived to `.opencode/history/issue-165/` as historical reference (Issue #165 closed 2026-06-23).
 3. **llms.txt:** ✅ CLOSED — Regenerated as part of v1.7.0 finalization (Issue #164)
 4. **Defer after release:** Web/LAN Backend Adapter MVP (Issues #97–#142)

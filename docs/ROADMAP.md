@@ -61,17 +61,17 @@ Multiple speckit-labeled issues are open tracking larger feature workstreams:
 
 ## Documentation Debt
 
-| Priority | Task                                   | Issue              | Status                                                |
-| -------- | -------------------------------------- | ------------------ | ----------------------------------------------------- |
-| P3       | Platform-specific INSTALL.md           | #43                | Backlog                                               |
-| P3       | Legacy docs cleanup                    | #42                | Backlog                                               |
-| P3       | Screenshots                            | #40                | Backlog                                               |
-| ~~P0~~   | ~~AGENTS.md for OpenCode agent rules~~ | PR #160            | ✅ Merged (2026-06-20)                                |
-| P0       | Evidence Portfolio docs                | Created 2026-06-18 | ✅ Updated 2026-06-22                                 |
-| P1       | Project Status doc                     | Created 2026-06-18 | ✅ Updated 2026-06-22                                 |
-| P0       | Regenerate llms.txt                    | #164               | ✅ Closed (2026-06-22)                                |
-| P0       | Review CANONICAL_PROMPT_STANDARD.md    | #165               | ✅ Closed — archived to .opencode/history/issue-165/  |
-| P0       | Corpus sensitive-file review           | #166               | ✅ Pilot completed — 46 files pending import decision |
+| Priority | Task                                   | Issue              | Status                                                          |
+| -------- | -------------------------------------- | ------------------ | --------------------------------------------------------------- |
+| P3       | Platform-specific INSTALL.md           | #43                | Backlog                                                         |
+| P3       | Legacy docs cleanup                    | #42                | Backlog                                                         |
+| P3       | Screenshots                            | #40                | Backlog                                                         |
+| ~~P0~~   | ~~AGENTS.md for OpenCode agent rules~~ | PR #160            | ✅ Merged (2026-06-20)                                          |
+| P0       | Evidence Portfolio docs                | Created 2026-06-18 | ✅ Updated 2026-06-22                                           |
+| P1       | Project Status doc                     | Created 2026-06-18 | ✅ Updated 2026-06-22                                           |
+| P0       | Regenerate llms.txt                    | #164               | ✅ Closed (2026-06-22)                                          |
+| P0       | Review CANONICAL_PROMPT_STANDARD.md    | #165               | ✅ Closed — archived to .opencode/history/issue-165/            |
+| P0       | Corpus sensitive-file review           | #166               | ✅ Pilot & review completed (118 files decided, 0 open reviews) |
 
 ---
 
