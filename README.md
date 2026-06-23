@@ -83,7 +83,7 @@ cargo test --manifest-path src-tauri/Cargo.toml   # Rust tests
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Current Release** | `v1.7.0` — Stable release on `master`                                                                                                                                                                                         |
 | **Status**          | 🟢 Stable — local CI gates green (10/10)                                                                                                                                                                                      |
-| **Binaries**        | No native binaries distributed yet — install from source                                                                                                                                                                      |
+| **Binaries**        | Windows x64 installer available (unsigned) — see [GitHub Release v1.7.0](https://github.com/xxammaxx/promptvault-lite/releases/tag/v1.7.0). Source install for other platforms.                                               |
 | **CI**              | [![CI](https://img.shields.io/badge/CI-REMOTE_CI_INFRA_BLOCKED-red)](https://github.com/xxammaxx/promptvault-lite/actions/workflows/ci.yml) — Local-CI-first policy (Issue #154). All remote workflow runs are infra-blocked. |
 
 ### What's new since v1.6.0

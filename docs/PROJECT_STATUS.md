@@ -59,7 +59,7 @@ All 10 local CI gates pass. Master is stable and functional. Remote-CI is `REMOT
 
 ## Not Present
 
-- Native binary releases (source-only install)
+- Windows x64 installer available (unsigned, locally built) — no CI-based binary build pipeline
 - Cloud backend / API / telemetry
 - Prompt suggestions workflow (#45)
 - Agentic Browser Repair Kit (#71)
@@ -70,7 +70,7 @@ All 10 local CI gates pass. Master is stable and functional. Remote-CI is `REMOT
 
 ## Known Limitations
 
-- **Source-only release:** No native binary build pipeline configured
+- **Windows installer:** Available unsigned as release asset (locally built). No CI-based binary build pipeline configured.
 - **Linux-only CI:** No macOS or Windows CI runners
 - **Repository visibility:** Public (made public 2026-06-23 as part of v1.7.0 finalization)
 - **Repository topics:** 10 topics configured (desktop-app, local-first, offline-first, prompt-engineering, prompt-management, react, rust, sqlite, tauri, typescript)

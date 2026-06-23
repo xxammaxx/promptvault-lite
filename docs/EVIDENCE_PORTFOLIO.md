@@ -86,13 +86,13 @@
 
 ## Unchanged Limitations
 
-| Limitation                               | Since  | Notes                                |
-| ---------------------------------------- | ------ | ------------------------------------ |
-| Source-only release (no native binaries) | v1.0   | No binary build pipeline yet         |
-| Linux-only CI                            | v1.0   | No macOS/Windows runners             |
-| Placeholder release icons                | v1.0   | #82 closed as completed (2026-06-12) |
-| Repository visibility                    | v1.7.0 | Public (made public 2026-06-23)      |
-| No Docker deployment                     | v1.0   | Issues #126–128 open                 |
+| Limitation                                            | Since  | Notes                                           |
+| ----------------------------------------------------- | ------ | ----------------------------------------------- |
+| Windows installer available (unsigned, locally built) | v1.7.0 | NSIS installer uploaded manually, not CI-signed |
+| Linux-only CI                                         | v1.0   | No macOS/Windows runners                        |
+| Placeholder release icons                             | v1.0   | #82 closed as completed (2026-06-12)            |
+| Repository visibility                                 | v1.7.0 | Public (made public 2026-06-23)                 |
+| No Docker deployment                                  | v1.0   | Issues #126–128 open                            |
 
 ---
 
