@@ -3,7 +3,7 @@
 > Living Software Portfolio. Updated with every significant agent run.
 > No marketing claims — only evidence-backed facts.
 
-**Last evidence run:** 2026-06-22 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator, Project Completion RC Run)
+**Last evidence run:** 2026-06-23 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator, Post-Release Health Check)
 **Blueprint detection run:** 2026-06-19 (OpenCode 1.15.0)
 **Scanner extension run:** 2026-06-21 (PR #168, #170, #172 merged to master)
 **CodeRabbit removal run:** 2026-06-19 — confirmed: zero CodeRabbit files/references in repo
@@ -86,13 +86,13 @@
 
 ## Unchanged Limitations
 
-| Limitation                               | Since | Notes                                         |
-| ---------------------------------------- | ----- | --------------------------------------------- |
-| Source-only release (no native binaries) | v1.0  | No binary build pipeline yet                  |
-| Linux-only CI                            | v1.0  | No macOS/Windows runners                      |
-| Placeholder release icons                | v1.0  | #82 closed as completed (2026-06-12)          |
-| Repository visibility                    | v1.0  | Private — pending owner action to make public |
-| No Docker deployment                     | v1.0  | Issues #126–128 open                          |
+| Limitation                               | Since  | Notes                                |
+| ---------------------------------------- | ------ | ------------------------------------ |
+| Source-only release (no native binaries) | v1.0   | No binary build pipeline yet         |
+| Linux-only CI                            | v1.0   | No macOS/Windows runners             |
+| Placeholder release icons                | v1.0   | #82 closed as completed (2026-06-12) |
+| Repository visibility                    | v1.7.0 | Public (made public 2026-06-23)      |
+| No Docker deployment                     | v1.0   | Issues #126–128 open                 |
 
 ---
 
@@ -121,10 +121,10 @@
 
 ## Next Step
 
-- **Immediate:** Owner review of 46 remaining files — 72 ALLOW_IMPORT, 46 NEEDS_MANUAL_REVIEW, 5 POSSIBLE_REAL_SECRET priority (Issue #166)
-- **Next:** Owner decision on `docs/CANONICAL_PROMPT_STANDARD.md` (Issue #165)
+- **Done:** Corpus pilot scan completed (Issue #166 closed 2026-06-23). 46 sensitive-flagged files remain pending owner review for corpus import.
+- **Done:** CANONICAL_PROMPT_STANDARD.md reviewed and archived to `.opencode/history/issue-165/` (Issue #165 closed 2026-06-23).
 - **Deferred:** Web/LAN Backend Adapter MVP (Issues #97–#142), P3 documentation (#40, #42, #43)
-- **Governance:** Project completion RC review (2026-06-22 OpenCode 1.15.0 run)
+- **Governance:** Post-release health check complete (2026-06-23 OpenCode 1.15.0 run)
 
 ---
 

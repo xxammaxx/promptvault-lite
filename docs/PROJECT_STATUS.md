@@ -1,13 +1,13 @@
 # Project Status — PromptVault Lite
 
-**Last updated:** 2026-06-22
-**Current release:** v1.7.0
+**Last updated:** 2026-06-23
+**Current release:** v1.7.0 (public stable)
 **Branch:** master
 
 **Blueprint Detection merged:** 2026-06-19 (PR #148)
 **Scanner extensions:** `.md`, `.markdown`, `.txt` (1 MiB shared size limit, merged 2026-06-21 via PR #168, #170, #172)
 **CodeRabbit:** Removed from active repo (2026-06-19). Zero repo-level references found.
-**Real Corpus Pilot:** Completed 2026-06-21 (Issue #166). 46 files remain under manual owner review (72 approved via partial approval dry-run, Issue #166).
+**Real Corpus Pilot:** Completed 2026-06-21 (Issue #166 — closed 2026-06-23). Pilot scan finished; 46 files flagged for manual owner review remain pending as a separate corpus import task.
 
 ---
 
@@ -72,8 +72,8 @@ All 10 local CI gates pass. Master is stable and functional. Remote-CI is `REMOT
 
 - **Source-only release:** No native binary build pipeline configured
 - **Linux-only CI:** No macOS or Windows CI runners
-- **Repository visibility:** Private (requires owner approval to change to public)
-- **No repository topics set on GitHub**
+- **Repository visibility:** Public (made public 2026-06-23 as part of v1.7.0 finalization)
+- **Repository topics:** 10 topics configured (desktop-app, local-first, offline-first, prompt-engineering, prompt-management, react, rust, sqlite, tauri, typescript)
 - **No homepage URL configured**
 - **Placeholder release icons:** #82 closed as completed (2026-06-12)
 
@@ -118,8 +118,8 @@ All 10 local CI gates pass. Master is stable and functional. Remote-CI is `REMOT
 
 ## Next Steps (Recommended)
 
-1. **Owner Review (remaining):** Review 46 remaining sensitive-flagged corpus files — 72 approved via partial approval dry-run, 46 NEEDS_MANUAL_REVIEW (Issue #166)
-2. **Owner Decision:** Review `docs/CANONICAL_PROMPT_STANDARD.md` (Issue #165) — commit or archive
+1. **Corpus Import (pending):** 46 sensitive-flagged corpus files remain under manual owner review — 72 approved via partial approval dry-run. Pilot scan (Issue #166) completed 2026-06-23.
+2. **CANONICAL_PROMPT_STANDARD.md:** ✅ CLOSED — Archived to `.opencode/history/issue-165/` as historical reference (Issue #165 closed 2026-06-23).
 3. **llms.txt:** ✅ CLOSED — Regenerated as part of v1.7.0 finalization (Issue #164)
 4. **Defer after release:** Web/LAN Backend Adapter MVP (Issues #97–#142)
 5. **Backlog Cleanup:** P3 documentation issues (#40, #42, #43)
