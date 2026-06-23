@@ -3,7 +3,7 @@
 > **Zweck:** Diese Datei bietet KI-Agenten und RAG-Systemen eine strukturierte Uebersicht
 > ueber das PromptVault Lite Projekt. Sie ist fuer maschinelles Lesen optimiert.
 > **Source of Truth:** GitHub Issues → `xxammaxx/promptvault-lite`
-> **Letzte Aktualisierung:** 2026-06-22
+> **Letzte Aktualisierung:** 2026-06-23
 
 ## Projektidentitaet
 
@@ -130,7 +130,7 @@ mkdocs build --strict
 
 - Remote-CI ist `REMOTE_CI_INFRA_BLOCKED` (Issue #154) — Local-CI-first Policy
 - 46 Dateien verbleiben unter manueller Owner-Review — 72 via Partial Approval freigegeben (Issue #166)
-- `docs/CANONICAL_PROMPT_STANDARD.md` benoetigt Owner-Entscheidung (Issue #165)
+- `CANONICAL_PROMPT_STANDARD.md` wurde geprueft und nach `.opencode/history/issue-165/` archiviert (Issue #165 — geschlossen 2026-06-23)
 - Web/LAN Backend Adapter MVP (Issues #97–#142) — deferred after release
 - Settings Modal (#63) — planned
 - P3 Documentation Backlog (#40, #42, #43) — low priority
