@@ -39,17 +39,17 @@
 
 ## New Capabilities Since v1.6.0
 
-| Capability                                     | PR/Issue | Status                                 |
-| ---------------------------------------------- | -------- | -------------------------------------- |
-| NAS-mounted markdown folder scanning           | #145     | ✅ Merged (2026-06-20)                 |
-| Optimizer placeholder hardening                | #147     | ✅ Merged (2026-06-20)                 |
-| Blueprint detection, evaluation & optimization | #148     | ✅ Merged (2026-06-19)                 |
-| Native .txt prompt ingestion                   | #168     | ✅ Merged (2026-06-21)                 |
-| Centralized scanner extension handling         | #170     | ✅ Merged (2026-06-21)                 |
-| Shared file size limit (1 MiB)                 | #172     | ✅ Merged (2026-06-21)                 |
-| Real prompt corpus pilot (Z-drive)             | #166     | ✅ Completed; sensitive review pending |
-| Docs-as-Code MkDocs platform                   | #162     | ✅ Merged (2026-06-21)                 |
-| Historical evidence archive                    | #163     | ✅ Merged (2026-06-21)                 |
+| Capability                                     | PR/Issue | Status                                                 |
+| ---------------------------------------------- | -------- | ------------------------------------------------------ |
+| NAS-mounted markdown folder scanning           | #145     | ✅ Merged (2026-06-20)                                 |
+| Optimizer placeholder hardening                | #147     | ✅ Merged (2026-06-20)                                 |
+| Blueprint detection, evaluation & optimization | #148     | ✅ Merged (2026-06-19)                                 |
+| Native .txt prompt ingestion                   | #168     | ✅ Merged (2026-06-21)                                 |
+| Centralized scanner extension handling         | #170     | ✅ Merged (2026-06-21)                                 |
+| Shared file size limit (1 MiB)                 | #172     | ✅ Merged (2026-06-21)                                 |
+| Real prompt corpus pilot (Z-drive)             | #166     | ✅ Completed; corpus review finalized (0 open reviews) |
+| Docs-as-Code MkDocs platform                   | #162     | ✅ Merged (2026-06-21)                                 |
+| Historical evidence archive                    | #163     | ✅ Merged (2026-06-21)                                 |
 
 ---
 
@@ -73,16 +73,16 @@
 
 ## Issue #166 — Corpus Review Status (2026-06-22)
 
-| Category                           | Count | Decision            |
-| ---------------------------------- | ----: | ------------------- |
-| LIKELY_FALSE_POSITIVE_TEMPLATE     |    63 | ALLOW_IMPORT        |
-| LIKELY_FALSE_POSITIVE_ARCHITECTURE |     9 | ALLOW_IMPORT        |
-| POSSIBLE_SECRET_REFERENCE          |    41 | NEEDS_MANUAL_REVIEW |
-| POSSIBLE_REAL_SECRET               |     5 | NEEDS_MANUAL_REVIEW |
+| Category                           | Count | Decision                                                   |
+| ---------------------------------- | ----: | ---------------------------------------------------------- |
+| LIKELY_FALSE_POSITIVE_TEMPLATE     |    63 | ALLOW_IMPORT                                               |
+| LIKELY_FALSE_POSITIVE_ARCHITECTURE |     9 | ALLOW_IMPORT                                               |
+| POSSIBLE_SECRET_REFERENCE          |    41 | ALLOW_IMPORT                                               |
+| POSSIBLE_REAL_SECRET               |     5 | ALLOW_IMPORT_REDACTED (3) / EXCLUDE (1) / ALLOW_IMPORT (1) |
 
 - Dry-run: 72 files copied and text-validated (0 binary, 0 errors)
-- Full import: BLOCKED pending owner review of 46 remaining files
-- High-priority: RV-015, RV-032, RV-049, RV-083, RV-112
+- Corpus review finalized: 114 ALLOW_IMPORT + 3 ALLOW_IMPORT_REDACTED + 1 EXCLUDE. Open reviews: 0.
+- Import execution deferred pending owner approval.
 
 ## Unchanged Limitations
 
@@ -121,7 +121,7 @@
 
 ## Next Step
 
-- **Done:** Corpus pilot scan completed (Issue #166 closed 2026-06-23). 46 sensitive-flagged files remain pending owner review for corpus import.
+- **Done:** Corpus pilot scan completed (Issue #166 closed 2026-06-23). Review finalized (0 open reviews): 114 ALLOW_IMPORT + 3 ALLOW_IMPORT_REDACTED + 1 EXCLUDE. Import execution deferred.
 - **Done:** CANONICAL_PROMPT_STANDARD.md reviewed and archived to `.opencode/history/issue-165/` (Issue #165 closed 2026-06-23).
 - **Deferred:** Web/LAN Backend Adapter MVP (Issues #97–#142), P3 documentation (#40, #42, #43)
 - **Governance:** Post-release health check complete (2026-06-23 OpenCode 1.15.0 run)
