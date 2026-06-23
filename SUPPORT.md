@@ -32,4 +32,4 @@ See **[SECURITY.md](SECURITY.md)** for responsible disclosure.
 
 ## Current Status
 
-**v1.7.0** is the current stable release (published 2026-06-23). No native binaries are distributed yet — install from source via `pnpm install && pnpm start`.
+**v1.7.0** is the current stable release (published 2026-06-23). A Windows x64 installer (unsigned) is available as a [GitHub Release asset](https://github.com/xxammaxx/promptvault-lite/releases/tag/v1.7.0). For other platforms, install from source via `pnpm install && pnpm start`.
