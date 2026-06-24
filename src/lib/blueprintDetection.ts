@@ -175,6 +175,33 @@ function buildClassificationReasons(
   return reasons;
 }
 
+function appendLowConfidenceReason(
+  reasons: string[],
+  dimensions: BlueprintDimensionScore[],
+  confidence: number,
+): string[] {
+  if (confidence >= 0.6) {
+    return reasons;
+  }
+
+  const missingDimensions = dimensions
+    .filter((dimension) => dimension.score === 0)
+    .map((dimension) => dimension.name);
+
+  const primaryGaps = missingDimensions.slice(0, 3);
+  if (primaryGaps.length === 0) {
+    return [
+      ...reasons,
+      "Low confidence because: only limited blueprint evidence was detected.",
+    ];
+  }
+
+  return [
+    ...reasons,
+    `Low confidence because: missing ${primaryGaps.join(", ")}${missingDimensions.length > primaryGaps.length ? ", and other blueprint sections" : ""}.`,
+  ];
+}
+
 const CLASSIFICATION_SIGNALS: SignalDef[] = [
   // ---- Prompt-specific signals ----
   {
@@ -1303,13 +1330,18 @@ export function evaluateBlueprint(
     dimensions.length > 0
       ? clamp(0.2 + (nonZeroCount / dimensions.length) * 0.8, 0.2, 1.0)
       : 0.3;
+  const classificationReasons = appendLowConfidenceReason(
+    classification.reasons ?? [],
+    dimensions,
+    confidence,
+  );
 
   return {
     content_class: classification.content_class,
     blueprint_type: classification.blueprint_type,
     contamination_status: classification.contamination_status,
     classification_tags: classification.tags ?? [],
-    classification_reasons: classification.reasons ?? [],
+    classification_reasons: classificationReasons,
     goal_clarity_score: goalClarityScore,
     scope_sharpness_score: scopeSharpnessScore,
     architecture_score: architectureScore,

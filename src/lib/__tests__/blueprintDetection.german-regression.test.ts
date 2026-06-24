@@ -80,6 +80,28 @@ describe("German blueprint and prompt classification regressions", () => {
     expect(result.testability_score).toBeGreaterThan(0);
   });
 
+  it("explains low confidence with missing blueprint dimensions", () => {
+    const result = evaluateBlueprint(
+      `# Kurznotiz
+
+## Rolle
+
+Du bist Reviewer.
+
+## Ergebnisformat
+
+Gib eine knappe Antwort aus.`,
+      "2026-06-24",
+    );
+
+    expect(result.confidence).toBeLessThan(0.6);
+    expect(
+      result.classification_reasons?.some((reason) =>
+        reason.startsWith("Low confidence because:"),
+      ),
+    ).toBe(true);
+  });
+
   it("keeps plain documentation classified as documentation", () => {
     const result = classifyContent(DOCUMENTATION_ONLY);
     expect(result.content_class).toBe("DOC");

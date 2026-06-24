@@ -61,8 +61,9 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     return result.changes
       .filter((change) => change.type === "add_section")
       .map((change) => {
-        const match = change.description.match(/"(##[^"]+)"/);
-        const heading = match?.[1]?.trim();
+        const quotedMatch = change.description.match(/"(##[^"]+)"/);
+        const bareMatch = change.description.match(/(##\s.+)$/);
+        const heading = quotedMatch?.[1]?.trim() ?? bareMatch?.[1]?.trim();
         if (!heading) return null;
         if (original.includes(heading) || !optimized.includes(heading)) {
           return null;

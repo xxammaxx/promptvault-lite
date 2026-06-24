@@ -27,11 +27,11 @@ vi.mock("@/lib/promptOptimizer", () => ({
     changes: [
       {
         type: "add_section",
-        description: 'Workflow-Sektion ergänzt: "## Agenten-Workflow"',
+        description: "Workflow-Sektion ergänzt: ## Agenten-Workflow",
       },
       {
         type: "add_section",
-        description: 'Workflow-Sektion ergänzt: "## Verification Contract"',
+        description: "Workflow-Sektion ergänzt: ## Verification Contract",
       },
     ],
     warnings: [],
