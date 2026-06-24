@@ -488,6 +488,8 @@ export interface BlueprintEvaluation {
   content_class: ContentClass;
   blueprint_type: BlueprintType | null;
   contamination_status: BlueprintContamination;
+  classification_tags?: string[];
+  classification_reasons?: string[];
 
   // Scores (0-100, higher is better)
   goal_clarity_score: number;
@@ -551,6 +553,8 @@ export interface BlueprintDetectOutput {
   blueprint_type: BlueprintType | null;
   contamination_status: BlueprintContamination;
   confidence: number;
+  tags?: string[];
+  reasons?: string[];
   // Classification signals found
   prompt_signals: string[];
   blueprint_signals: string[];

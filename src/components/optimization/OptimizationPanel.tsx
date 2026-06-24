@@ -44,6 +44,41 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     return optimizePrompt(promptContent, selectedMode);
   }, [promptContent, selectedMode]);
 
+  const addedSectionPreviews = useMemo(() => {
+    if (!result) return [];
+
+    const original = result.original.replace(/\r\n/g, "\n");
+    const optimized = result.optimized.replace(/\r\n/g, "\n");
+
+    const extractSection = (heading: string): string => {
+      const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const match = optimized.match(
+        new RegExp(`(${escapedHeading}[\\s\\S]*?)(?=\\n##\\s|$)`),
+      );
+      return match?.[1]?.trim() ?? heading;
+    };
+
+    return result.changes
+      .filter((change) => change.type === "add_section")
+      .map((change) => {
+        const match = change.description.match(/"(##[^"]+)"/);
+        const heading = match?.[1]?.trim();
+        if (!heading) return null;
+        if (original.includes(heading) || !optimized.includes(heading)) {
+          return null;
+        }
+
+        const previewLines = extractSection(heading).split("\n").slice(0, 4);
+        return {
+          heading,
+          preview: previewLines.join("\n"),
+        };
+      })
+      .filter((preview): preview is { heading: string; preview: string } =>
+        Boolean(preview),
+      );
+  }, [result]);
+
   const handleCopy = useCallback(async () => {
     if (!result) return;
     try {
@@ -163,6 +198,22 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                     </div>
                   )}
 
+                  {addedSectionPreviews.length > 0 && (
+                    <div className="optimizer-added-sections">
+                      <h3>Hinzugefügte Abschnitte</h3>
+                      <ul className="optimizer-added-sections-list">
+                        {addedSectionPreviews.map((section) => (
+                          <li key={section.heading} className="optimizer-added-section">
+                            <strong>{section.heading}</strong>
+                            <pre className="optimizer-added-section-preview">
+                              {section.preview}
+                            </pre>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   {/* Warnings */}
                   {result.warnings.length > 0 && (
                     <div className="optimizer-warnings">
@@ -174,6 +225,16 @@ export const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                       </ul>
                     </div>
                   )}
+
+                  {result.changes.length === 0 &&
+                    result.original === result.optimized && (
+                      <div className="optimizer-warnings">
+                        <h3>Hinweise</h3>
+                        <ul>
+                          <li>Keine sichere automatische Änderung vorgenommen.</li>
+                        </ul>
+                      </div>
+                    )}
 
                   {/* Before/After Diff */}
                   <div className="optimizer-diff">

@@ -505,6 +505,52 @@ function aggressiveOptimize(input: string): OptimizationDiff {
   };
 }
 
+function extractHeadingFromChangeDescription(description: string): string | null {
+  const quotedMatch = description.match(/"(##[^"]+)"/);
+  if (quotedMatch) return quotedMatch[1].trim();
+
+  const bareMatch = description.match(/(##\s.+)$/);
+  return bareMatch ? bareMatch[1].trim() : null;
+}
+
+function finalizeOptimizationDiff(diff: OptimizationDiff): OptimizationDiff {
+  const originalNormalized = diff.original.replace(/\r\n/g, "\n");
+  const optimizedNormalized = diff.optimized.replace(/\r\n/g, "\n");
+
+  const changes = diff.changes.filter((change) => {
+    if (change.type !== "add_section") {
+      return originalNormalized !== optimizedNormalized || change.type !== "reorder";
+    }
+
+    const heading = extractHeadingFromChangeDescription(change.description);
+    if (!heading) {
+      return optimizedNormalized !== originalNormalized;
+    }
+
+    return (
+      optimizedNormalized.includes(heading) &&
+      !originalNormalized.includes(heading)
+    );
+  });
+
+  const warnings = [...diff.warnings];
+  if (
+    originalNormalized === optimizedNormalized &&
+    warnings.length === 0 &&
+    !warnings.some((warning) =>
+      /Keine sichere automatische Änderung vorgenommen/i.test(warning),
+    )
+  ) {
+    warnings.unshift("Keine sichere automatische Änderung vorgenommen.");
+  }
+
+  return {
+    ...diff,
+    changes: originalNormalized === optimizedNormalized ? [] : changes,
+    warnings,
+  };
+}
+
 // =============================================================================
 // Quality Validation — blocks placeholder-only optimized outputs
 // =============================================================================
@@ -653,15 +699,22 @@ export function optimizePrompt(
   input: string,
   mode: OptimizationMode,
 ): OptimizationDiff {
+  let diff: OptimizationDiff;
+
   switch (mode) {
     case "conservative":
-      return conservativeOptimize(input);
+      diff = conservativeOptimize(input);
+      break;
     case "balanced":
-      return balancedOptimize(input);
+      diff = balancedOptimize(input);
+      break;
     case "aggressive":
-      return aggressiveOptimize(input);
+      diff = aggressiveOptimize(input);
+      break;
     default:
       // Exhaustive: TypeScript enforces all OptimizationMode cases handled above
       throw new Error(`Unbekannter Optimierungsmodus: ${String(mode)}`);
   }
+
+  return finalizeOptimizationDiff(diff);
 }

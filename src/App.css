@@ -98,6 +98,8 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -184,11 +186,13 @@ body {
 .app-layout {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 .panel {
   display: flex;
   flex-direction: column;
+  min-height: 0;
   border-right: 1px solid var(--color-border);
   background: var(--color-surface);
   overflow: hidden;
@@ -223,6 +227,7 @@ body {
 }
 .panel-content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 8px;
@@ -1020,6 +1025,7 @@ body {
   max-height: 80vh;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   overflow: hidden;
 }
 .modal-header {
@@ -1040,6 +1046,7 @@ body {
   padding: 16px;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
 }
 .modal-footer {
   display: flex;
@@ -1466,6 +1473,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Mode Selector */
@@ -1537,6 +1546,38 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
+}
+
+.optimizer-added-sections h3 {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--color-text-muted);
+}
+
+.optimizer-added-sections-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.optimizer-added-section {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+}
+
+.optimizer-added-section-preview {
+  margin-top: 6px;
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 /* Changes List */
@@ -1625,12 +1666,14 @@ body {
   gap: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
+  min-height: 0;
   overflow: hidden;
 }
 
 .optimizer-diff-pane {
   display: flex;
   flex-direction: column;
+  min-height: 0;
   overflow: hidden;
 }
 

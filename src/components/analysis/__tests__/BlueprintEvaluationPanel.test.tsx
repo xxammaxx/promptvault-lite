@@ -187,8 +187,10 @@ describe("BlueprintEvaluationPanel", () => {
     const { container } = render(
       <BlueprintEvaluationPanel evaluation={eval_} />,
     );
-    const badge = container.querySelector(".badge-blueprint");
-    expect(badge).toBeNull();
+    const header = container.querySelector(".blueprint-eval-header");
+    expect(header?.textContent).toContain("Blueprint");
+    expect(header?.textContent).not.toContain("Security");
+    expect(header?.textContent).not.toContain("Architecture");
   });
 
   // ── 4. Confidence ──
@@ -199,6 +201,27 @@ describe("BlueprintEvaluationPanel", () => {
       <BlueprintEvaluationPanel evaluation={eval_} />,
     );
     expect(container.textContent).toContain("82% confidence");
+  });
+
+  it("renders classification context with primary kind, tags, and reasons", () => {
+    const eval_ = makeEvaluation({
+      content_class: "PROMPT_BLUEPRINT_HYBRID",
+      classification_tags: ["AGENT_PROMPT", "WORKFLOW"],
+      classification_reasons: [
+        "Structured agent-prompt headings detected.",
+        "Workflow governance sections detected.",
+      ],
+    });
+    const { container } = render(
+      <BlueprintEvaluationPanel evaluation={eval_} />,
+    );
+
+    expect(container.textContent).toContain("Primary Kind: PROMPT_BLUEPRINT_HYBRID");
+    expect(container.textContent).toContain("AGENT_PROMPT");
+    expect(container.textContent).toContain("WORKFLOW");
+    expect(container.textContent).toContain(
+      "Structured agent-prompt headings detected.",
+    );
   });
 
   it("renders 0% when confidence is 0", () => {
