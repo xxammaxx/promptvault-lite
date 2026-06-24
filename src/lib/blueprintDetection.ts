@@ -169,7 +169,9 @@ function buildClassificationReasons(
     countHeadings(content) >= 2 &&
     content.trim().length > 0
   ) {
-    reasons.push("Content contains structured headings but limited classifier signals.");
+    reasons.push(
+      "Content contains structured headings but limited classifier signals.",
+    );
   }
 
   return reasons;
@@ -498,20 +500,25 @@ export function classifyContent(content: string): BlueprintDetectOutput {
       0.85,
     );
   }
-  // Both present with more prompts than blueprints → PROMPT_BLUEPRINT_HYBRID
+  // Both present with more prompts than blueprints → PROMPT_BLUEPRINT_HYBRID (only with sufficient blueprint signals)
   else if (
     effectivePromptCount > effectiveBlueprintCount &&
-    effectiveBlueprintCount >= 1
+    effectiveBlueprintCount >= 2
   ) {
     contentClass = "PROMPT_BLUEPRINT_HYBRID";
     confidence = clamp(
-      0.4 + (effectiveBlueprintCount + effectivePromptCount) * 0.05,
-      0.4,
-      0.85,
+      0.3 + (effectiveBlueprintCount + effectivePromptCount) * 0.06,
+      0.3,
+      0.8,
     );
   }
+  // One blueprint signal with dominant prompt signals → PROMPT (not HYBRID)
+  else if (effectivePromptCount >= 2 && effectiveBlueprintCount === 1) {
+    contentClass = "PROMPT";
+    confidence = 0.6;
+  }
   // Roughly equal → PROMPT_BLUEPRINT_HYBRID
-  else if (effectivePromptCount >= 1 && effectiveBlueprintCount >= 1) {
+  else if (effectivePromptCount >= 1 && effectiveBlueprintCount >= 2) {
     contentClass = "PROMPT_BLUEPRINT_HYBRID";
     confidence = clamp(
       0.3 + (effectiveBlueprintCount + effectivePromptCount) * 0.08,
@@ -632,7 +639,11 @@ function detectBlueprintTypeRanked(
     return null;
   }
 
-  const checks: { type: BlueprintType; patterns: RegExp[]; priority: number }[] = [
+  const checks: {
+    type: BlueprintType;
+    patterns: RegExp[];
+    priority: number;
+  }[] = [
     {
       type: "architecture_blueprint",
       patterns: [

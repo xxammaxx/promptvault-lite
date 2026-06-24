@@ -478,3 +478,69 @@ describe("Secret Non-Output", () => {
     }
   });
 });
+
+// =============================================================================
+// Regression: HYBRID threshold guard (second follow-up)
+// =============================================================================
+
+describe("HYBRID threshold regression", () => {
+  const AGENT_PROMPT_WITH_WORKFLOW = `# Agenten-Prompt
+
+## Rolle
+Du bist ein Senior Code Reviewer.
+
+## Aufgabe
+Prüfe den folgenden Pull Request auf Sicherheitslücken.
+
+## Verification Contract
+- Alle Tests müssen grün sein
+- Kein Merge ohne Human Approval
+
+## Ergebnisformat
+Gib einen strukturierten Review-Report aus.`;
+
+  it("36. Agent prompt with only workflow governance signals stays PROMPT, not HYBRID", () => {
+    const result = classifyContent(AGENT_PROMPT_WITH_WORKFLOW);
+    // A single workflow_governance blueprint signal with dominant prompt signals
+    // should NOT trigger HYBRID classification
+    expect(result.content_class).not.toBe("PROMPT_BLUEPRINT_HYBRID");
+    expect(result.content_class).toBe("PROMPT");
+  });
+
+  it("37. Agent prompt with workflow still has AGENT_PROMPT and WORKFLOW tags", () => {
+    const result = classifyContent(AGENT_PROMPT_WITH_WORKFLOW);
+    expect(result.tags).toContain("AGENT_PROMPT");
+    expect(result.tags).toContain("WORKFLOW");
+  });
+
+  const AGENT_PROMPT_WITH_ARCHITECTURE = `# System Design Agent Prompt
+
+## Rolle
+Du bist System Architect.
+
+## System Architecture Overview
+Die Anwendung besteht aus einem React Frontend und einem Rust Backend.
+Die Komponenten kommunizieren über lokale IPC.
+
+## Data Flow & Integration
+Daten fließen vom Frontend über Tauri-Commands zum Rust-Backend.
+SQLite dient als lokale Datenbank für Prompts und Evaluations.
+
+## Aufgabe
+Analysiere die Systemarchitektur und schlage Verbesserungen vor.`;
+
+  it("38. Agent prompt with multiple architecture blueprint signals becomes HYBRID", () => {
+    const result = classifyContent(AGENT_PROMPT_WITH_ARCHITECTURE);
+    // Multiple blueprint signals (architecture + data_flow) with prompt signals
+    // SHOULD trigger HYBRID — this is a real hybrid
+    expect(result.content_class).toBe("PROMPT_BLUEPRINT_HYBRID");
+  });
+
+  it("39. Pure agent prompt without any blueprint signals stays PROMPT", () => {
+    const result = classifyContent(
+      "# My Prompt\n\n## Rolle\nDu bist Assistant.\n\n## Aufgabe\nHilf mir.",
+    );
+    expect(result.content_class).toBe("PROMPT");
+    expect(result.content_class).not.toBe("PROMPT_BLUEPRINT_HYBRID");
+  });
+});

@@ -184,6 +184,10 @@ export const BlueprintEvaluationPanel: React.FC<
     : improvements.slice(0, 3);
   const totalImprovements = improvements.length;
 
+  const isHybrid = evaluation.content_class === "PROMPT_BLUEPRINT_HYBRID";
+  const isPrompt = evaluation.content_class === "PROMPT";
+  const isBlueprint = evaluation.content_class === "BLUEPRINT";
+
   return (
     <div className="blueprint-evaluation-panel">
       {/* ---- Header: classification badges ---- */}
@@ -231,11 +235,28 @@ export const BlueprintEvaluationPanel: React.FC<
 
       {/* ---- Overall Score ---- */}
       <div className="analysis-section">
-        <h3>Overall Blueprint Score</h3>
+        <h3>
+          {isBlueprint
+            ? "Blueprint Quality Score"
+            : isHybrid
+              ? "Blueprint Completeness"
+              : isPrompt
+                ? "Prompt Structure Score"
+                : "Overall Score"}
+        </h3>
         <div className="score-display">
           <CircularScore score={overallScore} />
-          <span className="score-label">Overall</span>
+          <span className="score-label">
+            {isHybrid ? "Completeness" : isPrompt ? "Structure" : "Overall"}
+          </span>
         </div>
+        {isHybrid && (
+          <p className="score-context-note">
+            This score measures blueprint completeness, not overall prompt
+            quality. A low score indicates missing blueprint sections — the
+            prompt may still be effective as an agent instruction.
+          </p>
+        )}
       </div>
 
       {/* ---- 9 Sub-Scores ---- */}

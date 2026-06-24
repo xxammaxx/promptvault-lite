@@ -225,6 +225,7 @@ export interface OptimizationChange {
     | "content"
     | "format"
     | "add_section"
+    | "replace_section"
     | "reorder";
   description: string;
 }

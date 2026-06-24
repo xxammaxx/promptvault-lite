@@ -403,6 +403,50 @@ function aggressiveOptimize(input: string): OptimizationDiff {
   // Extract code blocks before appending
   const { processed, blocks } = extractCodeBlocks(base.optimized);
 
+  // Detect and replace legacy context-window patterns
+  let cleanedResult = processed;
+  const LEGACY_CONTEXT_PATTERN =
+    /##\s+Kontextfenster-Empfehlung[\s\S]*?(?=\n##\s|$)/i;
+  const LEGACY_FRESH_PATTERN =
+    /Starte\s+diesen\s+Auftrag\s+in\s+einem\s+frischen\/leeren\s+Kontextfenster/i;
+  const hasLegacyContext = LEGACY_CONTEXT_PATTERN.test(processed);
+  const hasLegacyFresh = LEGACY_FRESH_PATTERN.test(processed);
+
+  if (hasLegacyContext || hasLegacyFresh) {
+    const contextBoundarySection = [
+      "## Context Boundary / Reality Refresh",
+      "",
+      "- Chatverlauf, Memory und frühere Reports gelten als STALE_UNTIL_VALIDATED.",
+      "- Source of Truth ist der aktuell validierte Zustand aus Git, Issues, PRs, Releases, Dateien und lokalen Gates.",
+      "- Alte Reports dürfen nur als historische Evidence genutzt werden.",
+      "- Widersprechen alte Angaben dem aktuellen Repo-Zustand, gilt der aktuelle Repo-/GitHub-/Testzustand.",
+      "",
+    ].join("\n");
+
+    if (hasLegacyContext) {
+      cleanedResult = cleanedResult.replace(LEGACY_CONTEXT_PATTERN, () => {
+        changes.push({
+          type: "replace_section",
+          description:
+            'Legacy "Kontextfenster-Empfehlung" durch "Context Boundary / Reality Refresh" ersetzt',
+        });
+        return contextBoundarySection;
+      });
+    } else {
+      // Only the fresh-window pattern exists — add Context Boundary alongside
+      cleanedResult += "\n" + contextBoundarySection;
+      changes.push({
+        type: "add_section",
+        description:
+          "## Context Boundary / Reality Refresh (Legacy-Kontextfenster-Empfehlung erkannt)",
+      });
+    }
+
+    warnings.push(
+      "Legacy-Kontextfenster-Empfehlung erkannt — besser durch Context Boundary / Reality Refresh ersetzen.",
+    );
+  }
+
   // Build agentic scaffolding sections (no TODO placeholders)
   const scaffoldingSections = [
     {
@@ -480,7 +524,7 @@ function aggressiveOptimize(input: string): OptimizationDiff {
   ];
 
   // Append all scaffolding sections
-  let result = processed;
+  let result = cleanedResult;
   for (const section of scaffoldingSections) {
     const sectionBlock = section.heading + "\n\n" + section.content.join("\n");
     result += sectionBlock;
@@ -505,7 +549,9 @@ function aggressiveOptimize(input: string): OptimizationDiff {
   };
 }
 
-function extractHeadingFromChangeDescription(description: string): string | null {
+function extractHeadingFromChangeDescription(
+  description: string,
+): string | null {
   const quotedMatch = description.match(/"(##[^"]+)"/);
   if (quotedMatch) return quotedMatch[1].trim();
 
@@ -519,7 +565,9 @@ function finalizeOptimizationDiff(diff: OptimizationDiff): OptimizationDiff {
 
   const changes = diff.changes.filter((change) => {
     if (change.type !== "add_section") {
-      return originalNormalized !== optimizedNormalized || change.type !== "reorder";
+      return (
+        originalNormalized !== optimizedNormalized || change.type !== "reorder"
+      );
     }
 
     const heading = extractHeadingFromChangeDescription(change.description);
