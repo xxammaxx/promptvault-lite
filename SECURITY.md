@@ -26,7 +26,8 @@ Security concerns relevant to PromptVault Lite include:
 
 | Version                   | Supported |
 | ------------------------- | --------- |
-| v1.7.0 (current stable)   | ✅        |
+| v1.7.1 (current stable)   | ✅        |
+| v1.7.0                    | ✅        |
 | v1.6.0                    | ✅        |
 | v1.5.0-rc.1 (pre-release) | ✅        |
 | Earlier versions          | ❌        |
