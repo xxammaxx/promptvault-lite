@@ -28,6 +28,17 @@ pub fn run() {
                 .app_data_dir()
                 .map_err(|e| format!("App-Datenverzeichnis nicht verfügbar: {}", e))?
                 .join("promptvault.db");
+
+            // Stelle sicher, dass das �bergeordnete Verzeichnis existiert,
+            // bevor die SQLite-Datenbank ge�ffnet/erstellt wird.
+            // Fix f�r: Windows-Installer-Startup-Crash (BEX64 / panic=abort)
+            // Root Cause: app_data_dir() liefert Pfad, der nicht existiert,
+            // und rusqlite::Connection::open() kann die Datei nicht erstellen.
+            if let Some(parent) = db_path.parent() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("Konnte Datenbank-Verzeichnis nicht erstellen: {}", e))?;
+            }
+
             let database = Database::new(
                 db_path
                     .to_str()
