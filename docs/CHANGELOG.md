@@ -1,10 +1,40 @@
 ---
 title: Changelog
 description: Versionshinweise für PromptVault Lite.
-version: 1.7.0
+version: 1.7.1
 ---
 
 # Changelog
+
+## v1.7.1 — Windows Installer Startup Crash Fix
+
+**Datum:** 2026-06-24
+
+### Fixed
+
+- Fixed Windows startup crash in installed/release builds when the application data directory did not exist on first launch. (PR #179)
+- The app now creates the parent AppData directory before opening `promptvault.db`.
+
+### Quality Gates
+
+| Gate                | Ergebnis                              |
+| ------------------- | ------------------------------------- |
+| `pnpm test`         | **650 passed** (22 files, 0 failures) |
+| `pnpm lint`         | **0 errors, 0 warnings**              |
+| `pnpm exec tsc`     | **0 errors**                          |
+| `pnpm build`        | **PASS**                              |
+| `cargo test --lib`  | **134 passed** (+1 ignored)           |
+| `cargo test --test` | **17 passed**                         |
+| `cargo fmt`         | **PASS**                              |
+| `cargo clippy`      | **0 warnings**                        |
+| `mkdocs build`      | **PASS**                              |
+
+### Known Limitations
+
+- Windows installer remains unsigned. Windows SmartScreen may show an "Unknown publisher" warning.
+- Remote-CI remains `REMOTE_CI_INFRA_BLOCKED` (Issue #154). Local-CI-first policy in effect.
+
+---
 
 ## v1.7.0 — Scanner Extensions, Blueprint, Docs-as-Code
 
