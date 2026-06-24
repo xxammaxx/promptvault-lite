@@ -3,7 +3,7 @@
 > Living Software Portfolio. Updated with every significant agent run.
 > No marketing claims — only evidence-backed facts.
 
-**Last evidence run:** 2026-06-23 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator, Post-Release Health Check)
+**Last evidence run:** 2026-06-24 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator, v1.7.1 Docs & Installer Status Reconciliation)
 **Blueprint detection run:** 2026-06-19 (OpenCode 1.15.0)
 **Scanner extension run:** 2026-06-21 (PR #168, #170, #172 merged to master)
 **CodeRabbit removal run:** 2026-06-19 — confirmed: zero CodeRabbit files/references in repo
@@ -86,13 +86,13 @@
 
 ## Unchanged Limitations
 
-| Limitation                               | Since  | Notes                                |
-| ---------------------------------------- | ------ | ------------------------------------ |
-| Source-only release (no native binaries) | v1.0   | No binary build pipeline yet         |
-| Linux-only CI                            | v1.0   | No macOS/Windows runners             |
-| Placeholder release icons                | v1.0   | #82 closed as completed (2026-06-12) |
-| Repository visibility                    | v1.7.0 | Public (made public 2026-06-23)      |
-| No Docker deployment                     | v1.0   | Issues #126–128 open                 |
+| Limitation                                       | Since  | Notes                                |
+| ------------------------------------------------ | ------ | ------------------------------------ |
+| Windows installer unsigned (SmartScreen warning) | v1.7.1 | No code signing certificate          |
+| Linux-only CI                                    | v1.0   | No macOS/Windows runners             |
+| Placeholder release icons                        | v1.0   | #82 closed as completed (2026-06-12) |
+| Repository visibility                            | v1.7.1 | Public (made public 2026-06-23)      |
+| No Docker deployment                             | v1.0   | Issues #126–128 open                 |
 
 ---
 

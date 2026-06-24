@@ -29,9 +29,9 @@ pub fn run() {
                 .map_err(|e| format!("App-Datenverzeichnis nicht verfügbar: {}", e))?
                 .join("promptvault.db");
 
-            // Stelle sicher, dass das �bergeordnete Verzeichnis existiert,
-            // bevor die SQLite-Datenbank ge�ffnet/erstellt wird.
-            // Fix f�r: Windows-Installer-Startup-Crash (BEX64 / panic=abort)
+            // Stelle sicher, dass das übergeordnete Verzeichnis existiert,
+            // bevor die SQLite-Datenbank geöffnet/erstellt wird.
+            // Fix für: Windows-Installer-Startup-Crash (BEX64 / panic=abort)
             // Root Cause: app_data_dir() liefert Pfad, der nicht existiert,
             // und rusqlite::Connection::open() kann die Datei nicht erstellen.
             if let Some(parent) = db_path.parent() {

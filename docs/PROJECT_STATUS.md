@@ -1,7 +1,7 @@
 # Project Status — PromptVault Lite
 
-**Last updated:** 2026-06-23
-**Current release:** v1.7.0 (public stable)
+**Last updated:** 2026-06-24
+**Current release:** v1.7.1 (public stable)
 **Branch:** master
 
 **Blueprint Detection merged:** 2026-06-19 (PR #148)
@@ -59,7 +59,9 @@ All 10 local CI gates pass. Master is stable and functional. Remote-CI is `REMOT
 
 ## Not Present
 
-- Native binary releases (source-only install)
+- Signed/code-signed binaries (Windows installer is unsigned)
+- Auto-updater
+- macOS/Linux native installers (Windows x64 only)
 - Cloud backend / API / telemetry
 - Prompt suggestions workflow (#45)
 - Agentic Browser Repair Kit (#71)
@@ -70,7 +72,8 @@ All 10 local CI gates pass. Master is stable and functional. Remote-CI is `REMOT
 
 ## Known Limitations
 
-- **Source-only release:** No native binary build pipeline configured
+- **Windows installer unsigned:** SmartScreen shows "Unknown publisher" warning; no code signing certificate
+- **No auto-updater:** Manual download required for each release
 - **Linux-only CI:** No macOS or Windows CI runners
 - **Repository visibility:** Public (made public 2026-06-23 as part of v1.7.0 finalization)
 - **Repository topics:** 10 topics configured (desktop-app, local-first, offline-first, prompt-engineering, prompt-management, react, rust, sqlite, tauri, typescript)

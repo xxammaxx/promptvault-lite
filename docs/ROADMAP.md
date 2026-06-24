@@ -1,7 +1,7 @@
 # Roadmap — PromptVault Lite
 
-**Last updated:** 2026-06-23
-**Current version:** v1.7.0 (master)
+**Last updated:** 2026-06-24
+**Current version:** v1.7.1 (master)
 
 ---
 
@@ -24,13 +24,13 @@
 
 ## Short-Term (Next 2-3 Sprints)
 
-| Priority | Task                                    | Issue | Status                              |
-| -------- | --------------------------------------- | ----- | ----------------------------------- |
-| P1       | Settings Modal                          | #63   | Planned                             |
-| P1       | Set GitHub repository topics & homepage | —     | [APPROVAL REQUIRED]                 |
-| P1       | Create first native binary release      | —     | Unblocked (#82 resolved 2026-06-12) |
-| P2       | Agentic Browser Repair Kit              | #71   | Planned                             |
-| P2       | Prompt suggestions workflow             | #45   | Planned                             |
+| Priority | Task                                    | Issue | Status                                                           |
+| -------- | --------------------------------------- | ----- | ---------------------------------------------------------------- |
+| P1       | Settings Modal                          | #63   | Planned                                                          |
+| P1       | Set GitHub repository topics & homepage | —     | [APPROVAL REQUIRED]                                              |
+| ~~P1~~   | ~~Create first native binary release~~  | —     | ✅ Done — v1.7.1 Windows x64 NSIS installer published (unsigned) |
+| P2       | Agentic Browser Repair Kit              | #71   | Planned                                                          |
+| P2       | Prompt suggestions workflow             | #45   | Planned                                                          |
 
 ---
 

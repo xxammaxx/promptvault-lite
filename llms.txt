@@ -3,7 +3,7 @@
 > **Zweck:** Diese Datei bietet KI-Agenten und RAG-Systemen eine strukturierte Uebersicht
 > ueber das PromptVault Lite Projekt. Sie ist fuer maschinelles Lesen optimiert.
 > **Source of Truth:** GitHub Issues → `xxammaxx/promptvault-lite`
-> **Letzte Aktualisierung:** 2026-06-23
+> **Letzte Aktualisierung:** 2026-06-24
 
 ## Projektidentitaet
 
@@ -12,7 +12,7 @@ Durchsuchen und Bewerten von Prompt-Dateien. Die App arbeitet vollstaendig offli
 — keine Cloud-Anbindung, keine Telemetrie, kein Tracking.
 
 - **Stack:** React 18 + TypeScript + Vite (Frontend), Rust + Tauri 2 (Backend), SQLite (Daten)
-- **Version:** v1.7.0
+- **Version:** v1.7.1
 - **Lizenz:** MIT
 - **Repository:** https://github.com/xxammaxx/promptvault-lite
 - **CI Status:** REMOTE_CI_INFRA_BLOCKED (Issue #154) — Local-CI-first policy
