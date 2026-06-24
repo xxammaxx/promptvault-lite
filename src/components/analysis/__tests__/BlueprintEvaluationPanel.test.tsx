@@ -166,7 +166,7 @@ describe("BlueprintEvaluationPanel", () => {
     const { container } = render(
       <BlueprintEvaluationPanel evaluation={eval_} />,
     );
-    expect(container.textContent).toContain("Overall Blueprint Score");
+    expect(container.textContent).toContain("Blueprint Quality Score");
     const svgCircle = container.querySelector("svg circle");
     expect(svgCircle).not.toBeNull();
     expect(container.textContent).toContain("68");
@@ -187,8 +187,10 @@ describe("BlueprintEvaluationPanel", () => {
     const { container } = render(
       <BlueprintEvaluationPanel evaluation={eval_} />,
     );
-    const badge = container.querySelector(".badge-blueprint");
-    expect(badge).toBeNull();
+    const header = container.querySelector(".blueprint-eval-header");
+    expect(header?.textContent).toContain("Blueprint");
+    expect(header?.textContent).not.toContain("Security");
+    expect(header?.textContent).not.toContain("Architecture");
   });
 
   // ── 4. Confidence ──
@@ -199,6 +201,29 @@ describe("BlueprintEvaluationPanel", () => {
       <BlueprintEvaluationPanel evaluation={eval_} />,
     );
     expect(container.textContent).toContain("82% confidence");
+  });
+
+  it("renders classification context with primary kind, tags, and reasons", () => {
+    const eval_ = makeEvaluation({
+      content_class: "PROMPT_BLUEPRINT_HYBRID",
+      classification_tags: ["AGENT_PROMPT", "WORKFLOW"],
+      classification_reasons: [
+        "Structured agent-prompt headings detected.",
+        "Workflow governance sections detected.",
+      ],
+    });
+    const { container } = render(
+      <BlueprintEvaluationPanel evaluation={eval_} />,
+    );
+
+    expect(container.textContent).toContain(
+      "Primary Kind: PROMPT_BLUEPRINT_HYBRID",
+    );
+    expect(container.textContent).toContain("AGENT_PROMPT");
+    expect(container.textContent).toContain("WORKFLOW");
+    expect(container.textContent).toContain(
+      "Structured agent-prompt headings detected.",
+    );
   });
 
   it("renders 0% when confidence is 0", () => {
@@ -372,7 +397,7 @@ describe("BlueprintEvaluationPanel", () => {
       <BlueprintEvaluationPanel evaluation={eval_} />,
     );
     expect(container.textContent).not.toContain("Detailed Breakdown");
-    expect(container.textContent).toContain("Overall Blueprint Score");
+    expect(container.textContent).toContain("Blueprint Quality Score");
   });
 
   it("does not crash with empty strengths", () => {
@@ -516,5 +541,39 @@ describe("BlueprintEvaluationPanel", () => {
       ".circular-score-value.score-low",
     );
     expect(scoreValue).not.toBeNull();
+  });
+
+  // ── Regression: Score label context (second follow-up) ──
+
+  it("shows 'Blueprint Quality Score' for pure BLUEPRINT content class", () => {
+    const eval_ = makeEvaluation({ content_class: "BLUEPRINT" });
+    const { container } = render(
+      <BlueprintEvaluationPanel evaluation={eval_} />,
+    );
+    expect(container.textContent).toContain("Blueprint Quality Score");
+    expect(container.textContent).not.toContain("Overall Blueprint Score");
+  });
+
+  it("shows 'Blueprint Completeness' for HYBRID content with explanation note", () => {
+    const eval_ = makeEvaluation({
+      content_class: "PROMPT_BLUEPRINT_HYBRID",
+      overall_score: 23,
+    });
+    const { container } = render(
+      <BlueprintEvaluationPanel evaluation={eval_} />,
+    );
+    expect(container.textContent).toContain("Blueprint Completeness");
+    expect(container.textContent).toContain("not overall prompt quality");
+    // Score should still render
+    expect(container.textContent).toContain("23");
+  });
+
+  it("shows 'Prompt Structure Score' for PROMPT content class", () => {
+    const eval_ = makeEvaluation({ content_class: "PROMPT" });
+    const { container } = render(
+      <BlueprintEvaluationPanel evaluation={eval_} />,
+    );
+    expect(container.textContent).toContain("Prompt Structure Score");
+    expect(container.textContent).not.toContain("Blueprint Quality Score");
   });
 });

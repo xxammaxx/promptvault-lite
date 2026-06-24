@@ -5,11 +5,15 @@ import type {
   BlueprintImprovement,
   BlueprintType,
 } from "@/types";
+import ContentClassBadge from "@/components/common/ContentClassBadge";
 
 // ---- Helpers (reused patterns from AnalysisPanel.tsx) ----
 
 const scoreColor = (score: number) =>
   score >= 70 ? "score-high" : score >= 40 ? "score-medium" : "score-low";
+
+const toFiniteScore = (score: number): number =>
+  Number.isFinite(score) ? score : 0;
 
 const scoreColorHex = (score: number) => {
   if (score >= 70) return "var(--color-success)";
@@ -36,7 +40,7 @@ const blueprintTypeLabel = (bt: BlueprintType): string => {
 /** SVG circular score gauge */
 const CircularScore: React.FC<{ score: number; size?: number }> = React.memo(
   function CircularScore({ score, size = 80 }) {
-    const clamped = Math.min(100, Math.max(0, score));
+    const clamped = Math.min(100, Math.max(0, toFiniteScore(score)));
     const radius = (size - 8) / 2;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (clamped / 100) * circumference;
@@ -83,7 +87,7 @@ const MiniScoreBar: React.FC<{
   score: number;
   title?: string;
 }> = React.memo(function MiniScoreBar({ label, score, title }) {
-  const clamped = Math.min(100, Math.max(0, score));
+  const clamped = Math.min(100, Math.max(0, toFiniteScore(score)));
   return (
     <div className="context-mini-score" title={title}>
       <span className="context-mini-label">{label}</span>
@@ -159,7 +163,10 @@ export const BlueprintEvaluationPanel: React.FC<
   ).map((key) => [key, evaluation[key] as number]);
 
   // ----- Derived display values -----
-  const overallScore = Math.min(100, Math.max(0, evaluation.overall_score));
+  const overallScore = Math.min(
+    100,
+    Math.max(0, toFiniteScore(evaluation.overall_score)),
+  );
   const confidence = Number.isFinite(evaluation.confidence)
     ? evaluation.confidence
     : 0;
@@ -170,16 +177,23 @@ export const BlueprintEvaluationPanel: React.FC<
   const missingElements: string[] = evaluation.missing_elements;
   const improvements: BlueprintImprovement[] =
     evaluation.suggested_improvements;
+  const classificationTags = evaluation.classification_tags ?? [];
+  const classificationReasons = evaluation.classification_reasons ?? [];
   const topImprovements = showAllImprovements
     ? improvements
     : improvements.slice(0, 3);
   const totalImprovements = improvements.length;
+
+  const isHybrid = evaluation.content_class === "PROMPT_BLUEPRINT_HYBRID";
+  const isPrompt = evaluation.content_class === "PROMPT";
+  const isBlueprint = evaluation.content_class === "BLUEPRINT";
 
   return (
     <div className="blueprint-evaluation-panel">
       {/* ---- Header: classification badges ---- */}
       <div className="blueprint-eval-header">
         <div className="context-badges">
+          <ContentClassBadge contentClass={evaluation.content_class} />
           {evaluation.blueprint_type && (
             <span className="badge badge-blueprint">
               {blueprintTypeLabel(evaluation.blueprint_type)}
@@ -189,13 +203,60 @@ export const BlueprintEvaluationPanel: React.FC<
         </div>
       </div>
 
+      {(classificationTags.length > 0 || classificationReasons.length > 0) && (
+        <div className="analysis-section">
+          <h3>Classification</h3>
+          <p className="criterion-detail">
+            Primary Kind: {evaluation.content_class}
+          </p>
+          {classificationTags.length > 0 && (
+            <div className="context-badges">
+              {classificationTags.map((tag) => (
+                <span key={tag} className="badge badge-tag">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          {classificationReasons.length > 0 && (
+            <ul className="blueprint-warnings-list">
+              {classificationReasons.map((reason, index) => (
+                <li key={index} className="blueprint-warning-item">
+                  <span className="blueprint-warning-icon" aria-hidden="true">
+                    &#8226;
+                  </span>
+                  <span>{reason}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {/* ---- Overall Score ---- */}
       <div className="analysis-section">
-        <h3>Overall Blueprint Score</h3>
+        <h3>
+          {isBlueprint
+            ? "Blueprint Quality Score"
+            : isHybrid
+              ? "Blueprint Completeness"
+              : isPrompt
+                ? "Prompt Structure Score"
+                : "Overall Score"}
+        </h3>
         <div className="score-display">
           <CircularScore score={overallScore} />
-          <span className="score-label">Overall</span>
+          <span className="score-label">
+            {isHybrid ? "Completeness" : isPrompt ? "Structure" : "Overall"}
+          </span>
         </div>
+        {isHybrid && (
+          <p className="score-context-note">
+            This score measures blueprint completeness, not overall prompt
+            quality. A low score indicates missing blueprint sections — the
+            prompt may still be effective as an agent instruction.
+          </p>
+        )}
       </div>
 
       {/* ---- 9 Sub-Scores ---- */}
@@ -217,8 +278,11 @@ export const BlueprintEvaluationPanel: React.FC<
         <div className="analysis-section">
           <h3>Detailed Breakdown ({dimensions.length} dimensions)</h3>
           <div className="criteria-list">
-            {dimensions.map((dim) => (
-              <DimensionRow key={dim.dimension} dimension={dim} />
+            {dimensions.map((dim, index) => (
+              <DimensionRow
+                key={`${dim.dimension}-${dim.name}-${index}`}
+                dimension={dim}
+              />
             ))}
           </div>
         </div>

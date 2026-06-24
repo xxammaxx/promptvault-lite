@@ -50,6 +50,160 @@ interface SignalDef {
   detect: (content: string) => boolean;
 }
 
+const AGENT_PROMPT_HEADING_PATTERNS = [
+  /^#+\s*(?:rolle|role)\b/im,
+  /^#+\s*(?:aufgabe|task)\b/im,
+  /^#+\s*(?:ergebnisformat|output\s*format)\b/im,
+  /^#+\s*(?:kontextfenster-empfehlung|context\s*window|context\s*recommendation)\b/im,
+  /^#+\s*(?:anforderungen|requirements)\b/im,
+  /^#+\s*(?:hard\s*constraints|constraints|einschränkungen)\b/im,
+];
+
+const WORKFLOW_GOVERNANCE_PATTERNS = [
+  /^#+\s*(?:verification\s*contract|verifikation|acceptance\s*criteria)\b/im,
+  /^#+\s*(?:human\s*approval(?:\s*gate)?|review\s*scope)\b/im,
+  /^#+\s*(?:evidence|nachweise?|belege?)\b/im,
+  /^#+\s*(?:agenten-workflow|workflow|arbeitsphasen|red\s*tests)\b/im,
+];
+
+function countMatchingPatterns(content: string, patterns: RegExp[]): number {
+  let count = 0;
+  for (const pattern of patterns) {
+    pattern.lastIndex = 0;
+    if (pattern.test(content)) count++;
+  }
+  return count;
+}
+
+function detectClassificationTags(
+  content: string,
+  promptSignals: string[],
+  blueprintSignals: string[],
+  contaminationSignals: string[],
+): string[] {
+  const tags = new Set<string>();
+
+  if (
+    promptSignals.includes("sectioned_agent_prompt") ||
+    promptSignals.includes("role_definition")
+  ) {
+    tags.add("AGENT_PROMPT");
+  }
+  if (
+    blueprintSignals.includes("system_architecture") ||
+    blueprintSignals.includes("data_flow") ||
+    /(?:architektur|architecture|datenfluss|data\s*flow)/i.test(content)
+  ) {
+    tags.add("ARCHITECTURE");
+  }
+  if (
+    blueprintSignals.includes("workflow_governance_sections") ||
+    /(?:workflow|human approval|reviewer-agent|verification contract|red tests)/i.test(
+      content,
+    )
+  ) {
+    tags.add("WORKFLOW");
+  }
+  if (
+    blueprintSignals.includes("security_compliance_section") ||
+    /(?:security|sicherheit|datenschutz|privacy|oauth|jwt|gdpr|dsgvo)/i.test(
+      content,
+    )
+  ) {
+    tags.add("SECURITY");
+  }
+  if (
+    blueprintSignals.includes("evidence_portfolio") ||
+    /(?:evidence|nachweis|beleg|screenshot|test output|gate status)/i.test(
+      content,
+    )
+  ) {
+    tags.add("EVIDENCE");
+  }
+  if (contaminationSignals.length > 0) {
+    tags.add("CONTAMINATION_RISK");
+  }
+
+  return [...tags];
+}
+
+function buildClassificationReasons(
+  contentClass: ContentClass,
+  promptSignals: string[],
+  blueprintSignals: string[],
+  contaminationSignals: string[],
+  content: string,
+): string[] {
+  const reasons: string[] = [];
+
+  if (promptSignals.includes("sectioned_agent_prompt")) {
+    reasons.push(
+      "Structured agent-prompt headings detected: Rolle/Aufgabe/Ergebnisformat/Kontext.",
+    );
+  }
+  if (blueprintSignals.includes("workflow_governance_sections")) {
+    reasons.push(
+      "Workflow governance sections detected: Verification Contract, Human Approval, Evidence, or Red Tests.",
+    );
+  }
+  if (
+    blueprintSignals.includes("system_architecture") ||
+    blueprintSignals.includes("data_flow")
+  ) {
+    reasons.push(
+      "Blueprint structure detected from architecture or data-flow terminology.",
+    );
+  }
+  if (contentClass === "DOC") {
+    reasons.push(
+      "Structured headings were present, but prompt and blueprint signals stayed below the decision threshold.",
+    );
+  }
+  if (contaminationSignals.length > 0) {
+    reasons.push(
+      `Contamination review signals detected: ${contaminationSignals.join(", ")}.`,
+    );
+  }
+  if (
+    reasons.length === 0 &&
+    countHeadings(content) >= 2 &&
+    content.trim().length > 0
+  ) {
+    reasons.push(
+      "Content contains structured headings but limited classifier signals.",
+    );
+  }
+
+  return reasons;
+}
+
+function appendLowConfidenceReason(
+  reasons: string[],
+  dimensions: BlueprintDimensionScore[],
+  confidence: number,
+): string[] {
+  if (confidence >= 0.6) {
+    return reasons;
+  }
+
+  const missingDimensions = dimensions
+    .filter((dimension) => dimension.score === 0)
+    .map((dimension) => dimension.name);
+
+  const primaryGaps = missingDimensions.slice(0, 3);
+  if (primaryGaps.length === 0) {
+    return [
+      ...reasons,
+      "Low confidence because: only limited blueprint evidence was detected.",
+    ];
+  }
+
+  return [
+    ...reasons,
+    `Low confidence because: missing ${primaryGaps.join(", ")}${missingDimensions.length > primaryGaps.length ? ", and other blueprint sections" : ""}.`,
+  ];
+}
+
 const CLASSIFICATION_SIGNALS: SignalDef[] = [
   // ---- Prompt-specific signals ----
   {
@@ -94,6 +248,11 @@ const CLASSIFICATION_SIGNALS: SignalDef[] = [
       /(?:example|beispiel|e\.g\.|for instance|zum beispiel|z\.b\.|input.*output)/i.test(
         c,
       ) && c.length < 3000,
+  },
+  {
+    name: "sectioned_agent_prompt",
+    category: "prompt",
+    detect: (c) => countMatchingPatterns(c, AGENT_PROMPT_HEADING_PATTERNS) >= 2,
   },
 
   // ---- Blueprint-specific signals ----
@@ -196,6 +355,11 @@ const CLASSIFICATION_SIGNALS: SignalDef[] = [
         );
       return headings >= 6 && hasArchitecture;
     },
+  },
+  {
+    name: "workflow_governance_sections",
+    category: "blueprint",
+    detect: (c) => countMatchingPatterns(c, WORKFLOW_GOVERNANCE_PATTERNS) >= 2,
   },
 
   // ---- Hybrid signals (can appear in both) ----
@@ -336,20 +500,25 @@ export function classifyContent(content: string): BlueprintDetectOutput {
       0.85,
     );
   }
-  // Both present with more prompts than blueprints → PROMPT_BLUEPRINT_HYBRID
+  // Both present with more prompts than blueprints → PROMPT_BLUEPRINT_HYBRID (only with sufficient blueprint signals)
   else if (
     effectivePromptCount > effectiveBlueprintCount &&
-    effectiveBlueprintCount >= 1
+    effectiveBlueprintCount >= 2
   ) {
     contentClass = "PROMPT_BLUEPRINT_HYBRID";
     confidence = clamp(
-      0.4 + (effectiveBlueprintCount + effectivePromptCount) * 0.05,
-      0.4,
-      0.85,
+      0.3 + (effectiveBlueprintCount + effectivePromptCount) * 0.06,
+      0.3,
+      0.8,
     );
   }
+  // One blueprint signal with dominant prompt signals → PROMPT (not HYBRID)
+  else if (effectivePromptCount >= 2 && effectiveBlueprintCount === 1) {
+    contentClass = "PROMPT";
+    confidence = 0.6;
+  }
   // Roughly equal → PROMPT_BLUEPRINT_HYBRID
-  else if (effectivePromptCount >= 1 && effectiveBlueprintCount >= 1) {
+  else if (effectivePromptCount >= 1 && effectiveBlueprintCount >= 2) {
     contentClass = "PROMPT_BLUEPRINT_HYBRID";
     confidence = clamp(
       0.3 + (effectiveBlueprintCount + effectivePromptCount) * 0.08,
@@ -364,11 +533,24 @@ export function classifyContent(content: string): BlueprintDetectOutput {
   }
 
   // Detect blueprint sub-type
-  const blueprintType = detectBlueprintType(trimmed, contentClass);
+  const blueprintType = detectBlueprintTypeRanked(trimmed, contentClass);
 
   // Detect contamination
   const { contaminationStatus, contaminationSignals } =
     detectBlueprintContamination(trimmed);
+  const tags = detectClassificationTags(
+    trimmed,
+    promptSignals,
+    blueprintSignals,
+    contaminationSignals,
+  );
+  const reasons = buildClassificationReasons(
+    contentClass,
+    promptSignals,
+    blueprintSignals,
+    contaminationSignals,
+    trimmed,
+  );
 
   return {
     content_class: contentClass,
@@ -378,6 +560,8 @@ export function classifyContent(content: string): BlueprintDetectOutput {
         : null,
     contamination_status: contaminationStatus,
     confidence: Math.round(confidence * 100) / 100,
+    tags,
+    reasons,
     prompt_signals: promptSignals,
     blueprint_signals: blueprintSignals,
     contamination_signals: contaminationSignals,
@@ -442,6 +626,116 @@ function detectBlueprintType(
   }
 
   return "generic_blueprint";
+}
+
+function detectBlueprintTypeRanked(
+  content: string,
+  contentClass: ContentClass,
+): BlueprintType | null {
+  if (
+    contentClass !== "BLUEPRINT" &&
+    contentClass !== "PROMPT_BLUEPRINT_HYBRID"
+  ) {
+    return null;
+  }
+
+  const checks: {
+    type: BlueprintType;
+    patterns: RegExp[];
+    priority: number;
+  }[] = [
+    {
+      type: "architecture_blueprint",
+      patterns: [
+        /(?:architecture|architektur|system\s*design|layered\s*architecture)/i,
+        /(?:component\s*(?:diagram|architecture)|komponenten\s*(?:diagramm|architektur))/i,
+        /(?:data\s*flow|datenfluss|entity\s*relationship|ER\s*diagram|microservice|monolith)/i,
+      ],
+      priority: 2,
+    },
+    {
+      type: "security_blueprint",
+      patterns: [
+        /(?:security|sicherheit|threat\s*model|bedrohungs\s*modell)/i,
+        /(?:vulnerability|schwachstelle|penetration\s*test|CVE)/i,
+        /(?:authorization|OAuth[^A-Za-z]|JWT)/i,
+      ],
+      priority: 2,
+    },
+    {
+      type: "compliance_blueprint",
+      patterns: [
+        /(?:compliance|GDPR|DSGVO|HIPAA|SOX|ISO\s*27001)/i,
+        /(?:audit|prüfung|privacy|datenschutz|data\s*protection)/i,
+        /(?:consent|einwilligung|retention|aufbewahrung)/i,
+      ],
+      priority: 1,
+    },
+    {
+      type: "deployment_blueprint",
+      patterns: [
+        /(?:deployment|bereitstellung|infrastructure|infrastruktur)/i,
+        /(?:kubernetes|docker|container|cloud|AWS|Azure|GCP)/i,
+        /(?:CI\/CD|pipeline|release\s*(?:plan|process)|monitoring|logging)/i,
+      ],
+      priority: 1,
+    },
+    {
+      type: "agent_workflow_blueprint",
+      patterns: [
+        /(?:agent\s*(?:workflow|role|responsibility)|subagent|delegation|orchestrator)/i,
+        /(?:issue.*orchestrator|review.*agent|security.*agent|research.*agent|playwright.*agent)/i,
+        /(?:verification\s*contract|human\s*approval|red\s*tests|review\s*scope|evidence)/i,
+      ],
+      priority: 3,
+    },
+    {
+      type: "implementation_blueprint",
+      patterns: [
+        /(?:implementation\s*plan|umsetzungsplan|task\s*breakdown|work\s*breakdown)/i,
+        /(?:phase\s*[1-9]|sprint\s*[1-9]|milestone|MVP|roadmap)/i,
+      ],
+      priority: 1,
+    },
+    {
+      type: "product_blueprint",
+      patterns: [
+        /(?:product\s*(?:vision|roadmap|strategy)|produkt\s*(?:vision|strategie))/i,
+        /(?:feature\s*(?:plan|list|roadmap)|user\s*story|persona|market\s*(?:analysis|fit))/i,
+      ],
+      priority: 1,
+    },
+  ];
+
+  let bestType: BlueprintType | null = null;
+  let bestScore = 0;
+  let bestPriority = -1;
+
+  for (const check of checks) {
+    let score = 0;
+    for (const pattern of check.patterns) {
+      pattern.lastIndex = 0;
+      if (pattern.test(content)) score++;
+    }
+
+    if (
+      contentClass === "PROMPT_BLUEPRINT_HYBRID" &&
+      check.type === "agent_workflow_blueprint"
+    ) {
+      score += 1;
+    }
+
+    if (
+      score > bestScore ||
+      (score === bestScore && check.priority > bestPriority)
+    ) {
+      bestType = check.type;
+      bestScore = score;
+      bestPriority = check.priority;
+    }
+  }
+
+  return bestScore > 0 ? bestType : detectBlueprintType(content, contentClass);
 }
 
 // =============================================================================
@@ -745,6 +1039,10 @@ const BLUEPRINT_CRITERIA: BlueprintCritDef[] = [
         /^#+\s*(?:tests?|testing|testen|test\s*(?:strategy|plan|approach)|QA|quality\s*assurance)/im.test(
           c,
         );
+      const hasVerificationHeading =
+        /^#+\s*(?:verification\s*contract|verifikation|acceptance\s*criteria)/im.test(
+          c,
+        );
       const hasTestTypes =
         /(?:unit\s*tests?|integration\s*tests?|e2e|end.to.end|regression\s*tests?|visual\s*tests?|playwright|vitest|jest|cargo\s*test)/i.test(
           c,
@@ -753,9 +1051,10 @@ const BLUEPRINT_CRITERIA: BlueprintCritDef[] = [
         /(?:red\s*tests?|failing\s*tests?|tests?\s*(?:must|should)\s*(?:fail|pass)|before.*green|before.*pass)/i.test(
           c,
         );
-      if (hasTestSection && hasTestTypes && hasRedTests) return 2;
-      if (hasTestSection && hasTestTypes) return 1;
-      if (hasTestSection) return 1;
+      const hasTestFrame = hasTestSection || hasVerificationHeading;
+      if (hasTestFrame && hasTestTypes && hasRedTests) return 2;
+      if (hasTestFrame && hasTestTypes) return 1;
+      if (hasTestFrame) return 1;
       return 0;
     },
   },
@@ -1042,11 +1341,18 @@ export function evaluateBlueprint(
     dimensions.length > 0
       ? clamp(0.2 + (nonZeroCount / dimensions.length) * 0.8, 0.2, 1.0)
       : 0.3;
+  const classificationReasons = appendLowConfidenceReason(
+    classification.reasons ?? [],
+    dimensions,
+    confidence,
+  );
 
   return {
     content_class: classification.content_class,
     blueprint_type: classification.blueprint_type,
     contamination_status: classification.contamination_status,
+    classification_tags: classification.tags ?? [],
+    classification_reasons: classificationReasons,
     goal_clarity_score: goalClarityScore,
     scope_sharpness_score: scopeSharpnessScore,
     architecture_score: architectureScore,
@@ -1085,6 +1391,8 @@ function buildEmptyEvaluation(
     content_class: classification.content_class,
     blueprint_type: null,
     contamination_status: "CLEAN",
+    classification_tags: classification.tags ?? [],
+    classification_reasons: classification.reasons ?? [],
     goal_clarity_score: 0,
     scope_sharpness_score: 0,
     architecture_score: 0,

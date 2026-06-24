@@ -172,7 +172,7 @@ describe("AnalysisPanel — Blueprint Evaluation Integration", () => {
     render(<AnalysisPanel />);
 
     // Blueprint evaluation headings should be visible
-    expect(screen.getByText("Overall Blueprint Score")).toBeInTheDocument();
+    expect(screen.getByText("Blueprint Quality Score")).toBeInTheDocument();
     // Overall score rendered as circular gauge value
     expect(screen.getByText("68")).toBeInTheDocument();
     // Blueprint type badge (may appear multiple times — badge + dimension label)
@@ -193,7 +193,7 @@ describe("AnalysisPanel — Blueprint Evaluation Integration", () => {
 
     // Blueprint evaluation heading must NOT be present
     expect(
-      screen.queryByText("Overall Blueprint Score"),
+      screen.queryByText("Blueprint Quality Score"),
     ).not.toBeInTheDocument();
     // But prompt analysis IS shown (prompt has evaluation)
     expect(screen.getByText("Qualitätsanalyse")).toBeInTheDocument();
@@ -213,7 +213,7 @@ describe("AnalysisPanel — Blueprint Evaluation Integration", () => {
     render(<AnalysisPanel />);
 
     expect(
-      screen.queryByText("Overall Blueprint Score"),
+      screen.queryByText("Blueprint Quality Score"),
     ).not.toBeInTheDocument();
     expect(screen.getByText("Qualitätsanalyse")).toBeInTheDocument();
   });
@@ -229,7 +229,7 @@ describe("AnalysisPanel — Blueprint Evaluation Integration", () => {
     render(<AnalysisPanel />);
 
     // Both sections should be visible simultaneously
-    expect(screen.getByText("Overall Blueprint Score")).toBeInTheDocument();
+    expect(screen.getByText("Blueprint Quality Score")).toBeInTheDocument();
     expect(screen.getByText("Qualitätsanalyse")).toBeInTheDocument();
     expect(screen.getByText("Gesamtwertung")).toBeInTheDocument();
   });
@@ -283,7 +283,7 @@ describe("AnalysisPanel — Blueprint Evaluation Integration", () => {
     const { container } = render(<AnalysisPanel />);
     expect(container).toBeTruthy();
     // Blueprint evaluation section renders (Strengths section hidden when 0 items)
-    expect(screen.getByText("Overall Blueprint Score")).toBeInTheDocument();
+    expect(screen.getByText("Blueprint Quality Score")).toBeInTheDocument();
   });
 
   // --- RT-008: Negative/NaN/out-of-range scores don't crash ---
@@ -300,7 +300,7 @@ describe("AnalysisPanel — Blueprint Evaluation Integration", () => {
     expect(container).toBeTruthy();
     // CircularScore clamps to 0-100, so score 0 should be displayed
     // The panel renders, even with edge case scores
-    expect(screen.getByText("Overall Blueprint Score")).toBeInTheDocument();
+    expect(screen.getByText("Blueprint Quality Score")).toBeInTheDocument();
   });
 
   // --- RT-009: Suggested improvements with priority ---
@@ -344,7 +344,7 @@ describe("AnalysisPanel — Blueprint Evaluation Integration", () => {
     expect(screen.getByText("Empfehlungen")).toBeInTheDocument();
     // Blueprint NOT present
     expect(
-      screen.queryByText("Overall Blueprint Score"),
+      screen.queryByText("Blueprint Quality Score"),
     ).not.toBeInTheDocument();
   });
 
@@ -364,7 +364,7 @@ describe("AnalysisPanel — Blueprint Evaluation Integration", () => {
     render(<AnalysisPanel />);
 
     // Blueprint evaluation IS shown (guard now allows blueprintEval to pass through)
-    expect(screen.getByText("Overall Blueprint Score")).toBeInTheDocument();
+    expect(screen.getByText("Blueprint Quality Score")).toBeInTheDocument();
   });
 
   // --- RT-013: Confidence edge case — 100% ---

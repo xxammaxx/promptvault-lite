@@ -606,3 +606,60 @@ Data Scientist`;
     });
   });
 });
+
+// =============================================================================
+// Regression: Legacy context window detection (second follow-up)
+// =============================================================================
+
+describe("Legacy context window pattern handling", () => {
+  const PROMPT_WITH_LEGACY_CONTEXT = `# Agent Prompt
+
+## Rolle
+Du bist Senior Engineer.
+
+## Kontextfenster-Empfehlung
+
+Starte diesen Auftrag in einem frischen/leeren Kontextfenster.
+
+## Aufgabe
+Analysiere den Code.`;
+
+  it("aggressive mode replaces legacy Kontextfenster-Empfehlung with Context Boundary", () => {
+    const result = optimizePrompt(PROMPT_WITH_LEGACY_CONTEXT, "aggressive");
+
+    // Should NOT contain the legacy pattern
+    expect(result.optimized).not.toMatch(/Kontextfenster-Empfehlung/i);
+    expect(result.optimized).not.toMatch(/frischen\/leeren Kontextfenster/i);
+
+    // Should contain the new Context Boundary section
+    expect(result.optimized).toContain("Context Boundary / Reality Refresh");
+    expect(result.optimized).toContain("STALE_UNTIL_VALIDATED");
+
+    // Should warn about legacy pattern
+    expect(result.warnings.some((w) => /Legacy/i.test(w))).toBe(true);
+  });
+
+  it("aggressive mode does not add legacy context to a clean prompt", () => {
+    const cleanPrompt =
+      "## Rolle\n\nDu bist Assistant.\n\n## Aufgabe\n\nHilf mir.";
+    const result = optimizePrompt(cleanPrompt, "aggressive");
+
+    // The optimized output should still contain the new scaffold sections
+    expect(result.optimized).toContain("## Agenten-Workflow");
+    expect(result.optimized).toContain("## Verification Contract");
+
+    // But should NOT contain the legacy pattern
+    expect(result.optimized).not.toMatch(/Kontextfenster-Empfehlung/i);
+    expect(result.optimized).not.toMatch(/frischen\/leeren Kontextfenster/i);
+  });
+
+  it("balanced mode preserves original sections without adding legacy context", () => {
+    const result = optimizePrompt(PROMPT_WITH_LEGACY_CONTEXT, "balanced");
+
+    // Balanced mode does NOT transform — it preserves
+    expect(result.optimized).toMatch(/Kontextfenster-Empfehlung/i);
+    // But still adds useful scaffolding if structural
+    expect(result.optimized).toContain("## Rolle");
+    expect(result.optimized).toContain("## Aufgabe");
+  });
+});
