@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const appCss = readFileSync(resolve(process.cwd(), "src/App.css"), "utf8");
+const appCss = readFileSync(
+  resolve(process.cwd(), "src/App.css"),
+  "utf8",
+).replace(/\r\n/g, "\n");
 const appTsx = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
 
 function readBlock(selector: string): string {
