@@ -1,13 +1,15 @@
 # Project Status — PromptVault Lite
 
-**Last updated:** 2026-06-24
+**Last updated:** 2026-07-02
 **Current release:** v1.7.1 (public stable)
 **Branch:** master
+**Master since v1.7.1:** PR #185 (UI/Optimizer/Classification/Layout Fixes) merged 2026-06-24, PR #186 (Settings Modal, closes #63) merged 2026-07-02
 
 **Blueprint Detection merged:** 2026-06-19 (PR #148)
 **Scanner extensions:** `.md`, `.markdown`, `.txt` (1 MiB shared size limit, merged 2026-06-21 via PR #168, #170, #172)
 **CodeRabbit:** Removed from active repo (2026-06-19). Zero repo-level references found.
 **Real Corpus Pilot:** Completed 2026-06-21 (Issue #166 — closed 2026-06-23). Pilot scan finished; 117/117 files scanned successfully. Corpus review finalized: 114 ALLOW_IMPORT + 3 ALLOW_IMPORT_REDACTED + 1 EXCLUDE. Open manual reviews: 0.
+**Five-File Sanitized Evidence:** Playwright smoke test of 5 `.md` files from local owner prompt folder (Issue #187, 2026-07-02). Validated: 0 console errors, 0 external network calls, 5/5 analysis views rendered. Not a full 188-file corpus validation.
 
 ---
 
@@ -19,41 +21,44 @@ All 10 local CI gates pass. Master is stable and functional. Remote-CI is `REMOT
 
 ## Implemented
 
-| Feature                                                | Evidence                                                     | Since  |
-| ------------------------------------------------------ | ------------------------------------------------------------ | ------ |
-| Local Prompt Archive (recursive .md scan)              | Rust tests: `scanner/file_scanner`                           | v1.0   |
-| YAML Frontmatter Parser                                | Rust tests: `parser/frontmatter`                             | v1.0   |
-| Quality Analysis (10 criteria)                         | Rust tests: `analysis/quality`                               | v1.0   |
-| Hygiene Analysis (18 artifact categories)              | Rust tests: `analysis/hygiene`                               | v1.6.0 |
-| Prompt Optimizer (conservative/balanced/aggressive)    | Frontend tests: `promptOptimizer.test.ts`                    | v1.6.0 |
-| Dark Mode (light/dark/auto)                            | Frontend tests: `ThemeToggle.test.tsx`                       | v1.6.0 |
-| Resizable Explorer                                     | Frontend tests: `FileTree.test.tsx`                          | v1.6.0 |
-| Export (JSON, Markdown, ZIP)                           | Rust tests: `commands/export`                                | v1.0   |
-| Typed Local Action Layer (13 actions)                  | Frontend tests: `red-tests.test.ts`                          | v1.6.0 |
-| Blueprint Detection & Classification                   | Frontend tests: `blueprintDetection.test.ts`                 | v1.7.0 |
-| Blueprint Quality Evaluation (10 dimensions)           | Frontend tests: `blueprintDetection.test.ts`                 | v1.7.0 |
-| Blueprint Optimization (3 modes)                       | Frontend tests: `blueprintDetection.test.ts`                 | v1.7.0 |
-| Blueprint Contamination Detection                      | Frontend tests: `blueprintDetection.test.ts`                 | v1.7.0 |
-| Favorites Backend (SQLite persistence)                 | Rust integration tests                                       | v1.5.0 |
-| Score Filter                                           | Frontend store logic                                         | v1.5.0 |
-| Tauri Desktop App (1400×900 window)                    | Tauri config, local verification                             | v1.0   |
-| Windows Path Normalization                             | Rust tests: `scanner/file_scanner`                           | v1.6.0 |
-| Symlink Containment                                    | Rust tests: `scanner/file_scanner`                           | v1.6.0 |
-| Path-Traversal Protection                              | Rust tests: export commands                                  | v1.4.0 |
-| File Watcher (500ms debounce)                          | Rust: `scanner/file_scanner`                                 | v1.0   |
-| MIT License                                            | LICENSE file, SPDX                                           | v1.6.0 |
-| CI Pipeline definition (frontend + rust + secret scan) | .github/workflows/ci.yml (currently infra-blocked, see #154) | v1.6.0 |
+| Feature                                                | Evidence                                                            | Since  |
+| ------------------------------------------------------ | ------------------------------------------------------------------- | ------ |
+| Local Prompt Archive (recursive .md scan)              | Rust tests: `scanner/file_scanner`                                  | v1.0   |
+| YAML Frontmatter Parser                                | Rust tests: `parser/frontmatter`                                    | v1.0   |
+| Quality Analysis (10 criteria)                         | Rust tests: `analysis/quality`                                      | v1.0   |
+| Hygiene Analysis (18 artifact categories)              | Rust tests: `analysis/hygiene`                                      | v1.6.0 |
+| Prompt Optimizer (conservative/balanced/aggressive)    | Frontend tests: `promptOptimizer.test.ts`                           | v1.6.0 |
+| Dark Mode (light/dark/auto)                            | Frontend tests: `ThemeToggle.test.tsx`                              | v1.6.0 |
+| Resizable Explorer                                     | Frontend tests: `FileTree.test.tsx`                                 | v1.6.0 |
+| Export (JSON, Markdown, ZIP)                           | Rust tests: `commands/export`                                       | v1.0   |
+| Typed Local Action Layer (13 actions)                  | Frontend tests: `red-tests.test.ts`                                 | v1.6.0 |
+| Blueprint Detection & Classification                   | Frontend tests: `blueprintDetection.test.ts`                        | v1.7.0 |
+| Blueprint Quality Evaluation (10 dimensions)           | Frontend tests: `blueprintDetection.test.ts`                        | v1.7.0 |
+| Blueprint Optimization (3 modes)                       | Frontend tests: `blueprintDetection.test.ts`                        | v1.7.0 |
+| Blueprint Contamination Detection                      | Frontend tests: `blueprintDetection.test.ts`                        | v1.7.0 |
+| Favorites Backend (SQLite persistence)                 | Rust integration tests                                              | v1.5.0 |
+| Score Filter                                           | Frontend store logic                                                | v1.5.0 |
+| Tauri Desktop App (1400×900 window)                    | Tauri config, local verification                                    | v1.0   |
+| Windows Path Normalization                             | Rust tests: `scanner/file_scanner`                                  | v1.6.0 |
+| Symlink Containment                                    | Rust tests: `scanner/file_scanner`                                  | v1.6.0 |
+| Path-Traversal Protection                              | Rust tests: export commands                                         | v1.4.0 |
+| File Watcher (500ms debounce)                          | Rust: `scanner/file_scanner`                                        | v1.0   |
+| MIT License                                            | LICENSE file, SPDX                                                  | v1.6.0 |
+| CI Pipeline definition (frontend + rust + secret scan) | .github/workflows/ci.yml (currently infra-blocked, see #154)        | v1.6.0 |
+| UI/Optimizer/Classification/Layout Fixes               | PR #185 merged 2026-06-24, frontend tests PASS                      | master |
+| Settings Modal (theme, export format, dev mode, reset) | Frontend tests: `SettingsModal.test.tsx`, PR #186 merged 2026-07-02 | master |
 
 ---
 
-## Partially Implemented
+## On Master (Not Yet in v1.7.1 Release)
 
-| Feature                                     | Status                                                |
-| ------------------------------------------- | ----------------------------------------------------- |
-| NAS-Mounted Markdown Folder Ingestion       | ✅ Merged (PR #145, 2026-06-20) — now on master       |
-| Scanner Extension Support (.txt, .markdown) | ✅ Merged (PR #168, #170, 2026-06-21) — now on master |
-| Shared File Size Limit (1 MiB)              | ✅ Merged (PR #172, 2026-06-21) — now on master       |
-| Settings Modal                              | Planned (#63), not started                            |
+| Feature                                     | Status                                                             |
+| ------------------------------------------- | ------------------------------------------------------------------ |
+| NAS-Mounted Markdown Folder Ingestion       | ✅ Merged (PR #145, 2026-06-20)                                    |
+| Scanner Extension Support (.txt, .markdown) | ✅ Merged (PR #168, #170, 2026-06-21)                              |
+| Shared File Size Limit (1 MiB)              | ✅ Merged (PR #172, 2026-06-21)                                    |
+| UI/Optimizer/Classification/Layout Fixes    | ✅ Merged (PR #185, 2026-06-24)                                    |
+| Settings Modal (#63)                        | ✅ Merged (PR #186, 2026-07-02) — on master, not in v1.7.1 release |
 
 ---
 
@@ -82,40 +87,41 @@ All 10 local CI gates pass. Master is stable and functional. Remote-CI is `REMOT
 
 ---
 
-## Test Summary (2026-06-22)
+## Test Summary (2026-07-02)
 
-| Suite                             | Tests | Result                          |
-| --------------------------------- | ----- | ------------------------------- |
-| Frontend (Vitest)                 | 650   | PASS (22 files)                 |
-| Rust Unit (lib)                   | 134   | PASS (+1 ignored)               |
-| Rust Integration (command_errors) | 17    | PASS                            |
-| ESLint                            | —     | PASS (0 errors, 0 warnings)     |
-| TypeScript                        | —     | PASS (tsc --noEmit, 0 errors)   |
-| cargo fmt                         | —     | PASS                            |
-| cargo clippy                      | —     | PASS (0 warnings)               |
-| cargo build                       | —     | PASS                            |
-| pnpm build                        | —     | PASS                            |
-| mkdocs build --strict             | —     | PASS                            |
-| Local CI (10 gates, master)       | 10/10 | PASS (local-CI-first, see #154) |
-| Remote CI (GitHub Actions)        | —     | REMOTE_CI_INFRA_BLOCKED         |
+| Suite                             | Tests | Result                                           |
+| --------------------------------- | ----- | ------------------------------------------------ |
+| Frontend (Vitest)                 | 634   | PASS (26 files)                                  |
+| Rust Unit (lib)                   | 134   | PASS (+1 ignored)                                |
+| Rust Integration (command_errors) | 17    | PASS                                             |
+| Rust Total                        | 151   | PASS (1 ignored)                                 |
+| ESLint                            | —     | PASS (0 errors, 0 warnings)                      |
+| TypeScript                        | —     | PASS (tsc --noEmit, 0 errors)                    |
+| cargo fmt                         | —     | PASS                                             |
+| cargo clippy                      | —     | PASS (0 warnings)                                |
+| cargo build                       | —     | PASS                                             |
+| pnpm build                        | —     | PASS                                             |
+| mkdocs build --strict             | —     | TOOL_MISSING (mkdocs not installed on this host) |
+| Local CI (10 gates, master)       | 9/10  | PASS (mkdocs excluded — tool gap)                |
+| Remote CI (GitHub Actions)        | —     | REMOTE_CI_INFRA_BLOCKED                          |
 
 ---
 
-## OpenCode Agent Runtime (2026-06-22)
+## OpenCode Agent Runtime (2026-07-02)
 
-| Check      | Result                                  |
-| ---------- | --------------------------------------- |
-| Version    | 1.15.0                                  |
-| Provider   | DeepSeek (deepseek-v4-pro)              |
-| Agent Mode | issue-orchestrator                      |
-| gh CLI     | 2.92.0                                  |
-| OS/Shell   | Windows 10 (10.0.19045), PowerShell 5.1 |
-| Node       | v24.14.0                                |
-| pnpm       | 11.5.2                                  |
-| Git        | 2.47.0.windows.1                        |
-| Rust       | 1.96.0                                  |
+| Check      | Result                     |
+| ---------- | -------------------------- |
+| Version    | 1.15.0                     |
+| Provider   | DeepSeek (deepseek-v4-pro) |
+| Agent Mode | issue-orchestrator         |
+| gh CLI     | 2.45.0                     |
+| OS/Shell   | Linux (Ubuntu), bash       |
+| Node       | v22.22.0                   |
+| pnpm       | 11.1.0                     |
+| Git        | 2.43.0                     |
+| Rust       | 1.95.0                     |
 
-> Previous run (2026-06-19) used deepseek-v4-pro / issue-orchestrator. Consistently OpenCode 1.15.0.
+> This run: Linux host with OpenCode 1.15.0 / deepseek-v4-pro. Previous run (2026-06-22) was on Windows 10 / PowerShell 5.1.
 
 ---
 
@@ -126,4 +132,6 @@ All 10 local CI gates pass. Master is stable and functional. Remote-CI is `REMOT
 3. **llms.txt:** ✅ CLOSED — Regenerated as part of v1.7.0 finalization (Issue #164)
 4. **Defer after release:** Web/LAN Backend Adapter MVP (Issues #97–#142)
 5. **Backlog Cleanup:** P3 documentation issues (#40, #42, #43)
-6. **Settings Modal:** Implement post-release (#63)
+6. **Settings Modal (#63):** ✅ MERGED (PR #186, 2026-07-02) — on master, not in v1.7.1 release
+7. **Issue #187 — Five-File Playwright Evidence:** ✅ Validated (2026-07-02) — sanitized evidence on GitHub. Next: full 188-file corpus run.
+8. **Known Gaps:** Classification labels missing for `agent_prompt_candidate`, score labels empty in web mode, Tauri-specific analysis not fully tested in web mode, mkdocs not installed on this host.
