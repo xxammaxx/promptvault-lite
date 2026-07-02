@@ -3,9 +3,11 @@
 > Living Software Portfolio. Updated with every significant agent run.
 > No marketing claims — only evidence-backed facts.
 
-**Last evidence run:** 2026-06-24 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator, v1.7.1 Docs & Installer Status Reconciliation)
+**Last evidence run:** 2026-07-02 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator, Living Truth Mirror — Issue #187 validation)
 **Blueprint detection run:** 2026-06-19 (OpenCode 1.15.0)
 **Scanner extension run:** 2026-06-21 (PR #168, #170, #172 merged to master)
+**Settings Modal merge:** 2026-07-02 (PR #186, closes #63 — on master, not in v1.7.1 release)
+**UI/Layout/Optimizer fixes:** 2026-06-24 (PR #185 merged to master)
 **CodeRabbit removal run:** 2026-06-19 — confirmed: zero CodeRabbit files/references in repo
 
 ---
@@ -39,17 +41,44 @@
 
 ## New Capabilities Since v1.6.0
 
-| Capability                                     | PR/Issue | Status                                                 |
-| ---------------------------------------------- | -------- | ------------------------------------------------------ |
-| NAS-mounted markdown folder scanning           | #145     | ✅ Merged (2026-06-20)                                 |
-| Optimizer placeholder hardening                | #147     | ✅ Merged (2026-06-20)                                 |
-| Blueprint detection, evaluation & optimization | #148     | ✅ Merged (2026-06-19)                                 |
-| Native .txt prompt ingestion                   | #168     | ✅ Merged (2026-06-21)                                 |
-| Centralized scanner extension handling         | #170     | ✅ Merged (2026-06-21)                                 |
-| Shared file size limit (1 MiB)                 | #172     | ✅ Merged (2026-06-21)                                 |
-| Real prompt corpus pilot (Z-drive)             | #166     | ✅ Completed; corpus review finalized (0 open reviews) |
-| Docs-as-Code MkDocs platform                   | #162     | ✅ Merged (2026-06-21)                                 |
-| Historical evidence archive                    | #163     | ✅ Merged (2026-06-21)                                 |
+| Capability                                      | PR/Issue | Status                                                 |
+| ----------------------------------------------- | -------- | ------------------------------------------------------ |
+| NAS-mounted markdown folder scanning            | #145     | ✅ Merged (2026-06-20)                                 |
+| Optimizer placeholder hardening                 | #147     | ✅ Merged (2026-06-20)                                 |
+| Blueprint detection, evaluation & optimization  | #148     | ✅ Merged (2026-06-19)                                 |
+| Native .txt prompt ingestion                    | #168     | ✅ Merged (2026-06-21)                                 |
+| Centralized scanner extension handling          | #170     | ✅ Merged (2026-06-21)                                 |
+| Shared file size limit (1 MiB)                  | #172     | ✅ Merged (2026-06-21)                                 |
+| Real prompt corpus pilot (Z-drive)              | #166     | ✅ Completed; corpus review finalized (0 open reviews) |
+| Docs-as-Code MkDocs platform                    | #162     | ✅ Merged (2026-06-21)                                 |
+| Historical evidence archive                     | #163     | ✅ Merged (2026-06-21)                                 |
+| UI/Optimizer/Classification/Layout fixes        | #185     | ✅ Merged (2026-06-24) — on master, not in v1.7.1      |
+| Settings Modal (theme, export, dev mode, reset) | #186     | ✅ Merged (2026-07-02) — on master, closes #63         |
+| Five-file Playwright evidence (sanitized)       | #187     | ✅ Validated (2026-07-02) — GitHub-visible, no prompts |
+
+---
+
+## Issue #187 — Five-File Sanitized Playwright Evidence
+
+**Status:** FIVE_MD_EVIDENCE_VALIDATED_AFTER_TEST_FIX_GITHUB_VISIBLE
+
+On 2026-07-02, a Playwright smoke test was performed using 5 `.md` files from the local owner prompt folder. Results were sanitized and posted to GitHub Issue #187.
+
+| Check                         | Result                       |
+| ----------------------------- | ---------------------------- |
+| App shell loads               | ✅                           |
+| 5/5 files visible in Explorer | ✅                           |
+| 5/5 detail panels visible     | ✅                           |
+| Classification labels visible | ⚠️ 3/5 show label, 2/5 empty |
+| Analysis/reasons visible      | ✅ 4/5                       |
+| Optimizer tested on 2 files   | ✅                           |
+| Settings modal opens          | ✅                           |
+| Console errors                | 0 (clean)                    |
+| Network outside localhost     | 0 (clean)                    |
+
+**Important:** This is a five-file smoke test — it does NOT prove full 188-file corpus quality. The full corpus run remains pending. Classification label gaps noted for `agent_prompt_candidate` category; score labels empty across all files in this run.
+
+**Safety:** No prompt contents, private paths, real file names, or screenshots were published. Only sanitized aggregate results (safe IDs, buckets, sizes, signal counts) are visible on GitHub.
 
 ---
 
@@ -123,12 +152,15 @@
 
 - **Done:** Corpus pilot scan completed (Issue #166 closed 2026-06-23). Review finalized (0 open reviews): 114 ALLOW_IMPORT + 3 ALLOW_IMPORT_REDACTED + 1 EXCLUDE. Import execution deferred.
 - **Done:** CANONICAL_PROMPT_STANDARD.md reviewed and archived to `.opencode/history/issue-165/` (Issue #165 closed 2026-06-23).
+- **Done:** Settings Modal merged (PR #186, 2026-07-02) — on master, not in v1.7.1 release.
+- **Done:** Five-file Playwright evidence validated (Issue #187, 2026-07-02) — sanitized, GitHub-visible.
 - **Deferred:** Web/LAN Backend Adapter MVP (Issues #97–#142), P3 documentation (#40, #42, #43)
-- **Governance:** Post-release health check complete (2026-06-23 OpenCode 1.15.0 run)
+- **Pending:** Full 188-file corpus classification/optimizer validation.
+- **Pending:** Investigate classification label gap for `agent_prompt_candidate`. Investigate score label display in web mode.
 
 ---
 
-## OpenCode Agent Runtime (2026-06-22)
+## OpenCode Agent Runtime (2026-07-02)
 
 | Check               | Result                                                                                                                                              |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -136,28 +168,28 @@
 | Provider            | DeepSeek (deepseek-v4-pro)                                                                                                                          |
 | Agent Mode          | issue-orchestrator                                                                                                                                  |
 | Available Subagents | review-agent, research-agent, compliance-agent, migration-agent, playwright-agent, architecture-agent, security-agent, documentation-agent, explore |
-| Skills loaded       | github-source-of-truth, spec-driven-development, audit-trail-enforcer                                                                               |
-| Working Tree        | master (as of 2026-06-22 finalization: clean, except untracked docs/CANONICAL_PROMPT_STANDARD.md)                                                   |
-| gh CLI              | 2.92.0 (available)                                                                                                                                  |
-| OS/Shell            | Windows 10, PowerShell 5.1                                                                                                                          |
-| Rust                | 1.94.0                                                                                                                                              |
-| Node                | v24.14.0                                                                                                                                            |
+| Skills loaded       | github-source-of-truth, spec-driven-development, audit-trail-enforcer, read-before-sketch                                                           |
+| Working Tree        | master (2026-07-02: clean)                                                                                                                          |
+| gh CLI              | 2.45.0 (available)                                                                                                                                  |
+| OS/Shell            | Linux (Ubuntu), bash                                                                                                                                |
+| Rust                | 1.95.0                                                                                                                                              |
+| Node                | v22.22.0                                                                                                                                            |
 
 ---
 
-## Gate Results (2026-06-22 Fresh Run)
+## Gate Results (2026-07-02 Fresh Run)
 
-| Gate                       | Command                       | Result                      |
-| -------------------------- | ----------------------------- | --------------------------- |
-| Frontend Tests             | `pnpm test`                   | 650/650 PASS (22 files)     |
-| ESLint                     | `pnpm lint`                   | PASS (0 errors, 0 warnings) |
-| TypeScript                 | `tsc --noEmit`                | PASS (0 errors)             |
-| Rust Unit Tests            | `cargo test --lib`            | 134/134 PASS (+1 ignored)   |
-| Rust Integration Tests     | `cargo test --test "*"`       | 17/17 PASS                  |
-| cargo fmt                  | `cargo fmt --check --all`     | PASS                        |
-| cargo clippy               | `cargo clippy -- -D warnings` | PASS (0 warnings)           |
-| Git diff check             | `git diff --check`            | PASS (no conflicts)         |
-| MkDocs build               | `mkdocs build --strict`       | PASS                        |
-| pnpm build                 | `pnpm build`                  | PASS                        |
-| Local CI (10 gates)        | —                             | 10/10 PASS                  |
-| Remote CI (GitHub Actions) | `gh run list`                 | REMOTE_CI_INFRA_BLOCKED     |
+| Gate                       | Command                       | Result                       |
+| -------------------------- | ----------------------------- | ---------------------------- |
+| Frontend Tests             | `pnpm test`                   | 634/634 PASS (26 files)      |
+| ESLint                     | `pnpm lint`                   | PASS (0 errors, 0 warnings)  |
+| TypeScript                 | `tsc --noEmit`                | PASS (0 errors)              |
+| Rust Unit Tests            | `cargo test --lib`            | 134/134 PASS (+1 ignored)    |
+| Rust Integration Tests     | `cargo test --test "*"`       | 17/17 PASS                   |
+| cargo fmt                  | `cargo fmt --check --all`     | PASS                         |
+| cargo clippy               | `cargo clippy -- -D warnings` | PASS (0 warnings)            |
+| Git diff check             | `git diff --check`            | PASS (no conflicts)          |
+| MkDocs build               | `mkdocs build --strict`       | TOOL_MISSING (not installed) |
+| pnpm build                 | `pnpm build`                  | PASS                         |
+| Local CI (9/10 gates)      | —                             | 9/10 PASS (mkdocs excluded)  |
+| Remote CI (GitHub Actions) | `gh run list`                 | REMOTE_CI_INFRA_BLOCKED      |

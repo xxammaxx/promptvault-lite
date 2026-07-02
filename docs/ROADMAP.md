@@ -1,7 +1,7 @@
 # Roadmap — PromptVault Lite
 
-**Last updated:** 2026-06-24
-**Current version:** v1.7.1 (master)
+**Last updated:** 2026-07-02
+**Current version:** v1.7.1 (master has additional features beyond v1.7.1 release)
 
 ---
 
@@ -19,6 +19,8 @@
 | ~~P0~~   | ~~MkDocs Docs-as-Code~~                 | PR #162  | ✅ Merged (2026-06-21)           |
 | ~~P0~~   | ~~Historical evidence archive~~         | PR #163  | ✅ Merged (2026-06-21)           |
 | ~~P0~~   | ~~AGENTS.md agent rules~~               | PR #160  | ✅ Merged (2026-06-20)           |
+| ~~P0~~   | ~~UI/Optimizer/Classification/Layout~~  | PR #185  | ✅ Merged (2026-06-24)           |
+| ~~P1~~   | ~~Settings Modal (#63)~~                | PR #186  | ✅ Merged (2026-07-02)           |
 
 ---
 
@@ -26,7 +28,7 @@
 
 | Priority | Task                                    | Issue | Status                                                           |
 | -------- | --------------------------------------- | ----- | ---------------------------------------------------------------- |
-| P1       | Settings Modal                          | #63   | Planned                                                          |
+| ~~P1~~   | ~~Settings Modal~~                      | #63   | ✅ Merged (PR #186, 2026-07-02) — on master, not in v1.7.1       |
 | P1       | Set GitHub repository topics & homepage | —     | [APPROVAL REQUIRED]                                              |
 | ~~P1~~   | ~~Create first native binary release~~  | —     | ✅ Done — v1.7.1 Windows x64 NSIS installer published (unsigned) |
 | P2       | Agentic Browser Repair Kit              | #71   | Planned                                                          |
@@ -42,7 +44,7 @@
 | P1       | Docker/LXC Web Backend Adapter MVP | #97–#142  | Deferred after release — large epic, no implementation yet |
 | P2       | Docker Deployment                  | #126–#128 | Deferred (part of Web/LAN MVP)                             |
 | P2       | Web-specific UI adjustments        | #124–#125 | Deferred (part of Web/LAN MVP)                             |
-| P2       | Settings Modal                     | #63       | Planned                                                    |
+| ~~P2~~   | ~~Settings Modal~~                 | #63       | ✅ Merged (PR #186, 2026-07-02)                            |
 | P2       | Agentic Browser Repair Kit         | #71       | Planned                                                    |
 | P2       | Prompt suggestions workflow        | #45       | Planned                                                    |
 

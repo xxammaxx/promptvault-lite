@@ -3,7 +3,7 @@
 > **Zweck:** Diese Datei bietet KI-Agenten und RAG-Systemen eine strukturierte Uebersicht
 > ueber das PromptVault Lite Projekt. Sie ist fuer maschinelles Lesen optimiert.
 > **Source of Truth:** GitHub Issues → `xxammaxx/promptvault-lite`
-> **Letzte Aktualisierung:** 2026-06-24
+> **Letzte Aktualisierung:** 2026-07-02
 
 ## Projektidentitaet
 
@@ -89,7 +89,9 @@ Filesystem (Vault) + SQLite (FTS5)
 - **Keine personenbezogenen Daten** in der Analyse (die App ist local-only)
 - **Secret-Erkennung** in der Hygieneanalyse (API-Keys, Tokens, Passwoerter, Private Keys)
 - **Alle Analysen sind deterministisch** — keine externen APIs, keine ML-Modelle
-- **Real Corpus Pilot:** 46 Dateien verbleiben unter manueller Owner-Review — 72 via Partial Approval freigegeben (Issue #166)
+- **Real Corpus Pilot:** Corpus review finalized: 114 ALLOW_IMPORT + 3 ALLOW_IMPORT_REDACTED + 1 EXCLUDE (0 open manual reviews). Import deferred. (Issue #166)
+- **Settings Modal:** ✅ Merged (PR #186, 2026-07-02) — auf master, nicht im v1.7.1 Release.
+- **Five-File Sanitized Evidence:** ✅ Validated (Issue #187, 2026-07-02) — 5 .md-Dateien Playwright-Smoke-Test. Kein voller 188-Dateien-Korpuslauf.
 
 ## Build und Test
 
@@ -97,7 +99,7 @@ Filesystem (Vault) + SQLite (FTS5)
 # Frontend
 pnpm install
 pnpm dev          # Dev-Server (Port 1420)
-pnpm test         # Vitest (650 Tests, 22 Dateien)
+pnpm test         # Vitest (634 Tests, 26 Dateien)
 pnpm lint         # ESLint (0 errors, 0 warnings)
 pnpm build        # TypeScript + Vite Build
 
@@ -111,28 +113,30 @@ cargo clippy --workspace --all-targets -- -D warnings
 mkdocs build --strict
 ```
 
-## Aktuelle Test-Ergebnisse (2026-06-22)
+## Aktuelle Test-Ergebnisse (2026-07-02)
 
 | Suite                             | Tests | Result |
 | --------------------------------- | ----- | ------ |
-| Frontend (Vitest)                 | 650   | PASS   |
+| Frontend (Vitest)                 | 634   | PASS   |
 | Rust Unit (lib)                   | 134   | PASS   |
 | Rust Integration (command_errors) | 17    | PASS   |
+| Rust Total                        | 151   | PASS   |
 | ESLint                            | 0     | PASS   |
 | TypeScript (tsc --noEmit)        | 0     | PASS   |
 | cargo fmt                         | —     | PASS   |
 | cargo clippy                      | 0     | PASS   |
-| mkdocs build --strict            | —     | PASS   |
+| mkdocs build --strict            | —     | TOOL_MISSING |
 | pnpm build                        | —     | PASS   |
 | Remote CI                         | —     | BLOCKED |
 
 ## Offene Punkte
 
 - Remote-CI ist `REMOTE_CI_INFRA_BLOCKED` (Issue #154) — Local-CI-first Policy
-- 46 Dateien verbleiben unter manueller Owner-Review — 72 via Partial Approval freigegeben (Issue #166)
-- `CANONICAL_PROMPT_STANDARD.md` wurde geprueft und nach `.opencode/history/issue-165/` archiviert (Issue #165 — geschlossen 2026-06-23)
+- Settings Modal (#63) — ✅ Merged (PR #186, 2026-07-02) — auf master, nicht im v1.7.1 Release
 - Web/LAN Backend Adapter MVP (Issues #97–#142) — deferred after release
-- Settings Modal (#63) — planned
+- Five-File Playwright Evidence (#187) — ✅ validated (sanitized, GitHub-visible). Full 188-file corpus run pending.
+- Classification-Label-Lücke bei `agent_prompt_candidate`, Score-Labels in Web-Mode teilweise leer
+- mkdocs lokal nicht installiert (Tool-Gap)
 - P3 Documentation Backlog (#40, #42, #43) — low priority
 
 ## Diataxis-Dokumentationsstruktur

@@ -37,6 +37,9 @@ It is built for people who collect, write and refine many prompts — especially
 - **Blueprint Intelligence**
   Detect prompt blueprints, hybrid prompt/spec files and architecture-like agent instructions.
 
+- **Settings**
+  Configure theme (light/dark/auto), export format preferences, developer mode, and keyboard shortcuts via the settings modal.
+
 - **Local Prompt Optimizer**
   Improve prompts in conservative, balanced or aggressive mode — fully local and deterministic.
 
@@ -116,6 +119,8 @@ PromptVault Lite is in a stable public release state.
 
 The real corpus pilot is complete, the Windows startup crash is fixed, the v1.7.1 installer is published, and active documentation now matches the current release state.
 
+Since v1.7.1, the `master` branch has received the Settings Modal (PR #186, closes #63) and UI/Optimizer/Classification/Layout fixes (PR #185). These are on master but not yet in a release build.
+
 Remaining known limitations:
 
 - unsigned Windows installer
@@ -131,5 +136,5 @@ Remaining known limitations:
 - Code signing for Windows installer
 - macOS `.dmg` build
 - Linux `.AppImage` build
-- Settings Modal
+- Create v1.7.2 release with Settings Modal and UI/layout fixes
 - optional Web/LAN/Docker deployment later
