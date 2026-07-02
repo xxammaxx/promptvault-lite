@@ -1,19 +1,62 @@
 // =============================================================================
-// SettingsPanel — Developer Mode Toggle and basic settings
+// SettingsPanel — Full Settings Modal (Issue #63)
 // =============================================================================
-// Minimal settings modal as specified in Issue #92.
-// Does NOT build a full settings modal (Issue #63 would need that).
-// Only exposes the Developer Mode toggle with clear UX.
+// Expanded from the Dev-Mode-only modal (Issue #92) to a full settings dialog
+// with Theme, Export, Layout, Keyboard Shortcuts, and Language sections.
 
+import { useEffect } from "react";
 import { useAppStore } from "@/stores/appStore";
+import type { Theme, ExportFormat } from "@/stores/appStore";
 
 interface SettingsPanelProps {
   onClose: () => void;
 }
 
+const THEME_LABELS: Record<Theme, string> = {
+  light: "Hell",
+  dark: "Dunkel",
+  auto: "Auto (System)",
+};
+
+const FORMAT_LABELS: Record<ExportFormat, string> = {
+  json: "JSON",
+  markdown: "Markdown",
+  csv: "CSV",
+};
+
+const FORMAT_DESCRIPTIONS: Record<ExportFormat, string> = {
+  json: "Strukturierte Daten mit Bewertungen und Hygiene-Ergebnissen",
+  markdown: "Formatierte Markdown-Datei mit Frontmatter-Metadaten",
+  csv: "Tabellarische Übersicht aller Prompts und Scores",
+};
+
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
+  const theme = useAppStore((s) => s.theme);
+  const setTheme = useAppStore((s) => s.setTheme);
+  const exportFormat = useAppStore((s) => s.exportFormat);
+  const setExportFormat = useAppStore((s) => s.setExportFormat);
   const devMode = useAppStore((s) => s.devMode);
   const toggleDevMode = useAppStore((s) => s.toggleDevMode);
+  const resetSettings = useAppStore((s) => s.resetSettings);
+
+  // Escape key closes the modal (Issue #63 AC)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  const isMac =
+    typeof navigator !== "undefined" &&
+    navigator.platform.toUpperCase().includes("MAC");
+  const modLabel = isMac ? "Cmd" : "Strg";
 
   return (
     <div
@@ -26,7 +69,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         className="modal-dialog"
         role="dialog"
         aria-modal="true"
-        aria-label="Settings"
+        aria-label="Einstellungen"
       >
         <div className="modal-header">
           <h2>Einstellungen</h2>
@@ -40,10 +83,133 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         </div>
 
         <div className="modal-body">
-          {/* Developer Mode */}
+          {/* ---- Theme ---- */}
+          <section className="settings-section">
+            <h3 className="settings-section-title">Theme</h3>
+            <fieldset className="settings-radio-group">
+              {(Object.keys(THEME_LABELS) as Theme[]).map((t) => (
+                <label
+                  key={t}
+                  className={`settings-radio-option ${theme === t ? "settings-radio-active" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="theme"
+                    value={t}
+                    checked={theme === t}
+                    onChange={() => {
+                      setTheme(t);
+                    }}
+                    aria-label={THEME_LABELS[t]}
+                  />
+                  <span className="settings-radio-info">
+                    <span className="settings-radio-label">
+                      {THEME_LABELS[t]}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+          </section>
+
+          {/* ---- Export ---- */}
+          <section className="settings-section">
+            <h3 className="settings-section-title">Export</h3>
+            <fieldset className="settings-radio-group">
+              {(Object.keys(FORMAT_LABELS) as ExportFormat[]).map((fmt) => (
+                <label
+                  key={fmt}
+                  className={`settings-radio-option ${exportFormat === fmt ? "settings-radio-active" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="exportFormat"
+                    value={fmt}
+                    checked={exportFormat === fmt}
+                    onChange={() => {
+                      setExportFormat(fmt);
+                    }}
+                    aria-label={FORMAT_LABELS[fmt]}
+                  />
+                  <span className="settings-radio-info">
+                    <span className="settings-radio-label">
+                      {FORMAT_LABELS[fmt]}
+                    </span>
+                    <span className="settings-radio-desc">
+                      {FORMAT_DESCRIPTIONS[fmt]}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+          </section>
+
+          {/* ---- Tastenkürzel ---- */}
+          <section className="settings-section">
+            <h3 className="settings-section-title">Tastenkürzel</h3>
+            <div className="settings-shortcuts">
+              <div className="settings-shortcut-row">
+                <span className="settings-shortcut-key">
+                  <kbd>{modLabel}</kbd> + <kbd>O</kbd>
+                </span>
+                <span className="settings-shortcut-desc">Ordner öffnen</span>
+              </div>
+              <div className="settings-shortcut-row">
+                <span className="settings-shortcut-key">
+                  <kbd>{modLabel}</kbd> + <kbd>E</kbd>
+                </span>
+                <span className="settings-shortcut-desc">Exportieren</span>
+              </div>
+              <div className="settings-shortcut-row">
+                <span className="settings-shortcut-key">
+                  <kbd>{modLabel}</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd>
+                </span>
+                <span className="settings-shortcut-desc">Alle analysieren</span>
+              </div>
+              <div className="settings-shortcut-row">
+                <span className="settings-shortcut-key">
+                  <kbd>{modLabel}</kbd> + <kbd>F</kbd>
+                </span>
+                <span className="settings-shortcut-desc">
+                  Suche fokussieren
+                </span>
+              </div>
+              <div className="settings-shortcut-row">
+                <span className="settings-shortcut-key">
+                  <kbd>Esc</kbd>
+                </span>
+                <span className="settings-shortcut-desc">
+                  Filter zurücksetzen
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* ---- Sprache (Platzhalter) ---- */}
+          <section className="settings-section">
+            <h3 className="settings-section-title">Sprache</h3>
+            <div className="settings-row">
+              <div className="settings-row-label">
+                <span className="settings-label-text">Anzeigesprache</span>
+                <span className="settings-label-hint">
+                  Internationalisierung (i18n) ist in Planung. Aktuell nur
+                  Deutsch verfügbar.
+                </span>
+              </div>
+              <select
+                className="settings-select"
+                disabled
+                aria-label="Sprache"
+                defaultValue="de"
+              >
+                <option value="de">Deutsch</option>
+              </select>
+            </div>
+          </section>
+
+          {/* ---- Developer Mode ---- */}
           <section className="settings-section">
             <h3 className="settings-section-title">Entwickler-Werkzeuge</h3>
-
             <div className="settings-row">
               <div className="settings-row-label">
                 <span className="settings-label-text">Developer Mode</span>
@@ -82,6 +248,15 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         </div>
 
         <div className="modal-footer">
+          <button
+            className="btn"
+            onClick={() => {
+              resetSettings();
+            }}
+            aria-label="Alle Einstellungen zurücksetzen"
+          >
+            Zurücksetzen
+          </button>
           <button
             className="btn btn-primary"
             onClick={onClose}

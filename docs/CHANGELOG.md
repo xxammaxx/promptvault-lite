@@ -6,6 +6,23 @@ version: 1.7.1
 
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Settings Modal** (Issue #63): Vollständiger Einstellungen-Dialog hinter dem ⚙️-Button in der Toolbar.
+  - Theme-Auswahl (Hell/Dunkel/Auto) mit sofortiger Übernahme
+  - Export-Format-Voreinstellung (JSON/Markdown/CSV) mit localStorage-Persistenz
+  - Tastenkürzel-Übersicht (readonly)
+  - Sprache-Platzhalter (i18n in Planung)
+  - Developer-Mode Toggle (aus Issue #92 übernommen)
+  - Alle Einstellungen zurücksetzen
+  - Schließen per X-Button, Escape-Taste oder Klick außerhalb
+
+### Fixed
+
+- Tauri Watcher-Cleanup-Fehler im Web-Modus (Vite Dev Server) behoben — `stopFileWatcher` wird nur im Tauri-Kontext aufgerufen.
+
 ## v1.7.1 — Windows Installer Startup Crash Fix
 
 **Datum:** 2026-06-24

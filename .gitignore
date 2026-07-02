@@ -58,3 +58,6 @@ __pycache__/
 
 # Local Playwright/MCP runtime artifacts
 .playwright-mcp/
+
+# Local test evidence (screenshots, reports with private paths/content)
+evidence/

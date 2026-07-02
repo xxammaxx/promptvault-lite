@@ -71,6 +71,33 @@ function saveThemeToStorage(theme: Theme): void {
   }
 }
 
+// --- Export Format Types (Issue #63) ---
+
+export type ExportFormat = "json" | "markdown" | "csv";
+
+const EXPORT_FORMAT_KEY = "promptvault.settings.exportFormat";
+const VALID_EXPORT_FORMATS: Set<string> = new Set(["json", "markdown", "csv"]);
+
+function getExportFormatFromStorage(): ExportFormat {
+  try {
+    const stored = localStorage.getItem(EXPORT_FORMAT_KEY);
+    if (stored && VALID_EXPORT_FORMATS.has(stored)) {
+      return stored as ExportFormat;
+    }
+  } catch {
+    // localStorage not available
+  }
+  return "json";
+}
+
+function saveExportFormatToStorage(format: ExportFormat): void {
+  try {
+    localStorage.setItem(EXPORT_FORMAT_KEY, format);
+  } catch {
+    // silent fail
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Path Normalization Helpers (fix/windows-path-filetree-root)
 // ---------------------------------------------------------------------------
@@ -196,6 +223,9 @@ interface AppState {
   // Theme
   theme: Theme;
 
+  // Export settings (Issue #63)
+  exportFormat: ExportFormat;
+
   // Dev Mode
   devMode: boolean;
 
@@ -235,9 +265,16 @@ interface AppState {
 
   // Theme actions
   toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
+
+  // Export actions (Issue #63)
+  setExportFormat: (format: ExportFormat) => void;
 
   // Dev Mode actions
   toggleDevMode: () => void;
+
+  // Reset all settings to defaults (Issue #63)
+  resetSettings: () => void;
 
   // Handler context provider
   getHandlerContext: () => HandlerContext;
@@ -291,6 +328,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Theme state
   theme: getThemeFromStorage(),
+
+  // Export format (Issue #63)
+  exportFormat: getExportFormatFromStorage(),
 
   // Dev Mode state
   devMode: (() => {
@@ -416,11 +456,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (state._watcherUnlisten) {
       state._watcherUnlisten();
     }
-    // Stop backend watcher
-    try {
-      await stopFileWatcher();
-    } catch (err) {
-      console.error("Fehler beim Stoppen des Watchers:", err);
+    // Stop backend watcher (only in Tauri context)
+    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+      try {
+        await stopFileWatcher();
+      } catch (err) {
+        console.error("Fehler beim Stoppen des Watchers:", err);
+      }
     }
     set({
       _watcherUnlisten: null,
@@ -448,6 +490,37 @@ export const useAppStore = create<AppState>((set, get) => ({
       const next = THEME_CYCLE[state.theme];
       saveThemeToStorage(next);
       return { theme: next };
+    });
+  },
+
+  setTheme: (theme: Theme) => {
+    // Guard against invalid theme values at runtime
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard
+    if (theme !== "light" && theme !== "dark" && theme !== "auto") return;
+    saveThemeToStorage(theme);
+    set({ theme });
+  },
+
+  // Export actions (Issue #63)
+  setExportFormat: (format: ExportFormat) => {
+    if (!VALID_EXPORT_FORMATS.has(format)) return;
+    saveExportFormatToStorage(format);
+    set({ exportFormat: format });
+  },
+
+  // Reset all settings to defaults (Issue #63)
+  resetSettings: () => {
+    saveThemeToStorage("dark");
+    saveExportFormatToStorage("json");
+    try {
+      localStorage.removeItem("promptvault.devMode");
+    } catch {
+      // silent fail
+    }
+    set({
+      theme: "dark",
+      exportFormat: "json",
+      devMode: false,
     });
   },
 
