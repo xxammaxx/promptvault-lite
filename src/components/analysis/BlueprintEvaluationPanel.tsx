@@ -187,6 +187,7 @@ export const BlueprintEvaluationPanel: React.FC<
   const isHybrid = evaluation.content_class === "PROMPT_BLUEPRINT_HYBRID";
   const isPrompt = evaluation.content_class === "PROMPT";
   const isBlueprint = evaluation.content_class === "BLUEPRINT";
+  const isGuideline = evaluation.content_class === "GUIDELINE";
 
   return (
     <div className="blueprint-evaluation-panel">
@@ -240,14 +241,22 @@ export const BlueprintEvaluationPanel: React.FC<
             ? "Blueprint Quality Score"
             : isHybrid
               ? "Blueprint Completeness"
-              : isPrompt
-                ? "Prompt Structure Score"
-                : "Overall Score"}
+              : isGuideline
+                ? "Guideline Quality Score"
+                : isPrompt
+                  ? "Prompt Structure Score"
+                  : "Overall Score"}
         </h3>
         <div className="score-display">
           <CircularScore score={overallScore} />
           <span className="score-label">
-            {isHybrid ? "Completeness" : isPrompt ? "Structure" : "Overall"}
+            {isHybrid
+              ? "Completeness"
+              : isGuideline
+                ? "Guideline"
+                : isPrompt
+                  ? "Structure"
+                  : "Overall"}
           </span>
         </div>
         {isHybrid && (
@@ -255,6 +264,13 @@ export const BlueprintEvaluationPanel: React.FC<
             This score measures blueprint completeness, not overall prompt
             quality. A low score indicates missing blueprint sections — the
             prompt may still be effective as an agent instruction.
+          </p>
+        )}
+        {isGuideline && (
+          <p className="score-context-note">
+            This score measures guideline structure and clarity, not task-prompt
+            quality. A low role/input score does not indicate a poor guideline —
+            guidelines define reusable rules rather than single task prompts.
           </p>
         )}
       </div>

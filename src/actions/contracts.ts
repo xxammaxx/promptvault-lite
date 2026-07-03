@@ -355,6 +355,7 @@ function validateBlueprintDetectOutput(output: unknown): ValidationResult {
     "NOTE",
     "DOC",
     "CODE_FRAGMENT",
+    "GUIDELINE",
     "UNKNOWN_NEEDS_REVIEW",
   ];
   if (!validClasses.includes(obj.content_class as string))

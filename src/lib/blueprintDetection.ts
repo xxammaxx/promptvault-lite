@@ -46,7 +46,7 @@ function codeBlockLength(content: string): number {
 
 interface SignalDef {
   name: string;
-  category: "prompt" | "blueprint" | "hybrid";
+  category: "prompt" | "blueprint" | "hybrid" | "guideline";
   detect: (content: string) => boolean;
 }
 
@@ -80,9 +80,17 @@ function detectClassificationTags(
   promptSignals: string[],
   blueprintSignals: string[],
   contaminationSignals: string[],
+  guidelineSignals: string[],
 ): string[] {
   const tags = new Set<string>();
 
+  if (
+    guidelineSignals.includes("guideline_title") ||
+    guidelineSignals.includes("guideline_directive") ||
+    guidelineSignals.includes("guideline_rule_section")
+  ) {
+    tags.add("GUIDELINE");
+  }
   if (
     promptSignals.includes("sectioned_agent_prompt") ||
     promptSignals.includes("role_definition")
@@ -157,6 +165,11 @@ function buildClassificationReasons(
   if (contentClass === "DOC") {
     reasons.push(
       "Structured headings were present, but prompt and blueprint signals stayed below the decision threshold.",
+    );
+  }
+  if (contentClass === "GUIDELINE") {
+    reasons.push(
+      "Guideline/policy document detected with directive language and rule-oriented structure.",
     );
   }
   if (contaminationSignals.length > 0) {
@@ -387,6 +400,65 @@ const CLASSIFICATION_SIGNALS: SignalDef[] = [
         c,
       ),
   },
+
+  // ---- Guideline / Policy signals ----
+  {
+    name: "guideline_title",
+    category: "guideline",
+    detect: (c) =>
+      /^#+\s*(?:System-Richtlinie|Richtlinie|Guideline|Policy|Regelwerk|Leitlinie|Standards?|Prinzipien)\b/im.test(
+        c,
+      ),
+  },
+  {
+    name: "guideline_directive",
+    category: "guideline",
+    detect: (c) =>
+      /(?:Verzichte auf|Verwende|Achte auf|Halte dich|Nutze|Vermeide|Stelle sicher|Definiere|Fasse|Teile|Gilt als)\b/i.test(
+        c,
+      ),
+  },
+  {
+    name: "guideline_rule_section",
+    category: "guideline",
+    detect: (c) =>
+      /^#+\s*(?:Regeln?|Do|Don't|Guardrails|Constraints|Vorgaben?|Prinzipien|Anweisungen)\b/im.test(
+        c,
+      ),
+  },
+  {
+    name: "guideline_domain_terms",
+    category: "guideline",
+    detect: (c) =>
+      /(?:Token-Effizienz|BatchPrompting|Batch-Verarbeitung|Ausgabequalität|Skeleton-of-Thought|Kontext-Management|Output-Management|Prompt\s*Engineering|Token-?Budget)/i.test(
+        c,
+      ),
+  },
+  {
+    name: "guideline_imperative_rules",
+    category: "guideline",
+    detect: (c) => {
+      const lines = c.split("\n");
+      let imperativeCount = 0;
+      let totalLines = 0;
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.length === 0 || /^#/.test(trimmed)) continue;
+        totalLines++;
+        if (
+          /^(?:Verzichte|Verwende|Achte|Halte|Nutze|Vermeide|Definiere|Stelle|Fasse|Teile|Prüfe|Validier)/i.test(
+            trimmed,
+          ) ||
+          /^(?:Do not|Don't|Always|Never|Use|Avoid|Ensure|Define|Keep|Apply)/i.test(
+            trimmed,
+          )
+        ) {
+          imperativeCount++;
+        }
+      }
+      return totalLines >= 5 && imperativeCount >= 2;
+    },
+  },
 ];
 
 // =============================================================================
@@ -412,12 +484,15 @@ export function classifyContent(content: string): BlueprintDetectOutput {
   const promptSignals: string[] = [];
   const blueprintSignals: string[] = [];
   const hybridSignals: string[] = [];
+  const guidelineSignals: string[] = [];
 
   for (const signal of CLASSIFICATION_SIGNALS) {
     if (signal.detect(trimmed)) {
       if (signal.category === "prompt") promptSignals.push(signal.name);
       else if (signal.category === "blueprint")
         blueprintSignals.push(signal.name);
+      else if (signal.category === "guideline")
+        guidelineSignals.push(signal.name);
       else hybridSignals.push(signal.name);
     }
   }
@@ -425,6 +500,7 @@ export function classifyContent(content: string): BlueprintDetectOutput {
   const effectivePromptCount = promptSignals.length;
   const effectiveBlueprintCount = blueprintSignals.length;
   const hybridCount = hybridSignals.length;
+  const effectiveGuidelineCount = guidelineSignals.length;
 
   // Determine content class
   let contentClass: ContentClass;
@@ -437,11 +513,22 @@ export function classifyContent(content: string): BlueprintDetectOutput {
     contentClass = "CODE_FRAGMENT";
     confidence = 0.9;
   }
-  // Documentation detection: many headings, no prompt/blueprint signals
+  // Guideline / Policy detection: guideline signals present, not a task prompt
+  else if (
+    effectiveGuidelineCount >= 2 &&
+    effectivePromptCount <= 1 &&
+    effectiveBlueprintCount <= 1
+  ) {
+    contentClass = "GUIDELINE";
+    confidence = clamp(0.55 + effectiveGuidelineCount * 0.08, 0.55, 0.95);
+  }
+  // Documentation detection: many headings, no prompt/blueprint signals,
+  // at most weak guideline signals (single domain term match is not a guideline)
   else if (
     countHeadings(trimmed) >= 2 &&
     effectivePromptCount === 0 &&
-    effectiveBlueprintCount <= 1
+    effectiveBlueprintCount <= 1 &&
+    effectiveGuidelineCount <= 1
   ) {
     contentClass = "DOC";
     confidence = 0.8;
@@ -451,6 +538,7 @@ export function classifyContent(content: string): BlueprintDetectOutput {
     cleanLen < 300 &&
     effectivePromptCount === 0 &&
     effectiveBlueprintCount === 0 &&
+    effectiveGuidelineCount === 0 &&
     hybridCount === 0
   ) {
     contentClass = "NOTE";
@@ -543,6 +631,7 @@ export function classifyContent(content: string): BlueprintDetectOutput {
     promptSignals,
     blueprintSignals,
     contaminationSignals,
+    guidelineSignals,
   );
   const reasons = buildClassificationReasons(
     contentClass,
@@ -564,6 +653,7 @@ export function classifyContent(content: string): BlueprintDetectOutput {
     reasons,
     prompt_signals: promptSignals,
     blueprint_signals: blueprintSignals,
+    guideline_signals: guidelineSignals,
     contamination_signals: contaminationSignals,
   };
 }

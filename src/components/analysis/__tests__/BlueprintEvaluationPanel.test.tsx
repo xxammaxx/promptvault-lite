@@ -576,4 +576,18 @@ describe("BlueprintEvaluationPanel", () => {
     expect(container.textContent).toContain("Prompt Structure Score");
     expect(container.textContent).not.toContain("Blueprint Quality Score");
   });
+
+  it("shows 'Guideline Quality Score' for GUIDELINE content class with context note", () => {
+    const eval_ = makeEvaluation({
+      content_class: "GUIDELINE",
+      overall_score: 72,
+    });
+    const { container } = render(
+      <BlueprintEvaluationPanel evaluation={eval_} />,
+    );
+    expect(container.textContent).toContain("Guideline Quality Score");
+    expect(container.textContent).toContain("not task-prompt quality");
+    expect(container.textContent).not.toContain("Blueprint Quality Score");
+    expect(container.textContent).not.toContain("Prompt Structure Score");
+  });
 });

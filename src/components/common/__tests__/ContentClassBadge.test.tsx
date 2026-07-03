@@ -71,6 +71,18 @@ describe("ContentClassBadge", () => {
     expect(badge.className).toContain("badge-code");
   });
 
+  it("renders 'Guideline' label for GUIDELINE", () => {
+    render(<ContentClassBadge contentClass="GUIDELINE" />);
+    expect(screen.getByText("Guideline")).toBeInTheDocument();
+  });
+
+  it("renders guideline color class for GUIDELINE", () => {
+    render(<ContentClassBadge contentClass="GUIDELINE" />);
+    const badge = screen.getByText("Guideline");
+    expect(badge.className).toContain("badge-guideline");
+    expect(badge.className).toContain("content-class-badge");
+  });
+
   // --- Null safety ---
 
   it("renders nothing when contentClass is null", () => {

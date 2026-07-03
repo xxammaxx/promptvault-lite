@@ -123,12 +123,17 @@ function App() {
     try {
       const detection = classifyContent(prompt.content);
       state.setBlueprintDetection(prompt.id, detection);
-      rememberProcessedFingerprint(processedFingerprints.current, selectedPromptId, contentFingerprint);
+      rememberProcessedFingerprint(
+        processedFingerprints.current,
+        selectedPromptId,
+        contentFingerprint,
+      );
 
-      // Auto-evaluate only for BLUEPRINT and HYBRID content classes
+      // Auto-evaluate for BLUEPRINT, HYBRID, and GUIDELINE content classes
       if (
         detection.content_class === "BLUEPRINT" ||
-        detection.content_class === "PROMPT_BLUEPRINT_HYBRID"
+        detection.content_class === "PROMPT_BLUEPRINT_HYBRID" ||
+        detection.content_class === "GUIDELINE"
       ) {
         const evaluation = evaluateBlueprint(prompt.content);
         state.setBlueprintEvaluation(prompt.id, evaluation);
