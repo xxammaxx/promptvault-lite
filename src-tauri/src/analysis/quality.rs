@@ -27,6 +27,21 @@ fn is_guideline_content(content: &str) -> bool {
 
 /// Führt eine vollständige Qualitätsanalyse eines Prompts oder einer Guideline durch.
 pub fn evaluate_prompt(content: &str, prompt_id: &str) -> PromptEvaluation {
+    // Content size limit: cap at 100K chars to bound regex scanning time.
+    // For files larger than this, we analyse only the first portion.
+    // This prevents regex backtracking on extremely large documents
+    // while keeping evaluation deterministic.
+    const MAX_ANALYSIS_CHARS: usize = 100_000;
+    let content = if content.len() > MAX_ANALYSIS_CHARS {
+        let mut idx = MAX_ANALYSIS_CHARS;
+        while !content.is_char_boundary(idx) {
+            idx -= 1;
+        }
+        &content[..idx]
+    } else {
+        content
+    };
+
     // Route to guideline-specific scoring if content is a guideline
     if is_guideline_content(content) {
         return evaluate_guideline(content, prompt_id);
@@ -252,12 +267,20 @@ fn evaluate_guideline_rule_specificity(content: &str) -> EvaluationCriterion {
         Regex::new(r"(?im)^#{1,3}\s*(regeln?|rules?|prinzipien|principles|vorgaben?)\b")
             .map(|re| re.is_match(content))
             .unwrap_or(false);
-    let imperative_count = content.lines().filter(|line| {
-        let t = line.trim();
-        Regex::new(r"^(?:Verzichte|Verwende|Achte|Halte|Nutze|Vermeide|Definiere|Stelle|Fasse|Teile|Prüfe|Validier)\b")
-            .map(|re| re.is_match(t))
-            .unwrap_or(false)
-    }).count();
+    // Compile imperative regex once, not per line
+    let imperative_re = Regex::new(
+        r"^(?:Verzichte|Verwende|Achte|Halte|Nutze|Vermeide|Definiere|Stelle|Fasse|Teile|Prüfe|Validier)\b",
+    );
+    let imperative_count = content
+        .lines()
+        .filter(|line| {
+            let t = line.trim();
+            imperative_re
+                .as_ref()
+                .map(|re| re.is_match(t))
+                .unwrap_or(false)
+        })
+        .count();
     let score = if has_rules && imperative_count >= 3 {
         9
     } else if has_rules || imperative_count >= 2 {
@@ -484,7 +507,7 @@ fn evaluate_context_quality(content: &str) -> EvaluationCriterion {
         0
     };
 
-    let score = (count as u8 * 2 + length_bonus).min(10);
+    let score = ((count as u8).min(5) * 2 + length_bonus).min(10);
 
     let details = if score >= 8 {
         "Ausreichend Kontext vorhanden — das LLM versteht den Anwendungsfall.".into()
@@ -607,7 +630,7 @@ fn evaluate_output_format(content: &str) -> EvaluationCriterion {
         r"(?i)(gib\s+(mir\s+)?(das\s+ergebnis|die\s+antwort)\s+(in|als|im))",
         r"(?i)(json|markdown|yaml|xml|csv|tabelle|table|liste|list)",
         r"(?i)(struktur|schema|template|vorlage)",
-        r"```[\w]*\n[\s\S]*?\n```", // Beispiel-Codeblöcke für Ausgabeformat
+        r"```\w*", // Code block fence — safe prefix match, no [\s\S]*? backtracking
     ];
 
     let (found, count) = count_pattern_matches(content, &output_patterns);
