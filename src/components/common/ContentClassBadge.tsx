@@ -18,6 +18,7 @@ const CONTENT_CLASS_CONFIG: Record<
   NOTE: { label: "Notiz", cssModifier: "badge-note" },
   DOC: { label: "Dokumentation", cssModifier: "badge-doc" },
   CODE_FRAGMENT: { label: "Code", cssModifier: "badge-code" },
+  GUIDELINE: { label: "Guideline", cssModifier: "badge-guideline" },
   UNKNOWN_NEEDS_REVIEW: {
     label: "Review",
     cssModifier: "badge-review",

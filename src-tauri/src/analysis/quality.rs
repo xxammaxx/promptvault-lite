@@ -5,8 +5,33 @@ use regex::Regex;
 // Prompt-Qualitätsanalyse — Regelbasierte 10-Kriterien-Bewertung
 // =============================================================================
 
-/// Führt eine vollständige Qualitätsanalyse eines Prompts durch.
+/// Prüft ob der Inhalt eine Guideline/Richtlinie ist (nicht Task-Prompt).
+fn is_guideline_content(content: &str) -> bool {
+    let indicators = [
+        r"(?im)^#{1,3}\s*(System-Richtlinie|Richtlinie|Guideline|Policy|Regelwerk|Leitlinie|Prinzipien)\b",
+        r"(?im)(Verzichte auf|Verwende|Achte auf|Halte dich|Nutze|Vermeide|Stelle sicher)\b",
+        r"(?im)^#{1,3}\s*(Regeln?|Vorgaben?|Anweisungen)\b",
+        r"(?i)(Token-Effizienz|BatchPrompting|Batch-Verarbeitung|Ausgabequalität|Skeleton-of-Thought|Kontext-Management|Output-Management)\b",
+    ];
+
+    let mut count = 0;
+    for pattern in &indicators {
+        if let Ok(re) = Regex::new(pattern) {
+            if re.is_match(content) {
+                count += 1;
+            }
+        }
+    }
+    count >= 2
+}
+
+/// Führt eine vollständige Qualitätsanalyse eines Prompts oder einer Guideline durch.
 pub fn evaluate_prompt(content: &str, prompt_id: &str) -> PromptEvaluation {
+    // Route to guideline-specific scoring if content is a guideline
+    if is_guideline_content(content) {
+        return evaluate_guideline(content, prompt_id);
+    }
+
     let mut evaluation = PromptEvaluation::new(prompt_id.to_string());
 
     // Sonderfall: Leerer Prompt
@@ -140,6 +165,211 @@ pub fn evaluate_prompt(content: &str, prompt_id: &str) -> PromptEvaluation {
     evaluation.recommendations = generate_quality_recommendations(&evaluation.criteria);
 
     evaluation
+}
+
+// =============================================================================
+// Guideline Quality Analysis — Guideline-spezifische 8-Kriterien-Bewertung
+// =============================================================================
+
+/// Führt eine Guideline-spezifische Qualitätsanalyse durch.
+/// Verwendet guideline-relevante Kriterien statt Task-Prompt-Kriterien.
+fn evaluate_guideline(content: &str, prompt_id: &str) -> PromptEvaluation {
+    let mut evaluation = PromptEvaluation::new(prompt_id.to_string());
+
+    if content.trim().is_empty() {
+        evaluation.overall_score = 0;
+        evaluation.missing_sections = vec![
+            "Scope/Zweck".into(),
+            "Regel-Spezifität".into(),
+            "Constraint-Klarheit".into(),
+            "Anwendbarkeit".into(),
+            "Output-Disziplin".into(),
+            "Wiederverwendbarkeit".into(),
+        ];
+        return evaluation;
+    }
+
+    let criteria = [
+        evaluate_guideline_scope_clarity(content),
+        evaluate_guideline_rule_specificity(content),
+        evaluate_guideline_constraint_clarity(content),
+        evaluate_guideline_applicability(content),
+        evaluate_guideline_output_discipline(content),
+        evaluate_guideline_consistency(content),
+        evaluate_guideline_safety_boundaries(content),
+        evaluate_reusability(content), // reusability applies to both prompts and guidelines
+    ];
+
+    let mut total_weighted_score: f64 = 0.0;
+    let mut total_weight: f64 = 0.0;
+    let mut missing: Vec<String> = Vec::new();
+
+    for criterion in &criteria {
+        total_weighted_score += criterion.score as f64 * criterion.weight;
+        total_weight += criterion.weight;
+
+        if criterion.score < 3 {
+            missing.push(criterion.name.clone());
+        }
+    }
+
+    let overall_score = if total_weight > 0.0 {
+        ((total_weighted_score / total_weight) * 10.0)
+            .round()
+            .clamp(0.0, 100.0) as u8
+    } else {
+        0
+    };
+
+    evaluation.criteria = criteria.to_vec();
+    evaluation.overall_score = overall_score;
+    evaluation.missing_sections = missing;
+    evaluation.recommendations = generate_quality_recommendations(&evaluation.criteria);
+
+    evaluation
+}
+
+fn evaluate_guideline_scope_clarity(content: &str) -> EvaluationCriterion {
+    let score = if Regex::new(r"(?im)^#{1,3}\s*(scope|umfang|geltung|ziel|purpose|goal|zweck)\b")
+        .map(|re| re.is_match(content))
+        .unwrap_or(false)
+    {
+        7
+    } else {
+        2
+    };
+    EvaluationCriterion {
+        name: "Scope/Zweck".into(),
+        score,
+        max_score: 10,
+        weight: 0.15,
+        details: "Score based on if the guideline defines scope/purpose clearly".into(),
+    }
+}
+
+fn evaluate_guideline_rule_specificity(content: &str) -> EvaluationCriterion {
+    let has_rules =
+        Regex::new(r"(?im)^#{1,3}\s*(regeln?|rules?|prinzipien|principles|vorgaben?)\b")
+            .map(|re| re.is_match(content))
+            .unwrap_or(false);
+    let imperative_count = content.lines().filter(|line| {
+        let t = line.trim();
+        Regex::new(r"^(?:Verzichte|Verwende|Achte|Halte|Nutze|Vermeide|Definiere|Stelle|Fasse|Teile|Prüfe|Validier)\b")
+            .map(|re| re.is_match(t))
+            .unwrap_or(false)
+    }).count();
+    let score = if has_rules && imperative_count >= 3 {
+        9
+    } else if has_rules || imperative_count >= 2 {
+        6
+    } else {
+        3
+    };
+    EvaluationCriterion {
+        name: "Regel-Spezifität".into(),
+        score,
+        max_score: 10,
+        weight: 0.18,
+        details: "Score based on rule section presence and imperative count".into(),
+    }
+}
+
+fn evaluate_guideline_constraint_clarity(content: &str) -> EvaluationCriterion {
+    let score = if Regex::new(
+        r"(?im)^#{1,3}\s*(einschränkung|constraint|grenze|limitation|boundary|guardrail)\b",
+    )
+    .map(|re| re.is_match(content))
+    .unwrap_or(false)
+    {
+        8
+    } else {
+        3
+    };
+    EvaluationCriterion {
+        name: "Constraint-Klarheit".into(),
+        score,
+        max_score: 10,
+        weight: 0.14,
+        details: "Score based on explicit constraints/guardrails".into(),
+    }
+}
+
+fn evaluate_guideline_applicability(content: &str) -> EvaluationCriterion {
+    let score = if Regex::new(
+        r"(?im)(anwendbarkeit|applicability|gilt für|applies to|gültig|scope|umfang)\b",
+    )
+    .map(|re| re.is_match(content))
+    .unwrap_or(false)
+    {
+        7
+    } else {
+        2
+    };
+    EvaluationCriterion {
+        name: "Anwendbarkeit".into(),
+        score,
+        max_score: 10,
+        weight: 0.12,
+        details: "Score based on applicability/context definition".into(),
+    }
+}
+
+fn evaluate_guideline_output_discipline(content: &str) -> EvaluationCriterion {
+    let score = if Regex::new(r"(?im)^#{1,3}\s*(?:ausgabe|output|format|struktur|ergebnis)\b")
+        .map(|re| re.is_match(content))
+        .unwrap_or(false)
+    {
+        7
+    } else {
+        3
+    };
+    EvaluationCriterion {
+        name: "Output-Disziplin".into(),
+        score,
+        max_score: 10,
+        weight: 0.12,
+        details: "Score based on output format discipline".into(),
+    }
+}
+
+fn evaluate_guideline_consistency(content: &str) -> EvaluationCriterion {
+    let lines: Vec<&str> = content.lines().collect();
+    let heading_count = lines.iter().filter(|l| l.starts_with('#')).count();
+    let has_numbered = Regex::new(r"(?m)^\d+\.")
+        .map(|re| re.is_match(content))
+        .unwrap_or(false);
+    let score = if heading_count >= 3 && has_numbered {
+        8
+    } else if heading_count >= 2 {
+        6
+    } else {
+        3
+    };
+    EvaluationCriterion {
+        name: "Konsistenz/Struktur".into(),
+        score,
+        max_score: 10,
+        weight: 0.12,
+        details: "Score based on structural consistency (headings, numbering)".into(),
+    }
+}
+
+fn evaluate_guideline_safety_boundaries(content: &str) -> EvaluationCriterion {
+    let score = if Regex::new(r"(?im)(sicherheit|security|privacy|datenschutz|safety|vertraulich|confidential|kein|nicht|soll nicht)\b")
+        .map(|re| re.is_match(content))
+        .unwrap_or(false)
+    {
+        7
+    } else {
+        4
+    };
+    EvaluationCriterion {
+        name: "Sicherheitsgrenzen".into(),
+        score,
+        max_score: 10,
+        weight: 0.09,
+        details: "Score based on safety/failure boundary mentions".into(),
+    }
 }
 
 // -----------------------------------------------------------------------------

@@ -446,6 +446,7 @@ export type ContentClass =
   | "NOTE"
   | "DOC"
   | "CODE_FRAGMENT"
+  | "GUIDELINE"
   | "UNKNOWN_NEEDS_REVIEW";
 
 /** Blueprint sub-type for more granular classification */
@@ -559,6 +560,7 @@ export interface BlueprintDetectOutput {
   // Classification signals found
   prompt_signals: string[];
   blueprint_signals: string[];
+  guideline_signals?: string[];
   contamination_signals: string[];
 }
 

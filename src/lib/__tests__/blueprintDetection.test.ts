@@ -127,6 +127,23 @@ function fibonacci(n: number): number {
 }
 \`\`\``;
 
+const GUIDELINE_DOCUMENT = `# System-Richtlinie: Effiziente Prompt-Ausgabe
+
+Diese Richtlinie definiert die Regeln für effiziente Kommunikation mit KI-Systemen.
+
+## 1. Direkte Kommunikation
+
+Verzichte auf Füllwörter. Verwende klare Imperative.
+
+## 2. Output-Management
+
+Nutze strukturierte Formate wie JSON, YAML oder Markdown.
+
+## 3. Batch-Verarbeitung
+
+Fasse gleichartige Aufgaben in Batches zusammen.
+BatchPrompting reduziert Overhead und verbessert Konsistenz.`;
+
 const CONTAMINATED_BLUEPRINT = `## Goal
 Build a prompt management tool.
 
@@ -197,6 +214,15 @@ describe("Content Classification", () => {
   it("7. Empty content is UNKNOWN_NEEDS_REVIEW", () => {
     const result = classifyContent("");
     expect(result.content_class).toBe("UNKNOWN_NEEDS_REVIEW");
+  });
+
+  it("8. Guideline/policy document classified as GUIDELINE", () => {
+    const result = classifyContent(GUIDELINE_DOCUMENT);
+    expect(result.content_class).toBe("GUIDELINE");
+    expect(result.confidence).toBeGreaterThan(0.5);
+    // Should have guideline signals
+    expect(result.guideline_signals).toBeDefined();
+    expect(result.guideline_signals?.length).toBeGreaterThan(0);
   });
 });
 

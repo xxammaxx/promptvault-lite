@@ -132,6 +132,8 @@ fn is_common_word(word: &str) -> bool {
         "Anthropic",
         "Claude",
         "GPT",
+        // Prompt-Engineering domain terms (not project artifacts)
+        "BatchPrompting",
     ];
     common.contains(&word)
 }
@@ -756,9 +758,37 @@ fn detect_role_mismatch(content: &str) -> Vec<DetectedArtifact> {
     artifacts
 }
 
+/// Prüft ob der Inhalt eine Guideline/Richtlinie ist (nicht Task-Prompt).
+/// Verwendet einfache Heuristiken unabhängig vom TS-Klassifikator.
+fn is_guideline_content(content: &str) -> bool {
+    let guideline_indicators = [
+        r"(?im)^#{1,3}\s*(System-Richtlinie|Richtlinie|Guideline|Policy|Regelwerk|Leitlinie|Prinzipien)\b",
+        r"(?im)(Verzichte auf|Verwende|Achte auf|Halte dich|Nutze|Vermeide|Stelle sicher)\b",
+        r"(?im)^#{1,3}\s*(Regeln?|Vorgaben?|Anweisungen)\b",
+        r"(?i)(Token-Effizienz|BatchPrompting|Batch-Verarbeitung|Ausgabequalität|Skeleton-of-Thought|Kontext-Management|Output-Management)\b",
+        r"(?im)^(?:Do not|Don't|Always|Never|Use|Avoid|Ensure|Define|Keep|Apply)\s",
+    ];
+
+    let mut indicator_count = 0;
+    for pattern in &guideline_indicators {
+        if let Ok(re) = Regex::new(pattern) {
+            if re.is_match(content) {
+                indicator_count += 1;
+            }
+        }
+    }
+    indicator_count >= 2
+}
+
 /// Kategorie 17: Missing Structure (fehlender Standardaufbau)
 fn detect_missing_structure(content: &str) -> Vec<DetectedArtifact> {
     let mut artifacts = Vec::new();
+
+    // For guideline/policy content, use different structural expectations.
+    // Guidelines define reusable rules, not single task prompts.
+    if is_guideline_content(content) {
+        return detect_missing_guideline_structure(content);
+    }
 
     // Canonical sections that should be present in a well-structured prompt
     let required_sections = [
@@ -801,6 +831,59 @@ fn detect_missing_structure(content: &str) -> Vec<DetectedArtifact> {
             1,
             1,
             Some("{ADD_STRUCTURE}".into()),
+        ));
+    }
+
+    artifacts
+}
+
+/// Guideline-spezifische Strukturprüfung.
+/// Prüft Scope, rules, constraints, output discipline statt Role/Eingabe/Ausgabe.
+fn detect_missing_guideline_structure(content: &str) -> Vec<DetectedArtifact> {
+    let mut artifacts = Vec::new();
+
+    let guideline_sections = [
+        (
+            r"(?im)^#{1,3}\s*(?:scope|umfang|geltung|ziel|purpose|goal)\b",
+            "Scope/Zweck",
+        ),
+        (
+            r"(?im)^#{1,3}\s*(?:regeln?|rules?|prinzipien|principles|vorgaben?)\b",
+            "Regeln/Prinzipien",
+        ),
+        (
+            r"(?im)^#{1,3}\s*(?:einschränkung|constraint|grenze|limitation|boundary|guardrail)\b",
+            "Constraints/Guardrails",
+        ),
+        (
+            r"(?im)^#{1,3}\s*(?:anwendbarkeit|applicability|kontext|context|gültig)\b",
+            "Anwendbarkeit/Kontext",
+        ),
+        (
+            r"(?im)^#{1,3}\s*(?:ausgabe|output|format|struktur)\b",
+            "Output-Disziplin",
+        ),
+    ];
+
+    let mut missing: Vec<&str> = Vec::new();
+
+    for (pattern, name) in &guideline_sections {
+        if let Ok(re) = Regex::new(pattern) {
+            if !re.is_match(content) {
+                missing.push(name);
+            }
+        }
+    }
+
+    // Only flag if more than 2 guideline-relevant sections are missing
+    if missing.len() > 2 && content.trim().len() > 100 {
+        artifacts.push(DetectedArtifact::new(
+            ArtifactCategory::MissingStructure,
+            "info".into(),
+            format!("Fehlende Guideline-Sektionen: {}", missing.join(", ")),
+            1,
+            1,
+            Some("{ADD_GUIDELINE_STRUCTURE}".into()),
         ));
     }
 

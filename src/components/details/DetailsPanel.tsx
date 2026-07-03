@@ -214,7 +214,9 @@ export const ActionBar: React.FC<{
   const contentClass = detection?.content_class ?? null;
   const contaminationStatus = detection?.contamination_status ?? null;
   const showBlueprintBtn =
-    contentClass === "BLUEPRINT" || contentClass === "PROMPT_BLUEPRINT_HYBRID";
+    contentClass === "BLUEPRINT" ||
+    contentClass === "PROMPT_BLUEPRINT_HYBRID" ||
+    contentClass === "GUIDELINE";
   const blueprintBlocked = contaminationStatus === "BLOCKING_SENSITIVE_CONTENT";
 
   return (
