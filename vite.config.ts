@@ -16,6 +16,7 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/test-setup.ts"],
+    exclude: ["evidence/**", "node_modules/**", ".opencode/**", "src-tauri/**"],
   },
   plugins: [react()],
   resolve: {

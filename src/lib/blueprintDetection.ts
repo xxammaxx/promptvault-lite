@@ -172,6 +172,16 @@ function buildClassificationReasons(
       "Guideline/policy document detected with directive language and rule-oriented structure.",
     );
   }
+  if (contentClass === "PROMPT") {
+    reasons.push(
+      "Content classified as a task prompt: role, goal, or instruction patterns detected, but no blueprint/guideline structure.",
+    );
+  }
+  if (contentClass === "CODE_FRAGMENT") {
+    reasons.push(
+      "Content appears to be a code fragment with minimal prompt or blueprint structure.",
+    );
+  }
   if (contaminationSignals.length > 0) {
     reasons.push(
       `Contamination review signals detected: ${contaminationSignals.join(", ")}.`,
