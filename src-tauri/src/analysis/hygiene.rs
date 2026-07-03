@@ -435,26 +435,54 @@ fn detect_json_dumps(content: &str) -> Vec<DetectedArtifact> {
 fn detect_code_dumps(content: &str) -> Vec<DetectedArtifact> {
     let mut artifacts = Vec::new();
 
-    // Finde Markdown-Codeblöcke die sehr lang sind (>20 Zeilen)
-    let re = Regex::new(r"(?s)```(\w*)\n(.*?)```").unwrap();
+    // Finde Markdown-Codeblöcke die sehr lang sind (>20 Zeilen).
+    // Line-based scanning — no backtracking-prone regex needed.
+    let mut in_block = false;
+    let mut block_start: usize = 0;
+    let mut block_line_count: usize = 0;
 
-    for cap in re.captures_iter(content) {
-        if let Some(code_match) = cap.get(2) {
-            let code = code_match.as_str();
-            let line_count = code.lines().count();
-
-            if line_count > 20 {
-                let full = cap.get(0).unwrap();
-                artifacts.push(DetectedArtifact::new(
-                    ArtifactCategory::CodeDump,
-                    "info".into(),
-                    format!("Code-Block ({} Zeilen)", line_count),
-                    line_of(content, full.start()),
-                    col_of(content, full.start()),
-                    Some("{CODE_SNIPPET}".into()),
-                ));
+    for (line_idx, line) in content.lines().enumerate() {
+        if line.trim().starts_with("```") {
+            if in_block {
+                // End of code block
+                if block_line_count > 20 {
+                    // Estimate byte offset for line_of/col_of using the start line
+                    let byte_offset = byte_offset_for_line(content, line_idx - block_line_count);
+                    artifacts.push(DetectedArtifact::new(
+                        ArtifactCategory::CodeDump,
+                        "info".into(),
+                        format!("Code-Block ({} Zeilen)", block_line_count),
+                        line_of(content, byte_offset),
+                        col_of(content, byte_offset),
+                        Some("{CODE_SNIPPET}".into()),
+                    ));
+                }
+                in_block = false;
+                block_line_count = 0;
+            } else {
+                // Start of code block
+                in_block = true;
+                block_start = line_idx;
+                block_line_count = 0;
             }
+            continue;
         }
+        if in_block {
+            block_line_count += 1;
+        }
+    }
+
+    // Handle unclosed code block at end of file
+    if in_block && block_line_count > 20 {
+        let byte_offset = byte_offset_for_line(content, block_start);
+        artifacts.push(DetectedArtifact::new(
+            ArtifactCategory::CodeDump,
+            "info".into(),
+            format!("Code-Block ({} Zeilen)", block_line_count),
+            line_of(content, byte_offset),
+            col_of(content, byte_offset),
+            Some("{CODE_SNIPPET}".into()),
+        ));
     }
 
     // Auch inline-code der sehr lang ist
@@ -605,6 +633,22 @@ fn col_of(content: &str, pos: usize) -> usize {
     } else {
         pos + 1
     }
+}
+
+/// Gibt ungefähre Byte-Offset für den Anfang einer bestimmten Zeile (0-basiert).
+/// Wird für die zeilenbasierte Code-Block-Erkennung verwendet.
+fn byte_offset_for_line(content: &str, line: usize) -> usize {
+    let mut current_line = 0;
+    for (i, c) in content.char_indices() {
+        if current_line == line {
+            return i;
+        }
+        if c == '\n' {
+            current_line += 1;
+        }
+    }
+    // Falls die Zeile über das Ende hinausgeht, den letzten gültigen Index nehmen
+    content.len()
 }
 
 // =============================================================================
