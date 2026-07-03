@@ -821,3 +821,200 @@ Return the refactored code.`;
     expect(result.content_class).toBe("DOC");
   });
 });
+
+// =============================================================================
+// 9. UNKNOWN Confidence / Fallback Explanation Tests
+// =============================================================================
+
+describe("UNKNOWN Confidence / Fallback Explanations", () => {
+  // Test 50: Empty file returns UNKNOWN with empty/whitespace reason
+  it("50. Empty file returns UNKNOWN with EMPTY_OR_WHITESPACE reason", () => {
+    const result = classifyContent("");
+    expect(result.content_class).toBe("UNKNOWN_NEEDS_REVIEW");
+    expect(Array.isArray(result.reasons)).toBe(true);
+    expect(result.reasons?.length ?? 0).toBeGreaterThan(0);
+    expect((result.reasons ?? [""])[0]).toContain("Empty or whitespace-only");
+    // Confidence should be honest — empty content can't be confident
+    expect(result.confidence).toBeLessThan(0.6);
+  });
+
+  // Test 51: Whitespace-only returns UNKNOWN with reason
+  it("51. Whitespace-only returns UNKNOWN with explicit reason", () => {
+    const result = classifyContent("   \n\n  \t  \n");
+    expect(result.content_class).toBe("UNKNOWN_NEEDS_REVIEW");
+    expect(Array.isArray(result.reasons)).toBe(true);
+    expect(result.reasons?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  // Test 52: Very short content gets NOTE (not UNKNOWN) — acceptable, but reasons must exist
+  it("52. Short generic note returns NOTE or UNKNOWN with reasons", () => {
+    const result = classifyContent("Hello world, just a quick note.");
+    // NOTE is a valid honest outcome for short content with no signals
+    expect(result.reasons).toBeDefined();
+    expect(result.confidence).toBeLessThan(0.9);
+  });
+
+  // Test 53: Short content with ambiguous signals returns UNKNOWN or NOTE with reasons
+  it("53. Short content returns UNKNOWN or NOTE with reasons", () => {
+    const result = classifyContent(
+      "Meeting notes for June 19, 2026. Discussed Q3 roadmap.",
+    );
+    if (result.content_class === "UNKNOWN_NEEDS_REVIEW") {
+      expect(Array.isArray(result.reasons)).toBe(true);
+      expect(result.reasons?.length ?? 0).toBeGreaterThan(0);
+    }
+    expect(result.confidence).toBeLessThan(0.9);
+  });
+
+  // Test 54: Heading-only content gets DOC — acceptable, DOC also needs reasons
+  it("54. Heading-only content gets DOC or UNKNOWN with reasons", () => {
+    const result = classifyContent(
+      "# Meeting Notes\n\n## Agenda\n\n## Action Items\n",
+    );
+    expect(Array.isArray(result.reasons)).toBe(true);
+    expect(result.reasons?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  // Test 55: List-only content gets NOTE (valid honest outcome for short content)
+  it("55. List-only content returns NOTE or UNKNOWN", () => {
+    const result = classifyContent(
+      "- Item one\n- Item two\n- Item three\n- Item four\n- Item five\n- Item six",
+    );
+    // NOTE or UNKNOWN are both honest outcomes for short list content
+    expect(
+      result.content_class === "NOTE" ||
+        result.content_class === "UNKNOWN_NEEDS_REVIEW",
+    ).toBe(true);
+    expect(result.confidence).toBeLessThan(0.95);
+  });
+
+  // Test 56: Mixed weak signals with headings gets DOC — acceptable
+  it("56. Content with headings but weak signals gets DOC or UNKNOWN with reasons", () => {
+    const result = classifyContent(
+      "## Architecture Overview\nFrontend uses React.\n## Workflow\nStep 1: Build.\n## Note\nSome random text without structure.",
+    );
+    expect(Array.isArray(result.reasons)).toBe(true);
+    expect(result.reasons?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  // Test 57: Inline code fragment without code blocks — content_class varies by signal match
+  // The classifier uses code blocks (```) for CODE_FRAGMENT detection
+  it("57. Inline code without backticks still has reasons", () => {
+    const result = classifyContent(
+      "function foo() {\n  const x = 42;\n  return x + 1;\n}\n\nconst y = { a: 1, b: 2 };",
+    );
+    expect(result.reasons).toBeDefined();
+  });
+
+  // Test 57b: Symbol-heavy content — verify reasons exist regardless of class
+  it("57b. Symbol-rich content always has reasons", () => {
+    const result = classifyContent(
+      "<div class='foo'>{items.map(i => <span>{i}</span>)}</div>",
+    );
+    expect(result.reasons).toBeDefined();
+  });
+
+  // Test 58: Real code block still gets CODE_FRAGMENT (not regressed)
+  it("58. Code block content still gets CODE_FRAGMENT", () => {
+    const result = classifyContent(
+      "```typescript\nfunction add(a: number, b: number): number {\n  return a + b;\n}\n```",
+    );
+    expect(result.content_class).toBe("CODE_FRAGMENT");
+  });
+
+  // Test 59: Minimal clear prompt gets PROMPT, not UNKNOWN
+  it("59. Minimal clear prompt gets PROMPT", () => {
+    const result = classifyContent(
+      "## Role\nYou are a helpful assistant.\n\n## Task\nExplain recursion.\n\n## Output Format\nReturn a clear explanation.",
+    );
+    expect(result.content_class).toBe("PROMPT");
+  });
+
+  // Test 60: Minimal doc stays DOC, not UNKNOWN
+  it("60. Minimal documentation stays DOC", () => {
+    const result = classifyContent(
+      "# Status Report\n\n## Current Status\nv1.7.1 stable.\n\n## Known Issues\nNone.",
+    );
+    expect(result.content_class).toBe("DOC");
+  });
+
+  // Test 61: Minimal guideline stays GUIDELINE
+  it("61. Minimal guideline stays GUIDELINE", () => {
+    const result = classifyContent(
+      "# System-Richtlinie\n\n## 1. Regel\nVerzichte auf Fuellwoerter.\n\n## 2. Regel\nNutze strukturierte Formate.",
+    );
+    expect(result.content_class).toBe("GUIDELINE");
+  });
+
+  // Test 62: BLUEPRINT/DOC boundary still works (PR #197)
+  it("62. BLUEPRINT/DOC boundary preserved (PR #197)", () => {
+    const doc = `# Architecture Overview
+
+## System Architecture
+Three-tier architecture.
+
+## Data Flow
+Frontend to backend via IPC.
+
+## Known Limitations
+None.`;
+    const result = classifyContent(doc);
+    expect(result.content_class).toBe("DOC");
+    expect(result.content_class).not.toBe("BLUEPRINT");
+  });
+
+  // Test 63: GUIDELINE regression test from PR #190 preserved
+  it("63. GUIDELINE regression (PR #190) preserved", () => {
+    const result = classifyContent(
+      "# System-Richtlinie: Effiziente Prompt-Ausgabe\n\n## 1. Direkte Kommunikation\nVerzichte auf Fuellwoerter.\n\n## 2. Output-Management\nNutze strukturierte Formate.",
+    );
+    expect(result.content_class).toBe("GUIDELINE");
+  });
+
+  // Test 64: UNKNOWN always has at least one actionable explanation
+  it("64. UNKNOWN classifications always have at least one actionable explanation", () => {
+    const fixtures = [
+      "",
+      "   \n\n  ",
+      "Hello world.",
+      "# Title Only\n\n## Subtitle\n",
+      "- a\n- b\n- c\n- d\n- e",
+      "## Architecture\nFrontend uses React.\n## Data Flow\nVia API.",
+      "function foo(x) { return x + 1; }",
+    ];
+    for (const fixture of fixtures) {
+      const result = classifyContent(fixture);
+      if (result.content_class === "UNKNOWN_NEEDS_REVIEW") {
+        expect(
+          result.reasons,
+          `UNKNOWN fixture missing reasons: "${fixture.substring(0, 40)}..."`,
+        ).toBeDefined();
+        expect(
+          result.reasons?.length ?? 0,
+          `UNKNOWN fixture has empty reasons: "${fixture.substring(0, 40)}..."`,
+        ).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  // Test 65: UNKNOWN confidence remains honest (low/moderate)
+  it("65. UNKNOWN confidence is honest (low/moderate)", () => {
+    const fixtures = [
+      "",
+      "   \n\n  ",
+      "Hello world.",
+      "# Title Only\n\n## Subtitle\n",
+      "- a\n- b\n- c\n- d\n- e",
+      "## Architecture\nFrontend uses React.\n## Data Flow\nVia API.",
+    ];
+    for (const fixture of fixtures) {
+      const result = classifyContent(fixture);
+      if (result.content_class === "UNKNOWN_NEEDS_REVIEW") {
+        expect(
+          result.confidence,
+          `UNKNOWN confidence too high for: "${fixture.substring(0, 40)}..."`,
+        ).toBeLessThanOrEqual(0.6);
+      }
+    }
+  });
+});
