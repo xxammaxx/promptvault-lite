@@ -163,9 +163,18 @@ function buildClassificationReasons(
     );
   }
   if (contentClass === "DOC") {
-    reasons.push(
-      "Structured headings were present, but prompt and blueprint signals stayed below the decision threshold.",
+    const hasWeakBlueprint = blueprintSignals.some(
+      (s) => !STRONG_BLUEPRINT_SIGNALS.has(s),
     );
+    if (hasWeakBlueprint) {
+      reasons.push(
+        "Documentation with architecture/documentation terms but no actionable blueprint criteria (acceptance criteria, verification, implementation plan).",
+      );
+    } else {
+      reasons.push(
+        "Structured headings were present, but prompt and blueprint signals stayed below the decision threshold.",
+      );
+    }
   }
   if (contentClass === "GUIDELINE") {
     reasons.push(
@@ -472,6 +481,28 @@ const CLASSIFICATION_SIGNALS: SignalDef[] = [
 ];
 
 // =============================================================================
+// Strong vs Weak Blueprint Signals
+// =============================================================================
+
+/**
+ * Strong blueprint signals indicate a buildable/specifiable system with
+ * acceptance criteria, verification contracts, implementation plans,
+ * or workflow governance. These alone or in combination can trigger
+ * BLUEPRINT classification.
+ *
+ * Weak blueprint signals (system_architecture, data_flow, roadmap_phases,
+ * multi_component_structure, defined_roles_not_prompt, next_steps_handoff,
+ * security_compliance_section, scope_definition, risk_limitations) are
+ * common in documentation and should not alone trigger BLUEPRINT.
+ */
+const STRONG_BLUEPRINT_SIGNALS = new Set<string>([
+  "verification_contract",
+  "evidence_portfolio",
+  "implementation_plan",
+  "workflow_governance_sections",
+]);
+
+// =============================================================================
 // Content Classification
 // =============================================================================
 
@@ -507,6 +538,11 @@ export function classifyContent(content: string): BlueprintDetectOutput {
     }
   }
 
+  // Separate strong (buildable/specifiable) from weak (architecture/doc-like) blueprint signals
+  const strongBlueprintCount = blueprintSignals.filter((s) =>
+    STRONG_BLUEPRINT_SIGNALS.has(s),
+  ).length;
+
   const effectivePromptCount = promptSignals.length;
   const effectiveBlueprintCount = blueprintSignals.length;
   const hybridCount = hybridSignals.length;
@@ -524,20 +560,24 @@ export function classifyContent(content: string): BlueprintDetectOutput {
     confidence = 0.9;
   }
   // Guideline / Policy detection: guideline signals present, not a task prompt
+  // Weak blueprint signals (architecture/doc terms) are allowed in guidelines
   else if (
     effectiveGuidelineCount >= 2 &&
     effectivePromptCount <= 1 &&
-    effectiveBlueprintCount <= 1
+    strongBlueprintCount <= 1
   ) {
     contentClass = "GUIDELINE";
     confidence = clamp(0.55 + effectiveGuidelineCount * 0.08, 0.55, 0.95);
   }
-  // Documentation detection: many headings, no prompt/blueprint signals,
-  // at most weak guideline signals (single domain term match is not a guideline)
+  // Documentation detection: many headings, no prompt signals,
+  // no strong blueprint signals (verification/AC/implementation),
+  // at most 4 weak blueprint signals (architecture/doc terms allowed),
+  // at most weak guideline signals
   else if (
     countHeadings(trimmed) >= 2 &&
     effectivePromptCount === 0 &&
-    effectiveBlueprintCount <= 1 &&
+    strongBlueprintCount === 0 &&
+    effectiveBlueprintCount <= 4 &&
     effectiveGuidelineCount <= 1
   ) {
     contentClass = "DOC";
@@ -567,12 +607,18 @@ export function classifyContent(content: string): BlueprintDetectOutput {
       0.95,
     );
   }
-  // Pure blueprint: has blueprint signals, no prompt signals
-  else if (effectiveBlueprintCount >= 2 && effectivePromptCount === 0) {
+  // Pure blueprint: has 2+ blueprint signals with at least 1 strong signal,
+  // no prompt signals → strong evidence of buildable spec
+  else if (
+    effectiveBlueprintCount >= 2 &&
+    effectivePromptCount === 0 &&
+    strongBlueprintCount >= 1
+  ) {
     contentClass = "BLUEPRINT";
     confidence = clamp(0.5 + effectiveBlueprintCount * 0.07, 0.5, 0.95);
   }
-  // Strong blueprint with some hybrid = blueprint
+  // Pure blueprint fallback: 3+ blueprint signals (even all weak), no prompt signals
+  // Only reached if DOC check above did not catch it (e.g., 5+ weak signals)
   else if (effectiveBlueprintCount >= 3 && effectivePromptCount === 0) {
     contentClass = "BLUEPRINT";
     confidence = clamp(
@@ -586,10 +632,11 @@ export function classifyContent(content: string): BlueprintDetectOutput {
     contentClass = "PROMPT";
     confidence = 0.7;
   }
-  // Both present with more blueprints than prompts → PROMPT_BLUEPRINT_HYBRID
+  // Both present with more blueprints than prompts → HYBRID (requires strong blueprint signal)
   else if (
     effectiveBlueprintCount > effectivePromptCount &&
-    effectiveBlueprintCount >= 2
+    effectiveBlueprintCount >= 2 &&
+    strongBlueprintCount >= 1
   ) {
     contentClass = "PROMPT_BLUEPRINT_HYBRID";
     confidence = clamp(
@@ -598,10 +645,11 @@ export function classifyContent(content: string): BlueprintDetectOutput {
       0.85,
     );
   }
-  // Both present with more prompts than blueprints → PROMPT_BLUEPRINT_HYBRID (only with sufficient blueprint signals)
+  // Both present with more prompts than blueprints → HYBRID (requires strong blueprint signal)
   else if (
     effectivePromptCount > effectiveBlueprintCount &&
-    effectiveBlueprintCount >= 2
+    effectiveBlueprintCount >= 2 &&
+    strongBlueprintCount >= 1
   ) {
     contentClass = "PROMPT_BLUEPRINT_HYBRID";
     confidence = clamp(
@@ -615,14 +663,28 @@ export function classifyContent(content: string): BlueprintDetectOutput {
     contentClass = "PROMPT";
     confidence = 0.6;
   }
-  // Roughly equal → PROMPT_BLUEPRINT_HYBRID
-  else if (effectivePromptCount >= 1 && effectiveBlueprintCount >= 2) {
+  // Roughly equal → HYBRID (requires strong blueprint signal)
+  else if (
+    effectivePromptCount >= 1 &&
+    effectiveBlueprintCount >= 2 &&
+    strongBlueprintCount >= 1
+  ) {
     contentClass = "PROMPT_BLUEPRINT_HYBRID";
     confidence = clamp(
       0.3 + (effectiveBlueprintCount + effectivePromptCount) * 0.08,
       0.4,
       0.85,
     );
+  }
+  // Prompt with weak architecture/documentation blueprint signals → PROMPT (not HYBRID)
+  // Catches agent prompts that mention architecture/data-flow without strong blueprint evidence
+  else if (
+    effectivePromptCount >= 1 &&
+    strongBlueprintCount === 0 &&
+    effectiveBlueprintCount <= 2
+  ) {
+    contentClass = "PROMPT";
+    confidence = clamp(0.4 + effectivePromptCount * 0.05, 0.4, 0.75);
   }
   // Only hybrid signals or unclear → UNKNOWN_NEEDS_REVIEW
   else {
