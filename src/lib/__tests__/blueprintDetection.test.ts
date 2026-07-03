@@ -552,13 +552,18 @@ Die Komponenten kommunizieren über lokale IPC.
 Daten fließen vom Frontend über Tauri-Commands zum Rust-Backend.
 SQLite dient als lokale Datenbank für Prompts und Evaluations.
 
+## Acceptance Criteria
+- Architecture overview matches current deployment
+- Data flow accuracy verified against implementation
+- All components identified correctly
+
 ## Aufgabe
 Analysiere die Systemarchitektur und schlage Verbesserungen vor.`;
 
-  it("38. Agent prompt with multiple architecture blueprint signals becomes HYBRID", () => {
+  it("38. Agent prompt with architecture + acceptance criteria becomes HYBRID", () => {
     const result = classifyContent(AGENT_PROMPT_WITH_ARCHITECTURE);
-    // Multiple blueprint signals (architecture + data_flow) with prompt signals
-    // SHOULD trigger HYBRID — this is a real hybrid
+    // Strong blueprint signal (acceptance criteria) + weak (architecture, data_flow)
+    // with prompt signals SHOULD trigger HYBRID
     expect(result.content_class).toBe("PROMPT_BLUEPRINT_HYBRID");
   });
 
@@ -568,5 +573,251 @@ Analysiere die Systemarchitektur und schlage Verbesserungen vor.`;
     );
     expect(result.content_class).toBe("PROMPT");
     expect(result.content_class).not.toBe("PROMPT_BLUEPRINT_HYBRID");
+  });
+});
+
+// =============================================================================
+// 8. BLUEPRINT / DOCUMENTATION Boundary Regression Tests
+// =============================================================================
+
+describe("BLUEPRINT / DOCUMENTATION Boundary", () => {
+  const DOC_ARCHITECTURE_OVERVIEW = `# Architecture Overview
+
+## System Architecture
+The application uses a three-tier architecture with React frontend,
+Rust backend, and SQLite storage.
+
+## Component Architecture
+- Frontend Layer: React components with TypeScript
+- Backend Layer: Rust/Tauri command handlers
+- Storage Layer: SQLite database
+
+## Data Flow
+1. User action triggers React event
+2. Event dispatches Tauri command
+3. Rust handler processes and returns result
+
+## Technology Stack
+- React 18, TypeScript, Vite
+- Rust, Tauri 2.x
+- SQLite
+
+## Known Limitations
+- Scoring is heuristic, not LLM-based
+- Large vaults may need pagination`;
+
+  it("40. Architecture overview doc stays DOC, not BLUEPRINT", () => {
+    const result = classifyContent(DOC_ARCHITECTURE_OVERVIEW);
+    // Has weak blueprint signals (system_architecture, data_flow) but no
+    // strong signals (no acceptance criteria, verification, implementation plan)
+    expect(result.content_class).toBe("DOC");
+  });
+
+  const DOC_ROADMAP_WITH_ARCHITECTURE = `# Project Status and Roadmap
+
+## Current Status
+v1.7.1 released. Core features stable.
+
+## Roadmap
+### Phase 1: Core (completed)
+### Phase 2: Classification (completed)
+### Phase 3: Optimization (in progress)
+
+## Architecture Decisions
+Hybrid Rust/TypeScript architecture where performance-critical
+operations run in Rust via Tauri commands.
+
+## System Components
+- Scanner Module: Rust file discovery
+- Classifier: TypeScript content analysis
+- Optimizer: TypeScript optimization engine`;
+
+  it("41. Roadmap/status doc with architecture terms stays DOC", () => {
+    const result = classifyContent(DOC_ROADMAP_WITH_ARCHITECTURE);
+    // Has weak signals (roadmap_phases, system_architecture) but no strong
+    expect(result.content_class).toBe("DOC");
+  });
+
+  const BLUEPRINT_WITH_AC = `# Blueprint: Export Enhancement
+
+## Goal
+Add batch export functionality for multiple formats.
+
+## Acceptance Criteria
+- Multi-select with checkboxes
+- Export to Markdown, JSON, CSV
+- Progress bar with cancel
+- Path traversal safety
+
+## Requirements
+### Functional
+- FR1: Multi-select
+- FR2: Export dialog
+
+### Non-Functional
+- NFR1: Memory under 200MB
+- NFR2: Cancel within 2s
+
+## Implementation Phases
+### Phase 1: Selection
+### Phase 2: Export engine
+
+## Verification Contract
+- Selection tests pass
+- Export format tests pass
+- Security tests pass`;
+
+  it("42. Blueprint with AC + requirements + verification becomes BLUEPRINT", () => {
+    const result = classifyContent(BLUEPRINT_WITH_AC);
+    // Strong signals (acceptance criteria, verification, implementation plan)
+    expect(result.content_class).toBe("BLUEPRINT");
+    expect(result.blueprint_signals.length).toBeGreaterThan(0);
+  });
+
+  const BLUEPRINT_WITH_VERIFICATION = `# System Design: Classification Pipeline
+
+## Overview
+Design a multi-stage classification pipeline.
+
+## System Components
+### Stage 1: Preprocessor
+### Stage 2: Signal Detector
+### Stage 3: Decision Engine
+
+## Verification Contract
+### Gate 1: Unit Tests - 90% coverage
+### Gate 2: Integration Tests - all fixtures
+### Gate 3: Acceptance - >= 85% accuracy
+
+## Implementation Plan
+### Step 1: Signal definitions
+### Step 2: Decision chain
+### Step 3: Quality evaluation
+
+## Constraints
+- No LLM or network calls
+- Pure deterministic classification`;
+
+  it("43. System design with verification contract becomes BLUEPRINT", () => {
+    const result = classifyContent(BLUEPRINT_WITH_VERIFICATION);
+    // Strong signals (verification_contract, implementation_plan)
+    expect(result.content_class).toBe("BLUEPRINT");
+    expect(result.blueprint_type).not.toBeNull();
+  });
+
+  const HYBRID_AGENT_BLUEPRINT = `## Role
+You are a full-stack developer.
+
+## Task
+Implement the batch export feature.
+
+## System Architecture
+The application uses React frontend and Rust backend.
+Components communicate via Tauri IPC.
+
+## Data Flow
+Export data flows from SQLite through Rust to filesystem.
+
+## Acceptance Criteria
+- AC1: Multi-select checkbox column
+- AC2: Export dialog with format picker
+- AC3: Progress bar with cancel
+
+## Verification Contract
+- All gates must pass
+- Path traversal validated
+
+## Ergebnisformat
+Return implementation with tests and evidence.`;
+
+  it("44. Agent prompt with verification + architecture becomes HYBRID", () => {
+    const result = classifyContent(HYBRID_AGENT_BLUEPRINT);
+    // Has prompt signals (role, task, output format) AND
+    // strong blueprint signals (acceptance criteria, verification contract)
+    // This is a true hybrid
+    expect(result.content_class).toBe("PROMPT_BLUEPRINT_HYBRID");
+  });
+
+  const AGENT_PROMPT_WITH_WEAK_ARCHITECTURE = `# Architecture Review Prompt
+
+## Rolle
+Du bist System Architect.
+
+## System Architecture Overview
+Die Anwendung hat drei Schichten: Frontend, Backend, Datenbank.
+
+## Data Flow & Integration
+Daten fliessen vom Frontend zum Backend ueber IPC.
+
+## Aufgabe
+Analysiere die Systemarchitektur.`;
+
+  it("45. Agent prompt with weak architecture signals only stays PROMPT, not HYBRID", () => {
+    const result = classifyContent(AGENT_PROMPT_WITH_WEAK_ARCHITECTURE);
+    // Has prompt signals + weak blueprint signals (architecture, data_flow)
+    // but NO strong blueprint signals → should stay PROMPT, not hybrid
+    expect(result.content_class).not.toBe("PROMPT_BLUEPRINT_HYBRID");
+    expect(result.content_class).toBe("PROMPT");
+  });
+
+  const GUIDELINE_WITH_ARCHITECTURE = `# System-Richtlinie: Architektur-Governance
+
+## 1. Review-Pflicht
+Verzichte auf Merges ohne Review.
+
+## 2. Architektur-Entscheidungen
+Nutze ADR-Dokumente fuer jede Entscheidung.
+
+## 3. System-Komponenten
+Achte auf saubere Trennung: Frontend und Backend getrennt.
+
+## 4. Datenfluss
+Stelle sicher, dass Daten validiert werden.
+
+## 5. Regel: Scope
+Halte PRs klein und fokussiert.`;
+
+  it("46. Guideline with architecture terms stays GUIDELINE", () => {
+    const result = classifyContent(GUIDELINE_WITH_ARCHITECTURE);
+    // Has guideline signals + weak blueprint (system_architecture, data_flow)
+    // Must remain GUIDELINE even with architecture mentions
+    expect(result.content_class).toBe("GUIDELINE");
+  });
+
+  const PROMPT_WITH_WEAK_ARCH = `## Role
+You are a React developer.
+
+## Task
+Refactor the export dialog. The system architecture uses React.
+Follow the existing component structure.
+
+## Output Format
+Return the refactored code.`;
+
+  it("47. Prompt with single weak architecture mention stays PROMPT", () => {
+    const result = classifyContent(PROMPT_WITH_WEAK_ARCH);
+    // Has 1 weak blueprint signal from architecture mention,
+    // but primarily a task prompt
+    expect(result.content_class).toBe("PROMPT");
+  });
+
+  // Verify that existing PR #190 guideline regression tests remain functional
+  it("48. PR #190 guideline protection still works", () => {
+    const result = classifyContent(
+      "# System-Richtlinie: Effiziente Prompt-Ausgabe\n\n## 1. Direkte Kommunikation\nVerzichte auf Fuellwoerter.\n\n## 2. Output-Management\nNutze strukturierte Formate.",
+    );
+    expect(result.content_class).toBe("GUIDELINE");
+  });
+
+  // Verify that PR #196 regex performance fix is preserved
+  it("49. PR #196 regex backtracking protection preserved", () => {
+    // Long content with potentially backtracking patterns
+    const longDoc =
+      "# A\n" +
+      "a".repeat(500) +
+      "\n## Architecture\nComponents.\n## Data Flow\nData.\n";
+    // Should classify cleanly without timeout/stack overflow
+    const result = classifyContent(longDoc);
+    expect(result.content_class).toBe("DOC");
   });
 });
