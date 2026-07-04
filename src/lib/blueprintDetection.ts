@@ -141,6 +141,8 @@ function buildClassificationReasons(
   blueprintSignals: string[],
   contaminationSignals: string[],
   content: string,
+  guidelineSignals: string[] = [],
+  hybridSignals: string[] = [],
 ): string[] {
   const reasons: string[] = [];
 
@@ -196,6 +198,23 @@ function buildClassificationReasons(
       `Contamination review signals detected: ${contaminationSignals.join(", ")}.`,
     );
   }
+
+  // UNKNOWN_NEEDS_REVIEW: build explicit fallback explanations
+  if (contentClass === "UNKNOWN_NEEDS_REVIEW") {
+    const unknownReasons = buildUnknownFallbackReasons(
+      content,
+      promptSignals,
+      blueprintSignals,
+      guidelineSignals,
+      hybridSignals,
+    );
+    // Use unknown reasons if no other reasons exist
+    if (reasons.length === 0) {
+      return unknownReasons;
+    }
+    return [...reasons, ...unknownReasons];
+  }
+
   if (
     reasons.length === 0 &&
     countHeadings(content) >= 2 &&
@@ -204,6 +223,119 @@ function buildClassificationReasons(
     reasons.push(
       "Content contains structured headings but limited classifier signals.",
     );
+  }
+
+  return reasons;
+}
+
+// =============================================================================
+// UNKNOWN Fallback Reason Builder
+// =============================================================================
+
+/**
+ * Builds actionable explanations for UNKNOWN_NEEDS_REVIEW classifications.
+ * Analyses WHY content could not be reliably classified and produces
+ * clear, honest reasons for the user.
+ */
+function buildUnknownFallbackReasons(
+  content: string,
+  promptSignals: string[],
+  blueprintSignals: string[],
+  guidelineSignals: string[],
+  hybridSignals: string[],
+): string[] {
+  const trimmed = content.trim();
+  const reasons: string[] = [];
+
+  if (trimmed.length === 0) {
+    reasons.push(
+      "Empty or whitespace-only content: no signals available for classification.",
+    );
+    return reasons;
+  }
+
+  const headingCount = countHeadings(trimmed);
+  const cleanLen = contentLengthWithoutCode(trimmed);
+  const codeLen = codeBlockLength(trimmed);
+
+  // Too short for any reliable classification
+  if (cleanLen < 50) {
+    reasons.push(
+      "Content too short for reliable classification: insufficient text for signal detection.",
+    );
+    return reasons;
+  }
+
+  // Short with no signals at all
+  if (
+    cleanLen < 200 &&
+    promptSignals.length === 0 &&
+    blueprintSignals.length === 0 &&
+    guidelineSignals.length === 0 &&
+    hybridSignals.length === 0
+  ) {
+    reasons.push(
+      "Low signal: no role, task, requirements, architecture, documentation or guideline structure detected.",
+    );
+    return reasons;
+  }
+
+  // Title-only: headings but barely any body text
+  if (headingCount > 0 && cleanLen < headingCount * 25 + 60) {
+    reasons.push(
+      "Title-only content: headings present but insufficient body text for a reliable classification.",
+    );
+  }
+
+  // Code-like fragment (no actual code blocks, but syntax-heavy text)
+  const symbolChars = (trimmed.match(/[{}=;<>[\]|&]/g) || []).length;
+  const symbolRatio = cleanLen > 0 ? symbolChars / cleanLen : 0;
+  if (symbolRatio > 0.12 || (codeLen > 0 && cleanLen < codeLen * 2)) {
+    reasons.push(
+      "Code-like fragment: content appears to be code, config, or shell syntax without enough explanatory context for classification.",
+    );
+  }
+
+  // List-only: predominantly bullet points without contextual prose
+  const lines = trimmed.split("\n");
+  const listLines = lines.filter((l) =>
+    /^\s*[-*\d+.]\s+/.test(l.trim()),
+  ).length;
+  if (lines.length > 3 && listLines / lines.length > 0.45) {
+    reasons.push(
+      "List-only content: bullet-point list detected without surrounding prose for reliable classification.",
+    );
+  }
+
+  // No specific reason found yet — build a mixed-weak-signals summary
+  if (reasons.length === 0) {
+    const weakSignalParts: string[] = [];
+    if (promptSignals.length > 0)
+      weakSignalParts.push(
+        `${promptSignals.length} weak prompt signal(s) (${promptSignals.join(", ")})`,
+      );
+    if (blueprintSignals.length > 0)
+      weakSignalParts.push(
+        `${blueprintSignals.length} weak blueprint signal(s) (${blueprintSignals.join(", ")})`,
+      );
+    if (guidelineSignals.length > 0)
+      weakSignalParts.push(
+        `${guidelineSignals.length} weak guideline signal(s) (${guidelineSignals.join(", ")})`,
+      );
+    if (hybridSignals.length > 0)
+      weakSignalParts.push(
+        `${hybridSignals.length} hybrid signal(s) (${hybridSignals.join(", ")})`,
+      );
+
+    if (weakSignalParts.length > 0) {
+      reasons.push(
+        `Mixed weak signals: ${weakSignalParts.join("; ")} present, but none strong enough for a reliable ${headingCount >= 2 ? "PROMPT, BLUEPRINT, DOCUMENTATION or GUIDELINE" : "classification"}${headingCount >= 2 ? "." : "."}`,
+      );
+    } else {
+      reasons.push(
+        "Low signal: no role, task, requirements, architecture, documentation or guideline structure detected for a reliable classification.",
+      );
+    }
   }
 
   return reasons;
@@ -514,7 +646,9 @@ export function classifyContent(content: string): BlueprintDetectOutput {
       content_class: "UNKNOWN_NEEDS_REVIEW",
       blueprint_type: null,
       contamination_status: "CLEAN",
-      confidence: 0.95,
+      confidence: 0.3,
+      tags: [],
+      reasons: buildUnknownFallbackReasons(trimmed, [], [], [], []),
       prompt_signals: [],
       blueprint_signals: [],
       contamination_signals: [],
@@ -689,7 +823,19 @@ export function classifyContent(content: string): BlueprintDetectOutput {
   // Only hybrid signals or unclear → UNKNOWN_NEEDS_REVIEW
   else {
     contentClass = "UNKNOWN_NEEDS_REVIEW";
-    confidence = 0.3;
+    // Dynamic confidence based on what weak signals are present
+    const totalWeakSignals =
+      effectivePromptCount +
+      effectiveBlueprintCount +
+      effectiveGuidelineCount +
+      hybridCount;
+    if (totalWeakSignals === 0) {
+      confidence = 0.25; // Nothing at all to go on
+    } else if (totalWeakSignals <= 2) {
+      confidence = 0.3; // Very few weak signals
+    } else {
+      confidence = clamp(0.3 + totalWeakSignals * 0.03, 0.3, 0.5); // More signals but all weak
+    }
   }
 
   // Detect blueprint sub-type
@@ -711,6 +857,8 @@ export function classifyContent(content: string): BlueprintDetectOutput {
     blueprintSignals,
     contaminationSignals,
     trimmed,
+    guidelineSignals,
+    hybridSignals,
   );
 
   return {
