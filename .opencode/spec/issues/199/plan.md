@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft — pending owner decisions on ADR-004
+Owner decisions recorded — ready for Phase 1 implementation (ADR-004 accepted 2026-07-05)
 
 ## Overview
 

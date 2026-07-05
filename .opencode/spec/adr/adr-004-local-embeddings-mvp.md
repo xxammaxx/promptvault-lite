@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed (Needs Owner Decision)
+Accepted (Owner Decisions Recorded for Phase 1 — 2026-07-05)
 
 ## Context
 
@@ -156,17 +156,23 @@ Requires network calls and sends prompt content to third parties. **Rejected** �
 ### Decision 1: First Real Provider
 - [ ] **A) ONNX Runtime** (all-MiniLM-L6-v2 or similar) — true local-first, Rust/ONNX, no external process
 - [ ] **B) Ollama local adapter** (`/api/embed`) — requires separate Ollama install, simple HTTP adapter
-- [ ] **C) Defer real provider** — ship mock-only first, decide after mock integration tests
+- [x] **C) Defer real provider** — ship mock-only first, decide after mock integration tests
+
+**Accepted:** Option C. No ONNX Runtime and no Ollama adapter in Phase 1. First code phase ships mock/synthetic provider + interface only. Real provider decision deferred to separate evaluation after mock integration tests.
 
 ### Decision 2: Vector Storage
-- [ ] **A) SQLite serialized vectors (BLOB/JSON)** — for MVP; evaluate sqlite-vec later
+- [x] **A) SQLite serialized vectors (BLOB/JSON)** — for MVP; evaluate sqlite-vec later
 - [ ] **B) Plan for sqlite-vec now** — include as Phase 2 dependency after packaging review
 - [ ] **C) Other local vector store** — specify
+
+**Accepted:** Option A. SQLite serialized vectors (BLOB/JSON) for MVP. No sqlite-vec dependency in MVP. No external vector DB. Evaluate sqlite-vec in a future phase as a separate owner decision.
 
 ### Decision 3: Duplicate Detection Threshold
 - [ ] **A) Fixed initial threshold** (e.g., cosine ≥ 0.90) — implemented as constant
 - [ ] **B) User-configurable threshold** — exposed in settings UI
-- [ ] **C) Report-only threshold** — no configuration, just grouping display
+- [x] **C) Report-only threshold** — no configuration, just grouping display
+
+**Accepted:** Option C. Report-only grouping in MVP. No settings UI and no automatic duplicate action. Cosine similarity threshold is an implementation detail decided during Phase 6; no user-facing configuration in MVP.
 
 ## Safety
 

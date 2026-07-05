@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft — pending owner decisions (ADR-004)
+Owner decisions recorded — ready for Phase 1 implementation (ADR-004 accepted 2026-07-05)
 
 ## Task Conventions
 
@@ -18,13 +18,18 @@ Each task includes:
 
 ## Phase 0: Architecture & Owner Decision
 
-### T0.1 — Owner reviews ADR-004
+### T0.1 — Owner reviews ADR-004 ✅ COMPLETED (2026-07-05)
 - **Goal**: Owner reads and decides on provider, storage, and duplicate threshold
 - **Files**: `.opencode/spec/adr/adr-004-local-embeddings-mvp.md`
 - **Tests**: None
 - **Gates**: None
 - **Privacy**: None
 - **Owner Gate**: Owner approval required to proceed to Phase 1
+
+**Decisions recorded:**
+1. Real Provider → **C) Defer** (mock/synthetic only in Phase 1)
+2. Vector Storage → **A) SQLite serialized vectors** for MVP
+3. Duplicate Threshold → **C) Report-only grouping, no configuration**
 
 ---
 
