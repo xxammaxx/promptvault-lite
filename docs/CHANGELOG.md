@@ -10,6 +10,14 @@ version: 1.7.1
 
 ### Added
 
+- **Audio-Kurzbeschreibung** (Issue #200): Sichere deutsche Kurzbeschreibung mit lokaler Sprachausgabe für ausgewählte Prompts.
+  - Kurzbeschreibung wird aus Titel, Beschreibung, Kategorie und Tags generiert
+  - Lokale TTS-Ausgabe über Web Speech API (keine Cloud-TTS, keine externen APIs)
+  - "Kurz vorlesen" / "Stoppen" Button in der Detailansicht
+  - Automatische Maskierung sensibler Inhalte (API-Keys, Tokens, E-Mails, Pfade)
+  - Blockierung der Audioausgabe bei kritischen Hygiene-Warnungen
+  - Provider-Detection für Piper, spd-say und espeak-ng (für künftige native TTS)
+
 - **Settings Modal** (Issue #63): Vollständiger Einstellungen-Dialog hinter dem ⚙️-Button in der Toolbar.
   - Theme-Auswahl (Hell/Dunkel/Auto) mit sofortiger Übernahme
   - Export-Format-Voreinstellung (JSON/Markdown/CSV) mit localStorage-Persistenz
