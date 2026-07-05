@@ -1,9 +1,9 @@
 # Project Status — PromptVault Lite
 
-**Last updated:** 2026-07-02
+**Last updated:** 2026-07-05
 **Current release:** v1.7.1 (public stable)
 **Branch:** master
-**Master since v1.7.1:** PR #185 (UI/Optimizer/Classification/Layout Fixes) merged 2026-06-24, PR #186 (Settings Modal, closes #63) merged 2026-07-02
+**Master since v1.7.1:** PR #185 (UI/Optimizer/Classification/Layout Fixes) merged 2026-06-24, PR #186 (Settings Modal, closes #63) merged 2026-07-02, PR #190 (GUIDELINE classification) merged 2026-07-03, PR #192 (real-corpus classification reasons) merged 2026-07-03, PR #196 (regex/backtracking hardening) merged 2026-07-03, PR #197 (BLUEPRINT/DOC boundary) merged 2026-07-03, PR #198 (UNKNOWN fallback explanations) merged 2026-07-04
 
 **Blueprint Detection merged:** 2026-06-19 (PR #148)
 **Scanner extensions:** `.md`, `.markdown`, `.txt` (1 MiB shared size limit, merged 2026-06-21 via PR #168, #170, #172)
@@ -59,6 +59,11 @@ All 10 local CI gates pass. Master is stable and functional. Remote-CI is `REMOT
 | Shared File Size Limit (1 MiB)              | ✅ Merged (PR #172, 2026-06-21)                                    |
 | UI/Optimizer/Classification/Layout Fixes    | ✅ Merged (PR #185, 2026-06-24)                                    |
 | Settings Modal (#63)                        | ✅ Merged (PR #186, 2026-07-02) — on master, not in v1.7.1 release |
+| GUIDELINE Classification                    | ✅ Merged (PR #190, 2026-07-03)                                    |
+| Real-Corpus Classification Reasons          | ✅ Merged (PR #192, 2026-07-03)                                    |
+| Regex/Backtracking Hardening                | ✅ Merged (PR #196, 2026-07-03)                                    |
+| BLUEPRINT/DOCUMENTATION Boundary Refinement | ✅ Merged (PR #197, 2026-07-03)                                    |
+| UNKNOWN Confidence / Fallback Explanations  | ✅ Merged (PR #198, 2026-07-04)                                    |
 
 ---
 
@@ -87,14 +92,16 @@ All 10 local CI gates pass. Master is stable and functional. Remote-CI is `REMOT
 
 ---
 
-## Test Summary (2026-07-02)
+## Test Summary (2026-07-05)
 
 | Suite                             | Tests | Result                                           |
 | --------------------------------- | ----- | ------------------------------------------------ |
-| Frontend (Vitest)                 | 634   | PASS (26 files)                                  |
+| Frontend (Vitest)                 | 665   | PASS (26 files)                                  |
 | Rust Unit (lib)                   | 134   | PASS (+1 ignored)                                |
 | Rust Integration (command_errors) | 17    | PASS                                             |
-| Rust Total                        | 151   | PASS (1 ignored)                                 |
+| Rust Regex Regression             | 5     | PASS                                             |
+| Rust Real Corpus Validation       | 1     | IGNORED (requires real prompt folder)            |
+| Rust Total                        | 156   | PASS (2 ignored)                                 |
 | ESLint                            | —     | PASS (0 errors, 0 warnings)                      |
 | TypeScript                        | —     | PASS (tsc --noEmit, 0 errors)                    |
 | cargo fmt                         | —     | PASS                                             |
@@ -102,7 +109,7 @@ All 10 local CI gates pass. Master is stable and functional. Remote-CI is `REMOT
 | cargo build                       | —     | PASS                                             |
 | pnpm build                        | —     | PASS                                             |
 | mkdocs build --strict             | —     | TOOL_MISSING (mkdocs not installed on this host) |
-| Local CI (10 gates, master)       | 9/10  | PASS (mkdocs excluded — tool gap)                |
+| Local CI (11 gates, master)       | 10/11 | PASS (mkdocs excluded — tool gap)                |
 | Remote CI (GitHub Actions)        | —     | REMOTE_CI_INFRA_BLOCKED                          |
 
 ---
