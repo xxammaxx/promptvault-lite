@@ -119,7 +119,17 @@ PromptVault Lite is in a stable public release state.
 
 The real corpus pilot is complete, the Windows startup crash is fixed, the v1.7.1 installer is published, and active documentation now matches the current release state.
 
-Since v1.7.1, the `master` branch has received the Settings Modal (PR #186, closes #63) and UI/Optimizer/Classification/Layout fixes (PR #185). These are on master but not yet in a release build.
+Since v1.7.1, the `master` branch has received significant classification improvements:
+
+- **Settings Modal** (PR #186) with theme, export format, dev mode, and reset
+- **GUIDELINE classification** (PR #190) for policy and guideline-style prompts
+- **Real-corpus classification reasons** (PR #192) with regression fixtures
+- **Regex/backtracking hardening** (PR #196) in prompt quality analysis
+- **BLUEPRINT/DOCUMENTATION boundary refinement** (PR #197)
+- **UNKNOWN confidence and fallback explanations** (PR #198)
+- **UI/Optimizer/Classification/Layout fixes** (PR #185)
+
+These are on master but not yet in a release build. The final real-corpus validation recheck (Issue #191) passed on 2026-07-04.
 
 Remaining known limitations:
 
@@ -136,5 +146,5 @@ Remaining known limitations:
 - Code signing for Windows installer
 - macOS `.dmg` build
 - Linux `.AppImage` build
-- Create v1.7.2 release with Settings Modal and UI/layout fixes
+- Create v1.7.2 release with classification improvements (GUIDELINE, BLUEPRINT/DOC boundary, UNKNOWN fallback) plus Settings Modal and UI/optimizer fixes
 - optional Web/LAN/Docker deployment later

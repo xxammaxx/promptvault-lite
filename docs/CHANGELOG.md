@@ -19,9 +19,38 @@ version: 1.7.1
   - Alle Einstellungen zurücksetzen
   - Schließen per X-Button, Escape-Taste oder Klick außerhalb
 
+- **GUIDELINE Classification** (PR #190): Prompt-Klassifizierung erkennt jetzt guideline- und policy-artige Prompts als eigene Klasse. Verbessert die Genauigkeit bei Anleitungs- und Richtlinien-Prompts.
+
+- **Real-Corpus Classification Reasons** (PR #192): PROMPT- und CODE_FRAGMENT-Klassifizierungsgründe hinzugefügt. Regression-Fixtures für reale Prompt-Korpora.
+
+- **UNKNOWN Confidence und Fallback Explanations** (PR #198): Ehrlichere Behandlung von nicht klassifizierbaren Prompts mit detaillierten Fallback-Erklärungen statt stiller Defaults.
+
 ### Fixed
 
+- **Regex/Backtracking Hardening** (PR #196): Regex-Backtracking in der Prompt-Qualitätsanalyse verhindert. Verbessert Stabilität bei langen oder komplexen Prompt-Dateien. 5 neue Regressionstests.
+
+- **BLUEPRINT/DOCUMENTATION Boundary Refinement** (PR #197): Verfeinerte Abgrenzung zwischen BLUEPRINT- und DOCUMENTATION-Klassifikation bei architektur-ähnlichen Dokumenten.
+
+- **UI/Optimizer/Classification/Layout Fixes** (PR #185): Verbesserte Optimizer-Vorschau, Klassifizierungsanzeige, Scoring-UX und Layout-Konsistenz. Statusleiste bleibt im maximierten Layout sichtbar.
+
 - Tauri Watcher-Cleanup-Fehler im Web-Modus (Vite Dev Server) behoben — `stopFileWatcher` wird nur im Tauri-Kontext aufgerufen.
+
+### Quality Gates
+
+| Gate                | Ergebnis                              |
+| ------------------- | ------------------------------------- |
+| `pnpm test`         | **665 passed** (26 files, 0 failures) |
+| `pnpm lint`         | **0 errors, 0 warnings**              |
+| `pnpm exec tsc`     | **0 errors**                          |
+| `pnpm build`        | **PASS**                              |
+| `cargo test --lib`  | **134 passed** (+1 ignored)           |
+| `cargo test --test` | **22 passed** (+1 ignored)            |
+| `cargo fmt`         | **PASS**                              |
+| `cargo clippy`      | **0 warnings**                        |
+
+### Hygiene Scoring Note
+
+Der Hygiene-Analyzer wurde durch die Regex/Backtracking-Härtung strenger. Aggregierte Hygiene-Scores können dadurch niedriger ausfallen als in früheren Validierungsberichten, weil mehr Artefakt-Muster erkannt werden. Dies ist als verbesserte Erkennungsgenauigkeit zu interpretieren, nicht zwingend als Qualitätsregression.
 
 ## v1.7.1 — Windows Installer Startup Crash Fix
 

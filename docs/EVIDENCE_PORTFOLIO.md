@@ -3,10 +3,11 @@
 > Living Software Portfolio. Updated with every significant agent run.
 > No marketing claims — only evidence-backed facts.
 
-**Last evidence run:** 2026-07-02 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator, Living Truth Mirror — Issue #187 validation)
+**Last evidence run:** 2026-07-05 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator, v1.7.2 Release Readiness Prep)
 **Blueprint detection run:** 2026-06-19 (OpenCode 1.15.0)
 **Scanner extension run:** 2026-06-21 (PR #168, #170, #172 merged to master)
 **Settings Modal merge:** 2026-07-02 (PR #186, closes #63 — on master, not in v1.7.1 release)
+**Classification improvements:** 2026-07-03–04 (PR #190, #192, #196, #197, #198 merged to master)
 **UI/Layout/Optimizer fixes:** 2026-06-24 (PR #185 merged to master)
 **CodeRabbit removal run:** 2026-06-19 — confirmed: zero CodeRabbit files/references in repo
 
@@ -41,20 +42,30 @@
 
 ## New Capabilities Since v1.6.0
 
-| Capability                                      | PR/Issue | Status                                                 |
-| ----------------------------------------------- | -------- | ------------------------------------------------------ |
-| NAS-mounted markdown folder scanning            | #145     | ✅ Merged (2026-06-20)                                 |
-| Optimizer placeholder hardening                 | #147     | ✅ Merged (2026-06-20)                                 |
-| Blueprint detection, evaluation & optimization  | #148     | ✅ Merged (2026-06-19)                                 |
-| Native .txt prompt ingestion                    | #168     | ✅ Merged (2026-06-21)                                 |
-| Centralized scanner extension handling          | #170     | ✅ Merged (2026-06-21)                                 |
-| Shared file size limit (1 MiB)                  | #172     | ✅ Merged (2026-06-21)                                 |
-| Real prompt corpus pilot (Z-drive)              | #166     | ✅ Completed; corpus review finalized (0 open reviews) |
-| Docs-as-Code MkDocs platform                    | #162     | ✅ Merged (2026-06-21)                                 |
-| Historical evidence archive                     | #163     | ✅ Merged (2026-06-21)                                 |
-| UI/Optimizer/Classification/Layout fixes        | #185     | ✅ Merged (2026-06-24) — on master, not in v1.7.1      |
-| Settings Modal (theme, export, dev mode, reset) | #186     | ✅ Merged (2026-07-02) — on master, closes #63         |
-| Five-file Playwright evidence (sanitized)       | #187     | ✅ Validated (2026-07-02) — GitHub-visible, no prompts |
+| Capability                                        | PR/Issue | Status                                                 |
+| ------------------------------------------------- | -------- | ------------------------------------------------------ |
+| NAS-mounted markdown folder scanning              | #145     | ✅ Merged (2026-06-20)                                 |
+| Optimizer placeholder hardening                   | #147     | ✅ Merged (2026-06-20)                                 |
+| Blueprint detection, evaluation & optimization    | #148     | ✅ Merged (2026-06-19)                                 |
+| Native .txt prompt ingestion                      | #168     | ✅ Merged (2026-06-21)                                 |
+| Centralized scanner extension handling            | #170     | ✅ Merged (2026-06-21)                                 |
+| Shared file size limit (1 MiB)                    | #172     | ✅ Merged (2026-06-21)                                 |
+| Real prompt corpus pilot (Z-drive)                | #166     | ✅ Completed; corpus review finalized (0 open reviews) |
+| Docs-as-Code MkDocs platform                      | #162     | ✅ Merged (2026-06-21)                                 |
+| Historical evidence archive                       | #163     | ✅ Merged (2026-06-21)                                 |
+| UI/Optimizer/Classification/Layout fixes          | #185     | ✅ Merged (2026-06-24) — on master, not in v1.7.1      |
+| Settings Modal (theme, export, dev mode, reset)   | #186     | ✅ Merged (2026-07-02) — on master, closes #63         |
+| Five-file Playwright evidence (sanitized)         | #187     | ✅ Validated (2026-07-02) — GitHub-visible, no prompts |
+| GUIDELINE classification (policy/guideline-aware) | #190     | ✅ Merged (2026-07-03) — on master, not in release     |
+| Real-corpus classification reasons + regression   | #192     | ✅ Merged (2026-07-03) — on master, not in release     |
+| Regex/backtracking hardening (quality analysis)   | #196     | ✅ Merged (2026-07-03) — on master, not in release     |
+| BLUEPRINT/DOCUMENTATION boundary refinement       | #197     | ✅ Merged (2026-07-03) — on master, not in release     |
+| UNKNOWN confidence / fallback explanations        | #198     | ✅ Merged (2026-07-04) — on master, not in release     |
+| Final real-corpus GREEN recheck                   | #191     | ✅ Closed (2026-07-04)                                 |
+
+### Hygiene Scoring Note
+
+The hygiene analyzer became stricter after the regex/backtracking hardening work (PR #196). As a result, aggregate hygiene scores may be lower than in earlier validation reports because more artifact patterns are detected. This is expected and should be interpreted as improved detection sensitivity, not necessarily as a quality regression.
 
 ---
 
@@ -160,7 +171,7 @@ On 2026-07-02, a Playwright smoke test was performed using 5 `.md` files from th
 
 ---
 
-## OpenCode Agent Runtime (2026-07-02)
+## OpenCode Agent Runtime (2026-07-05)
 
 | Check               | Result                                                                                                                                              |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -169,7 +180,7 @@ On 2026-07-02, a Playwright smoke test was performed using 5 `.md` files from th
 | Agent Mode          | issue-orchestrator                                                                                                                                  |
 | Available Subagents | review-agent, research-agent, compliance-agent, migration-agent, playwright-agent, architecture-agent, security-agent, documentation-agent, explore |
 | Skills loaded       | github-source-of-truth, spec-driven-development, audit-trail-enforcer, read-before-sketch                                                           |
-| Working Tree        | master (2026-07-02: clean)                                                                                                                          |
+| Working Tree        | master (2026-07-05: clean)                                                                                                                          |
 | gh CLI              | 2.45.0 (available)                                                                                                                                  |
 | OS/Shell            | Linux (Ubuntu), bash                                                                                                                                |
 | Rust                | 1.95.0                                                                                                                                              |
@@ -177,19 +188,19 @@ On 2026-07-02, a Playwright smoke test was performed using 5 `.md` files from th
 
 ---
 
-## Gate Results (2026-07-02 Fresh Run)
+## Gate Results (2026-07-05 Fresh Run)
 
 | Gate                       | Command                       | Result                       |
 | -------------------------- | ----------------------------- | ---------------------------- |
-| Frontend Tests             | `pnpm test`                   | 634/634 PASS (26 files)      |
+| Frontend Tests             | `pnpm test`                   | 665/665 PASS (26 files)      |
 | ESLint                     | `pnpm lint`                   | PASS (0 errors, 0 warnings)  |
 | TypeScript                 | `tsc --noEmit`                | PASS (0 errors)              |
 | Rust Unit Tests            | `cargo test --lib`            | 134/134 PASS (+1 ignored)    |
-| Rust Integration Tests     | `cargo test --test "*"`       | 17/17 PASS                   |
+| Rust Integration Tests     | `cargo test --test "*"`       | 22/22 PASS (+1 ignored)      |
 | cargo fmt                  | `cargo fmt --check --all`     | PASS                         |
 | cargo clippy               | `cargo clippy -- -D warnings` | PASS (0 warnings)            |
 | Git diff check             | `git diff --check`            | PASS (no conflicts)          |
 | MkDocs build               | `mkdocs build --strict`       | TOOL_MISSING (not installed) |
 | pnpm build                 | `pnpm build`                  | PASS                         |
-| Local CI (9/10 gates)      | —                             | 9/10 PASS (mkdocs excluded)  |
+| Local CI (10/11 gates)     | —                             | 10/11 PASS (mkdocs excluded) |
 | Remote CI (GitHub Actions) | `gh run list`                 | REMOTE_CI_INFRA_BLOCKED      |
