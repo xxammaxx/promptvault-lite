@@ -24,6 +24,7 @@ version: 1.7.0
 ### Mitte: Prompt-Details
 
 - Titel und Beschreibung
+- **Audio-Kurzbeschreibung** mit "Kurz vorlesen" Button (lokale Sprachausgabe)
 - Version, Kategorie, Tags, Pfad und Datumsangaben
 - Vollständiger Markdown-Inhalt
 - Aktionen: Favorit, Kopieren, Datei öffnen, Analysieren
@@ -77,3 +78,32 @@ version: 1.7.0
   - **Strg/Cmd + Shift + A** — Alle Prompts analysieren
   - **Strg/Cmd + E** — Export-Dialog öffnen
   - **Esc** — Filter zurücksetzen / Suchfeld verlassen
+
+## Audio-Kurzbeschreibung (lokal)
+
+PromptVault Lite kann eine kurze deutsche Zusammenfassung des ausgewählten Prompts vorlesen.
+
+- Die Kurzbeschreibung erscheint in der Detailansicht unterhalb der Metadaten.
+- Klicke auf **"Kurz vorlesen"**, um die Sprachausgabe zu starten.
+- Während der Wiedergabe erscheint ein **"Stoppen"**-Button.
+- Die Sprachausgabe stoppt automatisch beim Wechsel des Prompts.
+
+### Lokale TTS (Text-to-Speech)
+
+Die Sprachausgabe nutzt die **Web Speech API** des Browsers und benötigt **keine Internetverbindung, keine Cloud-TTS-Dienste und keine API-Keys**.
+
+- **Keine Cloud-Abhängigkeit:** Alle Verarbeitung erfolgt lokal.
+- **Keine vollständigen Prompt-Inhalte:** Es wird nur eine kurze Zusammenfassung vorgelesen (maximal ca. 500 Zeichen).
+- **Sensible Inhalte werden maskiert:** API-Keys, Tokens, E-Mail-Adressen, Pfade und Code-Blöcke werden automatisch erkannt und nicht vorgelesen.
+- **Sicherheitsblockierung:** Inhalte mit kritischen Hygiene-Warnungen werden nicht vorgelesen.
+
+### TTS-Provider unter Linux
+
+PromptVault Lite erkennt automatisch verfügbare TTS-Provider:
+
+1. **Web Speech API** (bevorzugt) — im Browser/WebView integriert
+2. **Piper** — lokaler ONNX-basierter TTS (separate Installation erforderlich)
+3. **spd-say** (Speech Dispatcher) — `sudo apt install speech-dispatcher`
+4. **espeak-ng** — `sudo apt install espeak-ng`
+
+Die Kurzbeschreibung bleibt auch ohne TTS-Provider sichtbar — nur die Audioausgabe ist dann deaktiviert.

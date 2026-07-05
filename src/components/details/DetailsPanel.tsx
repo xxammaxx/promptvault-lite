@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { OptimizationPanel } from "@/components/optimization/OptimizationPanel";
 import { BlueprintOptimizationPanel } from "@/components/optimization/BlueprintOptimizationPanel";
 import ContentClassBadge from "@/components/common/ContentClassBadge";
+import { PromptAudioSummary } from "@/components/details/PromptAudioSummary";
 import type { BlueprintContamination } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -344,6 +345,7 @@ export const DetailsPanel: React.FC = () => {
       <div className="panel-content">
         <PromptMeta />
         <ContaminationWarning />
+        <PromptAudioSummary />
         <ActionBar
           onOptimize={handleOpenOptimizer}
           onBlueprintOptimize={handleBlueprintOptimize}
