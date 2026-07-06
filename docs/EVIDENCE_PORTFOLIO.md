@@ -35,6 +35,7 @@
 | SQLite/FTS5 database layer                                           | 14 Rust tests PASS                     | 2026-06-19    |
 | Symlink containment & path traversal protection                      | 10 Rust tests PASS                     | 2026-06-19    |
 | Paste prompt analysis — Clipboard & direct text (no file, no save)   | 26 frontend tests PASS                 | 2026-07-06    |
+| Embeddings feature flag + mock provider (Phase 1, no real model)     | 49 frontend tests PASS                 | 2026-07-06    |
 | CI: Frontend (tsc+lint+test+build)                                   | Local CI — PASS (see #154)             | 2026-06-20    |
 | CI: Rust (fmt+clippy+test+build)                                     | Local CI — PASS (see #154)             | 2026-06-20    |
 | CI: Secret Scan                                                      | NOT_RUN_TOOL_MISSING (local)           | 2026-06-20    |
