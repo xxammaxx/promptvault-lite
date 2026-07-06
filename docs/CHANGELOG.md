@@ -39,6 +39,14 @@ version: 1.7.1
 
 - **GUIDELINE Classification** (PR #190): Prompt-Klassifizierung erkennt jetzt guideline- und policy-artige Prompts als eigene Klasse. Verbessert die Genauigkeit bei Anleitungs- und Richtlinien-Prompts.
 
+- **Embeddings Feature Flag + Mock Provider** (Issue #199 Phase 1): Grundstein für lokale semantische Suche.
+  - Feature Flag `PROMPTVAULT_EMBEDDINGS=1` (standardmäßig deaktiviert)
+  - `EmbeddingProvider` Interface mit `MockEmbeddingProvider` für synthetische Tests
+  - `createEmbeddingProvider()` Factory mit Feature-Flag-Gating
+  - 49 synthetische Fixture-Tests (16 Feature-Flag, 11 Provider-Contract, 22 Mock-Provider)
+  - Keine echten Embeddings, keine neuen Dependencies, kein Netzwerkzugriff
+  - Echter Provider (ONNX/Ollama) auf spätere Phase verschoben (ADR-004 Decision C)
+
 - **Real-Corpus Classification Reasons** (PR #192): PROMPT- und CODE_FRAGMENT-Klassifizierungsgründe hinzugefügt. Regression-Fixtures für reale Prompt-Korpora.
 
 - **UNKNOWN Confidence und Fallback Explanations** (PR #198): Ehrlichere Behandlung von nicht klassifizierbaren Prompts mit detaillierten Fallback-Erklärungen statt stiller Defaults.
