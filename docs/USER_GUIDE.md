@@ -107,3 +107,20 @@ PromptVault Lite erkennt automatisch verfügbare TTS-Provider:
 4. **espeak-ng** — `sudo apt install espeak-ng`
 
 Die Kurzbeschreibung bleibt auch ohne TTS-Provider sichtbar — nur die Audioausgabe ist dann deaktiviert.
+
+## Direktanalyse — Prompt ohne Datei analysieren
+
+Die Direktanalyse erlaubt es, einen Prompt-Text einzufügen und sofort zu analysieren, ohne eine Datei im Vault anzulegen.
+
+1. Klicke in der Toolbar auf **📝 Direktanalyse**.
+2. Füge den Prompt-Text manuell in das Textfeld ein oder klicke auf **📋 Aus Zwischenablage einfügen**.
+3. Klicke auf **🔍 Analysieren**.
+4. Die Ergebnisse zeigen Klassifikation, Qualität, Hygiene, Blueprint-Bewertung und Context-Engineering-Scores.
+5. Mit **🗑️ Leeren** wird die Eingabe zurückgesetzt.
+
+### Sicherheit
+
+- Der eingefügte Text wird **nicht gespeichert** und bleibt nur im lokalen UI-State.
+- Die Zwischenablage wird ausschließlich nach expliziter Nutzeraktion gelesen (Button-Klick).
+- Keine Cloud-API, kein Remote-LLM, keine Telemetrie.
+- Zurück zum Dateimodus: Auf **📁 Dateien** klicken.
