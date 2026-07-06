@@ -2,17 +2,17 @@
 
 **Last updated:** 2026-07-06
 **Current stable release:** v1.7.1
-**Branch:** docs/baseline-sync-after-206 (Docs Baseline Sync)
-**Master HEAD:** ae3bb16 (PR #206 merge)
+**Branch:** master
+**Master HEAD:** 37e7a38 (PR #208 merge)
 
 ---
 
 ## Current Status: YELLOW_REVIEW 🟡
 
 **Code/Tests:** GREEN_SAFE — all local CI gates pass.
-**Docs:** RED_HOLD until Docs Baseline Sync (#207) is merged.
-**Security/Architecture/Compliance:** YELLOW_REVIEW — docs sync addresses open findings.
-**Release:** BLOCKED until Docs Sync (#207) merged.
+**Docs:** GREEN_SAFE — Docs Baseline Sync (#207) completed via PR #208.
+**Security/Architecture/Compliance:** YELLOW_REVIEW — post-docs-sync review recommended.
+**Release:** READY_REVIEWED — manual owner approval required before release execution.
 
 Remote-CI is `REMOTE_CI_INFRA_BLOCKED` (Issue #154). Local CI is authoritative.
 
@@ -49,22 +49,22 @@ Remote-CI is `REMOTE_CI_INFRA_BLOCKED` (Issue #154). Local CI is authoritative.
 
 ## On Master (Not Yet in v1.7.1 Release)
 
-| Feature                                     | Status                                                      |
-| ------------------------------------------- | ----------------------------------------------------------- |
-| NAS-Mounted Markdown Folder Ingestion       | ✅ Merged (PR #145, 2026-06-20)                             |
-| Scanner Extension Support (.txt, .markdown) | ✅ Merged (PR #168, #170, 2026-06-21)                       |
-| Shared File Size Limit (1 MiB)              | ✅ Merged (PR #172, 2026-06-21)                             |
-| UI/Optimizer/Classification/Layout Fixes    | ✅ Merged (PR #185, 2026-06-24)                             |
-| Settings Modal (#63)                        | ✅ Merged (PR #186, 2026-07-02)                             |
-| GUIDELINE Classification                    | ✅ Merged (PR #190, 2026-07-03)                             |
-| Real-Corpus Classification Reasons          | ✅ Merged (PR #192, 2026-07-03)                             |
-| Regex/Backtracking Hardening                | ✅ Merged (PR #196, 2026-07-03)                             |
-| BLUEPRINT/DOCUMENTATION Boundary Refinement | ✅ Merged (PR #197, 2026-07-03)                             |
-| UNKNOWN Confidence / Fallback Explanations  | ✅ Merged (PR #198, 2026-07-04)                             |
-| Audio Summary (TTS, Web Speech API)         | ✅ Merged (PR #202, 2026-07-03)                             |
-| Paste Prompt Analyzer                       | ✅ Merged (PR #205, 2026-07-05)                             |
-| Embeddings Phase 1 (Mock Provider)          | ✅ Merged (PR #206, 2026-07-06)                             |
-| Docs Baseline Sync                          | 🔄 Active (Issue #207, branch docs/baseline-sync-after-206) |
+| Feature                                     | Status                                |
+| ------------------------------------------- | ------------------------------------- |
+| NAS-Mounted Markdown Folder Ingestion       | ✅ Merged (PR #145, 2026-06-20)       |
+| Scanner Extension Support (.txt, .markdown) | ✅ Merged (PR #168, #170, 2026-06-21) |
+| Shared File Size Limit (1 MiB)              | ✅ Merged (PR #172, 2026-06-21)       |
+| UI/Optimizer/Classification/Layout Fixes    | ✅ Merged (PR #185, 2026-06-24)       |
+| Settings Modal (#63)                        | ✅ Merged (PR #186, 2026-07-02)       |
+| GUIDELINE Classification                    | ✅ Merged (PR #190, 2026-07-03)       |
+| Real-Corpus Classification Reasons          | ✅ Merged (PR #192, 2026-07-03)       |
+| Regex/Backtracking Hardening                | ✅ Merged (PR #196, 2026-07-03)       |
+| BLUEPRINT/DOCUMENTATION Boundary Refinement | ✅ Merged (PR #197, 2026-07-03)       |
+| UNKNOWN Confidence / Fallback Explanations  | ✅ Merged (PR #198, 2026-07-04)       |
+| Audio Summary (TTS, Web Speech API)         | ✅ Merged (PR #202, 2026-07-03)       |
+| Paste Prompt Analyzer                       | ✅ Merged (PR #205, 2026-07-05)       |
+| Embeddings Phase 1 (Mock Provider)          | ✅ Merged (PR #206, 2026-07-06)       |
+| Docs Baseline Sync                          | ✅ Merged (PR #208)                   |
 
 ---
 
@@ -117,18 +117,18 @@ Remote-CI is `REMOTE_CI_INFRA_BLOCKED` (Issue #154). Local CI is authoritative.
 
 ## Open Issues
 
-| Issue | Description                             | Status                |
-| ----- | --------------------------------------- | --------------------- |
-| #199  | Embeddings Phase 2: DB schema/storage   | OPEN (Phase 1 merged) |
-| #207  | Docs Baseline Sync (pre v1.7.2 release) | 🔄 Active             |
-| #154  | Remote-CI infra-blocked                 | OPEN                  |
+| Issue | Description                             | Status                     |
+| ----- | --------------------------------------- | -------------------------- |
+| #199  | Embeddings Phase 2: DB schema/storage   | OPEN (Phase 1 merged)      |
+| #207  | Docs Baseline Sync (pre v1.7.2 release) | ✅ Closed (PR #208 merged) |
+| #154  | Remote-CI infra-blocked                 | OPEN                       |
 
 ---
 
 ## Next Steps (Recommended)
 
-1. **Docs Baseline Sync (#207):** Merge docs PR to remove RED_HOLD on docs.
-2. **v1.7.2 Release:** After docs sync merge, create release with accumulated improvements.
+1. **v1.7.2 Release Execution:** Manual owner approval required. After approval, create release with accumulated improvements (separate release run).
+2. **Embeddings Phase 2 (#199):** DB schema/storage planning (still mock-only, no real provider).
 3. **Embeddings Phase 2 (#199):** DB schema/storage planning (still mock-only, no real provider).
 4. **Architecture Contract Audit:** Validate current architecture docs against code.
 5. **Security Posture Review:** Document CSP, capabilities, update_prompt trust model.

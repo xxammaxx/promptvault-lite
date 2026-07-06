@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-07-06
 **Current version:** v1.7.1 (stable release)
-**Next target:** v1.7.2 (after Docs Sync)
+**Next target:** v1.7.2 (Docs Sync completed via PR #208, release readiness reviewed)
 
 ---
 
@@ -30,10 +30,10 @@
 
 ## In Progress
 
-| Priority | Task                                    | Issue | Status                                   |
-| -------- | --------------------------------------- | ----- | ---------------------------------------- |
-| P0       | Docs Baseline Sync (pre v1.7.2 release) | #207  | 🔄 Active (docs/baseline-sync-after-206) |
-| P1       | v1.7.2 Release Readiness                | —     | 🔄 Blocked until Docs Sync merged        |
+| Priority | Task                                    | Issue | Status                                       |
+| -------- | --------------------------------------- | ----- | -------------------------------------------- |
+| P0       | Docs Baseline Sync (pre v1.7.2 release) | #207  | ✅ Completed (PR #208 merged)                |
+| P1       | v1.7.2 Release Readiness                | #209  | 🔄 Reviewed — manual owner approval required |
 
 ---
 
@@ -79,7 +79,7 @@
 | P3       | Platform-specific INSTALL.md | #43   | Backlog                |
 | P3       | Legacy docs cleanup          | #42   | Backlog                |
 | P3       | Screenshots                  | #40   | Backlog                |
-| P0       | Docs Baseline Sync           | #207  | 🔄 Active (pre v1.7.2) |
+| P0       | Docs Baseline Sync           | #207  | ✅ Completed (PR #208) |
 
 ---
 
