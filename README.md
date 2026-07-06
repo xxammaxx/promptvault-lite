@@ -77,7 +77,7 @@ Since v1.7.1, the `master` branch has received many improvements (not yet in a r
 - **Paste Prompt Analyzer** — direct clipboard/text analysis
 - **Embeddings Phase 1** — mock provider + feature flag
 - **Classification improvements** — GUIDELINE, BLUEPRINT/DOC boundary, UNKNOWN fallback
-- **v1.7.2 release is blocked** until Docs Baseline Sync (#207) is completed.
+- Docs Baseline Sync (#207) completed via PR #208. v1.7.2 release readiness has been reviewed. Release execution still requires separate manual owner approval.
 
 ---
 
@@ -134,7 +134,7 @@ PromptVault Lite is designed as a local-first tool:
 
 PromptVault Lite is in a stable public release state (v1.7.1).
 
-Master branch has significant improvements merged since v1.7.1; the next release (v1.7.2) is blocked until Docs Baseline Sync (#207) is completed and merged.
+Master branch has significant improvements merged since v1.7.1, including the Docs Baseline Sync (PR #208). v1.7.2 release readiness has been reviewed. Release execution still requires separate manual owner approval.
 
 Known limitations:
 
@@ -149,8 +149,7 @@ Known limitations:
 
 ## Best next improvements
 
-- Complete Docs Baseline Sync (#207) — in progress
-- Create v1.7.2 release with accumulated improvements
+- Create v1.7.2 release with accumulated improvements (manual owner approval required before release execution)
 - Embeddings Phase 2: DB schema planning (#199)
 - Code signing for Windows installer
 - macOS `.dmg` build

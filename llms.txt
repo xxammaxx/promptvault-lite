@@ -13,7 +13,7 @@ keine Cloud-Anbindung, keine Telemetrie, kein Tracking.
 
 - **Stack:** React 18 + TypeScript + Vite (Frontend), Rust + Tauri 2 (Backend), SQLite (Daten)
 - **State Management:** Zustand
-- **Version:** v1.7.1 (stable release) — v1.7.2 geplant nach Docs Sync
+- **Version:** v1.7.1 (stable release) — v1.7.2 Release Readiness reviewed (Docs Sync completed via PR #208)
 - **Lizenz:** MIT
 - **Repository:** https://github.com/xxammaxx/promptvault-lite
 - **CI Status:** REMOTE_CI_INFRA_BLOCKED (Issue #154) — Local-CI-first policy
@@ -93,7 +93,7 @@ Referenzen in aelteren Docs auf `evidence-gates.json`, `mcp-trust-tiers.json`, `
 ## Release-Status
 
 - **v1.7.1** ist das aktuelle stable release (Windows x64, unsigned)
-- **v1.7.2 ist BLOCKED** bis Docs Baseline Sync (#207) gemerged ist
+- **v1.7.2 Release Readiness:** Reviewed — manuelle Owner-Approval erforderlich vor Release Execution. Docs Baseline Sync (#207) completed via PR #208.
 - Keine Release/Tag/Assets duerfen ohne Owner-Approval erstellt werden
 
 ## Build und Test
@@ -138,8 +138,8 @@ pnpm exec playwright test           # optional (tool conflict on some hosts)
 
 ## Offene Punkte
 
-- **Docs Baseline Sync (#207):** 🔄 Active — Docs RED_HOLD bis Merge
-- **v1.7.2 Release:** BLOCKED bis Docs Sync gemerged
+- **Docs Baseline Sync (#207):** ✅ Completed (PR #208)
+- **v1.7.2 Release:** Readiness reviewed — manuelle Owner-Approval erforderlich
 - **Embeddings Phase 2 (#199):** DB schema/storage planning (no real provider)
 - Remote-CI `REMOTE_CI_INFRA_BLOCKED` (Issue #154)
 - P3 Documentation Backlog (#40, #42, #43) — low priority

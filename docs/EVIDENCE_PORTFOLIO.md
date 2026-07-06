@@ -119,7 +119,7 @@
 
 ## Next Step
 
-- **Active:** Docs Baseline Sync (#207) — remove RED_HOLD on documentation.
-- **Blocked:** v1.7.2 release — blocked until docs sync merged.
+- **Completed:** Docs Baseline Sync (#207 / PR #208) — RED_HOLD resolved.
+- **Pending:** v1.7.2 release — readiness reviewed, manual owner approval required before execution.
 - **Planned:** Embeddings Phase 2 (#199) — DB schema/storage, still mock-only.
 - **Planned:** Architecture Contract Audit, Security Posture Review.
