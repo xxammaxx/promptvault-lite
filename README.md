@@ -23,7 +23,7 @@ It is built for people who collect, write and refine many prompts — especially
 ## Key Features
 
 - **Local Prompt Archive**
-  Recursively scan local folders with `.md`, `.markdown` and `.txt` prompt files.
+  Recursively scan local folders with `.md`, `.markdown` and `.txt` prompt files (1 MiB limit).
 
 - **Prompt Explorer**
   Browse prompt folders in a clean desktop file tree with search, filters and favorites.
@@ -35,7 +35,13 @@ It is built for people who collect, write and refine many prompts — especially
   Find prompt contamination such as secrets, private paths, logs, OCR residue, foreign project context and evidence clutter.
 
 - **Blueprint Intelligence**
-  Detect prompt blueprints, hybrid prompt/spec files and architecture-like agent instructions.
+  Detect prompt blueprints, hybrid prompt/spec files and architecture-like agent instructions. Evaluate and optimize blueprint quality across 10 dimensions.
+
+- **Paste Prompt Analyzer**
+  Analyze pasted or typed prompt text directly — no file needed, no persistence, fully local.
+
+- **Audio Summary**
+  Get an AI-readable text summary of any prompt with optional text-to-speech playback via local Web Speech API.
 
 - **Settings**
   Configure theme (light/dark/auto), export format preferences, developer mode, and keyboard shortcuts via the settings modal.
@@ -46,6 +52,9 @@ It is built for people who collect, write and refine many prompts — especially
 - **Export Tools**
   Export prompt data and analysis results as JSON, Markdown or ZIP.
 
+- **Embeddings (Phase 1 — Mock)**
+  Embedding feature flag and mock provider for future semantic search. Disabled by default. No real ML model.
+
 - **Privacy-first Desktop App**
   No cloud backend. No API calls. No telemetry. No account. No prompt upload.
 
@@ -55,13 +64,20 @@ It is built for people who collect, write and refine many prompts — especially
 
 **v1.7.1** is the current stable release.
 
-This patch release fixes the Windows startup crash that could happen on first launch after installation when the app data directory did not exist yet.
-
 A Windows x64 installer is available as a GitHub Release asset:
 
 - `PromptVault.Lite_1.7.1_x64-setup.exe`
 
 Note: The installer is currently unsigned. Windows SmartScreen may show an "Unknown publisher" warning.
+
+Since v1.7.1, the `master` branch has received many improvements (not yet in a release):
+
+- **Settings Modal** — theme, export format, dev mode, reset
+- **Audio Summary** — TTS via Web Speech API
+- **Paste Prompt Analyzer** — direct clipboard/text analysis
+- **Embeddings Phase 1** — mock provider + feature flag
+- **Classification improvements** — GUIDELINE, BLUEPRINT/DOC boundary, UNKNOWN fallback
+- **v1.7.2 release is blocked** until Docs Baseline Sync (#207) is completed.
 
 ---
 
@@ -106,6 +122,7 @@ PromptVault Lite is designed as a local-first tool:
 - React 18
 - TypeScript
 - Rust
+- Zustand
 - SQLite
 - Vite
 - Vitest
@@ -115,36 +132,26 @@ PromptVault Lite is designed as a local-first tool:
 
 ## Project Status
 
-PromptVault Lite is in a stable public release state.
+PromptVault Lite is in a stable public release state (v1.7.1).
 
-The real corpus pilot is complete, the Windows startup crash is fixed, the v1.7.1 installer is published, and active documentation now matches the current release state.
+Master branch has significant improvements merged since v1.7.1; the next release (v1.7.2) is blocked until Docs Baseline Sync (#207) is completed and merged.
 
-Since v1.7.1, the `master` branch has received significant classification improvements:
+Known limitations:
 
-- **Settings Modal** (PR #186) with theme, export format, dev mode, and reset
-- **GUIDELINE classification** (PR #190) for policy and guideline-style prompts
-- **Real-corpus classification reasons** (PR #192) with regression fixtures
-- **Regex/backtracking hardening** (PR #196) in prompt quality analysis
-- **BLUEPRINT/DOCUMENTATION boundary refinement** (PR #197)
-- **UNKNOWN confidence and fallback explanations** (PR #198)
-- **UI/Optimizer/Classification/Layout fixes** (PR #185)
-
-These are on master but not yet in a release build. The final real-corpus validation recheck (Issue #191) passed on 2026-07-04.
-
-Remaining known limitations:
-
-- unsigned Windows installer
-- no code signing certificate yet
+- unsigned Windows installer (no code signing certificate)
 - no auto-updater
-- no macOS/Linux installers yet
-- Remote-CI is currently infra-blocked; local CI is authoritative
+- no macOS/Linux pre-built installers
+- Remote-CI is infra-blocked (Issue #154); local CI is authoritative
+- Embeddings Phase 1 is mock-only (no real semantic search)
+- Docker/Web/LAN deployment is deferred
 
 ---
 
 ## Best next improvements
 
+- Complete Docs Baseline Sync (#207) — in progress
+- Create v1.7.2 release with accumulated improvements
+- Embeddings Phase 2: DB schema planning (#199)
 - Code signing for Windows installer
 - macOS `.dmg` build
 - Linux `.AppImage` build
-- Create v1.7.2 release with classification improvements (GUIDELINE, BLUEPRINT/DOC boundary, UNKNOWN fallback) plus Settings Modal and UI/optimizer fixes
-- optional Web/LAN/Docker deployment later

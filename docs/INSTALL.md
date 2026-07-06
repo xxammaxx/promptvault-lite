@@ -1,10 +1,18 @@
 ---
 title: Installation
-description: Installationsanleitung für Linux, Windows und macOS.
-version: 1.7.0
+description: Installationsanleitung für PromptVault Lite.
+version: 1.7.2-dev
+last_updated: 2026-07-06
 ---
 
 # Installation
+
+## Unterstützte Nutzung
+
+- **Entwicklung:** Linux, Windows (getestet auf Linux Mint 22.1 und Windows 10)
+- **Pre-built Installer:** Windows x64 (NSIS, unsigned)
+- macOS/Linux: Nur Quellbau — keine pre-built Installer verfügbar
+- Docker: Nicht als Produktions-Deployment implementiert
 
 ## Voraussetzungen
 
@@ -12,7 +20,7 @@ version: 1.7.0
 - Node.js (LTS empfohlen)
 - pnpm
 
-## Allgemeine Schritte
+## Allgemeine Schritte (Quellbau)
 
 ```bash
 pnpm install
@@ -30,14 +38,6 @@ Für einen Produktionsbuild:
 pnpm tauri build
 ```
 
-## Linux
-
-1. Installiere Rust, Node.js und pnpm.
-2. Stelle sicher, dass die nativen Build-Abhängigkeiten für deine Distribution vorhanden sind.
-3. Klone das Projekt und wechsle in das Verzeichnis.
-4. Führe `pnpm install` aus.
-5. Starte mit `pnpm start`.
-
 ## Windows
 
 1. Installiere Rust, Node.js und pnpm.
@@ -46,11 +46,25 @@ pnpm tauri build
 4. Führe `pnpm install` aus.
 5. Starte mit `pnpm start`.
 
-## macOS
+**Pre-built Installer:** Ein Windows x64 NSIS-Installer ist als GitHub Release Asset verfügbar.
+Der Installer ist derzeit unsigned — Windows SmartScreen zeigt eine Warnung an.
+Kein Code-Signing-Zertifikat vorhanden.
+
+## Linux
 
 1. Installiere Rust, Node.js und pnpm.
-2. Stelle die Xcode-/Command-Line-Tools bereit, falls dein System sie noch nicht hat.
-3. Öffne ein Terminal im Projektordner.
+2. Stelle sicher, dass die nativen Build-Abhängigkeiten für deine Distribution vorhanden sind.
+3. Klone das Projekt und wechsle in das Verzeichnis.
+4. Führe `pnpm install` aus.
+5. Starte mit `pnpm start`.
+
+## macOS
+
+Quellbau möglich, aber nicht aktiv getestet. Kein pre-built macOS-Installer verfügbar.
+
+1. Installiere Rust, Node.js und pnpm.
+2. Stelle die Xcode-/Command-Line-Tools bereit.
+3. Klone das Projekt und wechsle in das Verzeichnis.
 4. Führe `pnpm install` aus.
 5. Starte mit `pnpm start`.
 
@@ -58,6 +72,6 @@ pnpm tauri build
 
 - **`pnpm` oder `cargo` nicht gefunden**: Prüfe, ob die Werkzeuge im PATH sind.
 - **App startet nicht**: Führe `pnpm install` erneut aus.
-- **Scan findet keine Dateien**: Der Scanner verarbeitet nur `.md`-Dateien.
-- **Export/Favoriten scheinen zu hängen**: Der Vorgang läuft lokal im Rust-Backend; bei großen Prompt-Mengen (>>100) kann der erste Aufruf mehrere Sekunden dauern. Status wird in der Toolbar als ⏳-Symbol angezeigt.
-- **Build-Probleme auf Linux/macOS/Windows**: Prüfe die plattformspezifischen Native-Build-Voraussetzungen für Rust/Tauri.
+- **Scan findet keine Dateien**: Der Scanner verarbeitet `.md`, `.markdown` und `.txt`-Dateien bis 1 MiB.
+- **Export/Favoriten scheinen zu hängen**: Der Vorgang läuft lokal im Rust-Backend; bei großen Prompt-Mengen kann der erste Aufruf mehrere Sekunden dauern.
+- **Build-Probleme**: Prüfe die plattformspezifischen Native-Build-Voraussetzungen für Rust/Tauri.

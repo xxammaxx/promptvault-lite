@@ -55,16 +55,16 @@ version: 1.7.0
 
 ## Infrastruktur / Prozesse
 
-| Begriff                                | Definition                                                                                                                                                                                      |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **CI (Continuous Integration)**        | GitHub Actions-Workflow `ci.yml`. Prüft Typecheck, Lint, Frontend-Tests, Rust-Tests und Build vor Merge.                                                                                        |
-| **ADR (Architecture Decision Record)** | Dokumentierte Architekturentscheidung. Abgelegt in `docs/adr/`. Aktuell: ADR-001 (AI Governance), ADR-002 (Docs-as-Code).                                                                       |
-| **Diátaxis**                           | Dokumentations-Systematik von Daniele Procida: Tutorials, How-to Guides, Reference, Explanation. PromptVault Lite strukturiert `docs/` nach diesem Schema.                                      |
-| **Docs-as-Code**                       | Dokumentation wird wie Code behandelt: versioniert, reviewed, getestet. ADR-002 definiert die Plattform.                                                                                        |
-| **Cold / Warm / Hot Context**          | Kontext-Zonen-Modell aus `CONTEXT_ENGINEERING_STANDARD.md`: Cold = unverhandelbare Regeln, Warm = beratendes Projektwissen, Hot = aktueller Laufzeitkontext mit TTL.                            |
-| **Evidence-Gate**                      | Prüfpunkt, der belegte Nachweise fordert. Definiert in `.opencode/policies/evidence-gates.json`. Kategorien: severity_claim, architecture_decision, bug_fix, feature_complete, migration_ready. |
-| **Speckit-Workflow**                   | Spezifikationsgetriebener Workflow: Constitution → Specify → Plan → Tasks → TaskstoIssues → Implement. Vorgeschaltet vor jeder Implementierung.                                                 |
-| **MCP (Model Context Protocol)**       | Protokoll für KI-Tool-Zugriff. Trust-Tiers (0/1/2) definieren Zugriffsrechte in `.opencode/policies/mcp-trust-tiers.json`.                                                                      |
+| Begriff                                | Definition                                                                                                                                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **CI (Continuous Integration)**        | GitHub Actions-Workflow `ci.yml`. Prüft Typecheck, Lint, Frontend-Tests, Rust-Tests und Build vor Merge.                                                                             |
+| **ADR (Architecture Decision Record)** | Dokumentierte Architekturentscheidung. Abgelegt in `docs/adr/`. Aktuell: ADR-001 (AI Governance), ADR-002 (Docs-as-Code).                                                            |
+| **Diátaxis**                           | Dokumentations-Systematik von Daniele Procida: Tutorials, How-to Guides, Reference, Explanation. PromptVault Lite strukturiert `docs/` nach diesem Schema.                           |
+| **Docs-as-Code**                       | Dokumentation wird wie Code behandelt: versioniert, reviewed, getestet. ADR-002 definiert die Plattform.                                                                             |
+| **Cold / Warm / Hot Context**          | Kontext-Zonen-Modell aus `CONTEXT_ENGINEERING_STANDARD.md`: Cold = unverhandelbare Regeln, Warm = beratendes Projektwissen, Hot = aktueller Laufzeitkontext mit TTL.                 |
+| **Evidence-Gate**                      | Prüfpunkt, der belegte Nachweise fordert. Kategorien: severity_claim, architecture_decision, bug_fix, feature_complete, migration_ready. Policy-Dateien sind als `planned` markiert. |
+| **Speckit-Workflow**                   | Spezifikationsgetriebener Workflow: Constitution → Specify → Plan → Tasks → TaskstoIssues → Implement. Vorgeschaltet vor jeder Implementierung.                                      |
+| **MCP (Model Context Protocol)**       | Protokoll für KI-Tool-Zugriff. Trust-Tiers (0/1/2) definieren Zugriffsrechte. Policy-Dateien sind als `planned` markiert.                                                            |
 
 ## Blueprint (in Entwicklung)
 

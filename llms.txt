@@ -3,16 +3,17 @@
 > **Zweck:** Diese Datei bietet KI-Agenten und RAG-Systemen eine strukturierte Uebersicht
 > ueber das PromptVault Lite Projekt. Sie ist fuer maschinelles Lesen optimiert.
 > **Source of Truth:** GitHub Issues → `xxammaxx/promptvault-lite`
-> **Letzte Aktualisierung:** 2026-07-02
+> **Letzte Aktualisierung:** 2026-07-06
 
 ## Projektidentitaet
 
-PromptVault Lite ist ein lokales Desktop-Tool (Windows, macOS, Linux) zum Einlesen,
-Durchsuchen und Bewerten von Prompt-Dateien. Die App arbeitet vollstaendig offline
-— keine Cloud-Anbindung, keine Telemetrie, kein Tracking.
+PromptVault Lite ist ein lokales Desktop-Tool zum Einlesen, Durchsuchen, Analysieren und
+Optimieren von Prompt-Dateien. Die App arbeitet vollstaendig offline —
+keine Cloud-Anbindung, keine Telemetrie, kein Tracking.
 
 - **Stack:** React 18 + TypeScript + Vite (Frontend), Rust + Tauri 2 (Backend), SQLite (Daten)
-- **Version:** v1.7.1
+- **State Management:** Zustand
+- **Version:** v1.7.1 (stable release) — v1.7.2 geplant nach Docs Sync
 - **Lizenz:** MIT
 - **Repository:** https://github.com/xxammaxx/promptvault-lite
 - **CI Status:** REMOTE_CI_INFRA_BLOCKED (Issue #154) — Local-CI-first policy
@@ -20,22 +21,25 @@ Durchsuchen und Bewerten von Prompt-Dateien. Die App arbeitet vollstaendig offli
 ## Architekturueberblick
 
 ```
-React/TS UI (Explorer, Details, Analyse, Blueprints)
+React/TS UI (Explorer, Details, Analyse, Blueprints, Paste Analyzer, Audio, Settings)
     ↕ Tauri IPC
-Rust Backend (Scan, Parse, Analyze, Blueprint Detection, Export)
+Rust Backend (Scan, Parse, Analyze, Blueprint Detection, Export, Favorites, Actions)
     ↕
-Filesystem (Vault) + SQLite (FTS5)
+Filesystem (Vault) + SQLite (FTS5) + In-Memory AppState
 ```
 
 - **Scanner:** Rekursiver Scan von `.md`, `.markdown`, `.txt`-Dateien, Symlink-Containment,
-  case-insensitive Extension Matching, 1 MiB shared file size limit
+  case-insensitive Extension Matching, 1 MiB shared file size limit, File Watcher (500ms)
 - **Parser:** YAML-Frontmatter + Markdown-Strukturanalyse
 - **Analyse:** Qualitaetsanalyse (10 gewichtete Kriterien, Score 0–100) +
   Hygieneanalyse (18 Artefakt-Kategorien, Score 0–100)
-- **Blueprint Detection:** Auto-Erkennung von 7 Content-Klassen (PROMPT, BLUEPRINT,
-  PROMPT_BLUEPRINT_HYBRID, etc.), 10-Dimensionen-Evaluierung, 3-Modi-Optimierung
-- **Persistenz:** SQLite mit FTS5-Volltextindex + JSON-Cache-Fallback
-- **Export:** JSON, Markdown, ZIP (mit Path-Traversal-Schutz)
+- **Blueprint Detection:** Auto-Erkennung von 7 Content-Klassen, 10-Dimensionen-Evaluierung, 3-Modi-Optimierung
+- **Paste Prompt Analyzer:** Direktanalyse via Clipboard/Text ohne Datei, keine Speicherung
+- **Audio Summary:** KI-lesbare Textzusammenfassung + optionale TTS via Web Speech API (lokal)
+- **Embeddings Phase 1:** MockProvider, Feature Flag `PROMPTVAULT_EMBEDDINGS=1` (default disabled), keine echte semantische Suche
+- **Settings:** Theme (Light/Dark/Auto), Export-Format, Developer Mode, Reset
+- **Persistenz:** SQLite (Favorites) + JSON-Cache-Modul + In-Memory AppState
+- **Export:** JSON, Markdown, ZIP (CSV nicht implementiert)
 
 ## Wichtigste Einstiegspunkte
 
@@ -48,27 +52,20 @@ Filesystem (Vault) + SQLite (FTS5)
 | Changelog | `docs/CHANGELOG.md` | Vollstaendige Versionshistorie |
 | Architektur | `docs/ARCHITECTURE.md` | Detaillierte Architektur mit Modulen und Datenfluss |
 | Installationsanleitung | `docs/INSTALL.md` | Plattformspezifische Installation |
-| Development-Runbook | `docs/runbooks/development.md` | Dev-Setup, Commands, Workflows |
-| Glossar | `docs/glossary.md` | Fachbegriffe |
-| Projektstruktur | `docs/reference/project-structure.md` | Vollstaendige Dateireferenz |
-| ADRs | `docs/adr/` | Architecture Decision Records |
-| MkDocs Site | `mkdocs.yml` | Docs-as-Code Platform (Material for MkDocs) |
+| Testing | `docs/TESTING.md` | Teststruktur und Gate-Kommandos |
+| Glossary | `docs/glossary.md` | Fachbegriffe |
+| Governance | `docs/GOVERNANCE.md` | Erklärende Governance-Doku (für Agenten gilt AGENTS.md) |
 
 ## Relevante Dokumentationsseiten fuer KI-Agenten
 
 ### Agentenregeln (verbindlich)
-- `AGENTS.md` — Vollstaendige Agentenregeln (OpenCode ecosystem)
-- `CONTRIBUTING.md` — Contribution Guidelines und Governance
+- `AGENTS.md` — Vollstaendige Agentenregeln (OpenCode ecosystem) — **operative Source of Truth fuer Agenten**
+- `CONTRIBUTING.md` — Contribution Guidelines
 - `SECURITY.md` — Security Policy und Vulnerability Reporting
 
-### Policies (Immutable)
-- `.opencode/policies/evidence-gates.json` — Evidence-Gates
-- `.opencode/policies/mcp-trust-tiers.json` — MCP-Tool-Vertrauensstufen
-- `.opencode/policies/data-retention.json` — Datenaufbewahrung (DSGVO)
-
-### Templates (GitHub)
-- `.github/pull_request_template.md` — PR-Template
-- `.github/ISSUE_TEMPLATE/` — Issue Templates (ai-task, bug, feature, context-engineering)
+### Policies-Referenzen
+Hinweis: `.opencode/policies/`-Verzeichnis existiert derzeit nicht.
+Referenzen in aelteren Docs auf `evidence-gates.json`, `mcp-trust-tiers.json`, `data-retention.json` sind als `planned` zu betrachten.
 
 ## Regeln fuer KI-Agenten
 
@@ -78,20 +75,26 @@ Filesystem (Vault) + SQLite (FTS5)
 4. **Local-CI-First:** Remote-CI ist `REMOTE_CI_INFRA_BLOCKED` (Issue #154). Lokale Gates sind Pflicht.
 5. **Human Approval** fuer: Merge, Deployment, Migrationen, Architektur-Aenderungen.
 6. **Keine Secrets, `.env`-Dateien, `*.db`-Dateien** committen.
-7. **Tests muessen gruen sein:** `pnpm test`, `cargo test`, `pnpm lint`, `tsc --noEmit`.
+7. **Tests muessen gruen sein:** `pnpm test`, `cargo test --workspace`, `pnpm lint`, `tsc --noEmit`.
 8. **OS/Shell Detection:** Kein blindes Linux/PowerShell-Mixing. Pre-Flight erforderlich.
+9. **AGENTS.md** ist die operative Agentenregel — bei Konflikt mit `docs/GOVERNANCE.md` gilt AGENTS.md.
 
-## Lokale Datenschutz- und Sicherheitsregeln
+## Nicht implementiert (Stand 2026-07-06)
 
-- **Keine Netzwerkaufrufe** in der Analyse-Engine
-- **Symlink-Containment:** Externe Symlinks ausserhalb des Vault-Roots werden blockiert
-- **Path-Traversal-Schutz** in allen Export-Commands via `canonicalize`
-- **Keine personenbezogenen Daten** in der Analyse (die App ist local-only)
-- **Secret-Erkennung** in der Hygieneanalyse (API-Keys, Tokens, Passwoerter, Private Keys)
-- **Alle Analysen sind deterministisch** — keine externen APIs, keine ML-Modelle
-- **Real Corpus Pilot:** Corpus review finalized: 114 ALLOW_IMPORT + 3 ALLOW_IMPORT_REDACTED + 1 EXCLUDE (0 open manual reviews). Import deferred. (Issue #166)
-- **Settings Modal:** ✅ Merged (PR #186, 2026-07-02) — auf master, nicht im v1.7.1 Release.
-- **Five-File Sanitized Evidence:** ✅ Validated (Issue #187, 2026-07-02) — 5 .md-Dateien Playwright-Smoke-Test. Kein voller 188-Dateien-Korpuslauf.
+- **Keine echte semantische Suche / Embeddings** (Phase 1 mock-only, Feature Flag deaktiviert)
+- **Kein ONNX Runtime, Ollama, sqlite-vec** (per ADR-004 Decision C deferred)
+- **Kein Docker/Web/LAN Backend** (Issues #97–#142, deferred)
+- **Keine macOS/Linux pre-built Installer** (nur Windows x64 unsigned NSIS)
+- **Kein Code Signing** fuer Windows
+- **Kein Auto-Updater**
+- **Keine Cloud/API/Telemetrie** (Local-first Design)
+- **Kein DB-Migration-System** ausser inline `run_migrations()`
+
+## Release-Status
+
+- **v1.7.1** ist das aktuelle stable release (Windows x64, unsigned)
+- **v1.7.2 ist BLOCKED** bis Docs Baseline Sync (#207) gemerged ist
+- Keine Release/Tag/Assets duerfen ohne Owner-Approval erstellt werden
 
 ## Build und Test
 
@@ -99,28 +102,32 @@ Filesystem (Vault) + SQLite (FTS5)
 # Frontend
 pnpm install
 pnpm dev          # Dev-Server (Port 1420)
-pnpm test         # Vitest (634 Tests, 26 Dateien)
+pnpm test         # Vitest (785 Tests, 34 Dateien)
 pnpm lint         # ESLint (0 errors, 0 warnings)
 pnpm build        # TypeScript + Vite Build
 
 # Backend (Rust)
-cargo test --lib                    # 134 Unit-Tests (+1 ignored)
-cargo test --test "*"               # 17 Integration-Tests
+cargo test --workspace              # 156 Tests (2 ignored)
 cargo fmt --check --all             # Format Check
 cargo clippy --workspace --all-targets -- -D warnings
 
 # Dokumentation
-mkdocs build --strict
+mkdocs build --strict               # optional (tool gap on some hosts)
+
+# E2E
+pnpm exec playwright test           # optional (tool conflict on some hosts)
 ```
 
-## Aktuelle Test-Ergebnisse (2026-07-02)
+## Aktuelle Test-Ergebnisse (2026-07-06)
 
 | Suite                             | Tests | Result |
 | --------------------------------- | ----- | ------ |
-| Frontend (Vitest)                 | 634   | PASS   |
+| Frontend (Vitest)                 | 785   | PASS   |
 | Rust Unit (lib)                   | 134   | PASS   |
 | Rust Integration (command_errors) | 17    | PASS   |
-| Rust Total                        | 151   | PASS   |
+| Rust Regex Regression             | 5     | PASS   |
+| Rust Real Corpus Validation       | 1     | IGNORED |
+| Rust Total                        | 156   | PASS   |
 | ESLint                            | 0     | PASS   |
 | TypeScript (tsc --noEmit)        | 0     | PASS   |
 | cargo fmt                         | —     | PASS   |
@@ -131,55 +138,35 @@ mkdocs build --strict
 
 ## Offene Punkte
 
-- Remote-CI ist `REMOTE_CI_INFRA_BLOCKED` (Issue #154) — Local-CI-first Policy
-- Settings Modal (#63) — ✅ Merged (PR #186, 2026-07-02) — auf master, nicht im v1.7.1 Release
-- Web/LAN Backend Adapter MVP (Issues #97–#142) — deferred after release
-- Five-File Playwright Evidence (#187) — ✅ validated (sanitized, GitHub-visible). Full 188-file corpus run pending.
-- Classification-Label-Lücke bei `agent_prompt_candidate`, Score-Labels in Web-Mode teilweise leer
-- mkdocs lokal nicht installiert (Tool-Gap)
+- **Docs Baseline Sync (#207):** 🔄 Active — Docs RED_HOLD bis Merge
+- **v1.7.2 Release:** BLOCKED bis Docs Sync gemerged
+- **Embeddings Phase 2 (#199):** DB schema/storage planning (no real provider)
+- Remote-CI `REMOTE_CI_INFRA_BLOCKED` (Issue #154)
 - P3 Documentation Backlog (#40, #42, #43) — low priority
-
-## Diataxis-Dokumentationsstruktur
-
-```
-docs/
-├── index.md                    # Startseite
-├── getting-started/            # Tutorials
-│   └── index.md
-├── how-to/                     # How-to Guides
-│   └── index.md
-├── reference/                  # Technische Referenz
-│   └── project-structure.md
-├── explanation/                # Hintergrunderklaerungen
-│   └── index.md
-├── runbooks/                   # Entwicklungs-Runbooks
-│   └── development.md
-├── adr/                        # Architecture Decision Records
-│   ├── ADR-001-ai-governance.md
-│   └── ADR-002-docs-as-code-platform.md
-├── specs/                      # Specifications
-└── assets/screenshots/         # App Screenshots
-```
+- `.opencode/policies/` references in legacy docs are planned, not yet created
 
 ## Projektstruktur (vereinfacht)
 
 ```text
 promptvault-lite/
 ├── src/                    # React frontend
-│   ├── components/         # UI components (explorer, analysis, optimization, details, common)
-│   ├── stores/             # Zustand state management (appStore, blueprintStore)
-│   ├── lib/                # Tauri IPC wrapper, prompt optimizer, blueprint detection
+│   ├── components/         # UI components (explorer, analysis, optimization, details, paste, settings, common)
+│   ├── stores/             # Zustand state management
+│   ├── actions/            # Typed Local Action Layer
+│   ├── hooks/              # Custom React hooks
+│   ├── lib/                # Tauri IPC wrapper, analysis, embeddings, TTS
 │   └── types/              # TypeScript type definitions
 ├── src-tauri/              # Rust backend
 │   ├── src/
 │   │   ├── analysis/       # Quality, hygiene & blueprint quality analysis
-│   │   ├── commands/       # Tauri command handlers
-│   │   ├── database/       # SQLite & cache layer
-│   │   ├── models/         # Data models (prompt, blueprint)
-│   │   ├── parser/         # Markdown & frontmatter parser
-│   │   └── scanner/        # File scanner & watcher (.md, .markdown, .txt)
-│   └── tests/              # Rust integration tests
+│   │   ├── commands/       # Tauri command handlers (scan, analyze, export, etc.)
+│   │   ├── database/       # SQLite & JSON cache layer
+│   │   ├── models/         # Data models
+│   │   ├── parser/         # Frontmatter & markdown parser
+│   │   └── scanner/        # File scanner & watcher
+│   └── tests/              # Rust integration & regression tests
 ├── docs/                   # Documentation (MkDocs)
-├── .opencode/              # OpenCode agent configuration & history
+├── evidence/               # Local evidence artifacts
+├── AGENTS.md               # Operative Agentenregeln (Source of Truth fuer Agenten)
 └── .github/workflows/      # CI pipeline (currently REMOTE_CI_INFRA_BLOCKED)
 ```
