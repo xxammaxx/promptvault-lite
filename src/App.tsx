@@ -5,6 +5,7 @@ import { useResizablePanel } from "./hooks/useResizablePanel";
 import { ExplorerPanel } from "./components/explorer/ExplorerPanel";
 import { DetailsPanel } from "./components/details/DetailsPanel";
 import { AnalysisPanel } from "./components/analysis/AnalysisPanel";
+import { PastePromptAnalyzer } from "./components/paste/PastePromptAnalyzer";
 import { ExportDialog } from "./components/common/ExportDialog";
 import { ThemeToggle } from "./components/common/ThemeToggle";
 import { SettingsPanel } from "./components/settings/SettingsPanel";
@@ -33,6 +34,7 @@ function App() {
   const [folderPath, setFolderPath] = useState<string | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPasteAnalyzer, setShowPasteAnalyzer] = useState(false);
   const [pendingApproval, setPendingApproval] = useState<{
     request: ApprovalRequest;
     resolve: (approved: boolean) => void;
@@ -219,6 +221,20 @@ function App() {
           )}
           <ThemeToggle />
           <button
+            className={`btn ${showPasteAnalyzer ? "btn-primary" : ""}`}
+            onClick={() => {
+              setShowPasteAnalyzer(!showPasteAnalyzer);
+            }}
+            title="Direktanalyse — Prompt ohne Datei analysieren"
+            aria-label={
+              showPasteAnalyzer
+                ? "Zurück zur Dateiansicht"
+                : "Direktanalyse öffnen"
+            }
+          >
+            {showPasteAnalyzer ? "📁 Dateien" : "📝 Direktanalyse"}
+          </button>
+          <button
             className="btn"
             onClick={() => {
               setShowSettings(true);
@@ -265,18 +281,24 @@ function App() {
         </div>
       </header>
 
-      {/* Drei-Spalten-Layout */}
-      <main
-        className="app-layout"
-        style={
-          { "--explorer-width": explorerWidth + "px" } as React.CSSProperties
-        }
-      >
-        <ExplorerPanel searchRef={searchInputRef} />
-        <div className="resize-handle" ref={handleRef} {...handleProps} />
-        <DetailsPanel />
-        <AnalysisPanel />
-      </main>
+      {/* Drei-Spalten-Layout (Dateimodus) / Direktanalyse (Paste-Modus) */}
+      {showPasteAnalyzer ? (
+        <main className="app-layout">
+          <PastePromptAnalyzer />
+        </main>
+      ) : (
+        <main
+          className="app-layout"
+          style={
+            { "--explorer-width": explorerWidth + "px" } as React.CSSProperties
+          }
+        >
+          <ExplorerPanel searchRef={searchInputRef} />
+          <div className="resize-handle" ref={handleRef} {...handleProps} />
+          <DetailsPanel />
+          <AnalysisPanel />
+        </main>
+      )}
 
       {/* Statusleiste */}
       <footer className="app-statusbar">

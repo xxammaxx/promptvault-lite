@@ -10,6 +10,16 @@ version: 1.7.1
 
 ### Added
 
+- **Direktanalyse — Prompt einfügen** (Issue #204): Prompt-Text direkt einfügen und analysieren, ohne eine Datei im Vault anzulegen.
+  - Eigener Zugang per `📝 Direktanalyse` Button in der Toolbar
+  - Textarea für manuelles Einfügen
+  - Optionaler Button `📋 Aus Zwischenablage einfügen` (explizite Nutzeraktion erforderlich)
+  - `🔍 Analysieren` Button mit Wiederverwendung der bestehenden Analyse-Logik
+  - `🗑️ Leeren` Button zum Zurücksetzen
+  - Ergebnisanzeige: Klassifikation, Qualität, Hygiene, Blueprint-Bewertung, Context-Engineering
+  - Keine automatische Speicherung — eingefügte Texte bleiben nur im lokalen UI-State
+  - Keine Cloud-API, kein Remote-LLM, keine Telemetrie
+
 - **Audio-Kurzbeschreibung** (Issue #200): Sichere deutsche Kurzbeschreibung mit lokaler Sprachausgabe für ausgewählte Prompts.
   - Kurzbeschreibung wird aus Titel, Beschreibung, Kategorie und Tags generiert
   - Lokale TTS-Ausgabe über Web Speech API (keine Cloud-TTS, keine externen APIs)

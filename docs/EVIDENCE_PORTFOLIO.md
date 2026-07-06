@@ -3,7 +3,7 @@
 > Living Software Portfolio. Updated with every significant agent run.
 > No marketing claims — only evidence-backed facts.
 
-**Last evidence run:** 2026-07-05 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator, v1.7.2 Release Readiness Prep)
+**Last evidence run:** 2026-07-06 (OpenCode 1.15.0, deepseek-v4-pro / issue-orchestrator, Paste Prompt Analyzer PR)
 **Blueprint detection run:** 2026-06-19 (OpenCode 1.15.0)
 **Scanner extension run:** 2026-06-21 (PR #168, #170, #172 merged to master)
 **Settings Modal merge:** 2026-07-02 (PR #186, closes #63 — on master, not in v1.7.1 release)
@@ -34,6 +34,7 @@
 | Tauri IPC command layer                                              | 17 Rust integration tests PASS         | 2026-06-19    |
 | SQLite/FTS5 database layer                                           | 14 Rust tests PASS                     | 2026-06-19    |
 | Symlink containment & path traversal protection                      | 10 Rust tests PASS                     | 2026-06-19    |
+| Paste prompt analysis — Clipboard & direct text (no file, no save)   | 26 frontend tests PASS                 | 2026-07-06    |
 | CI: Frontend (tsc+lint+test+build)                                   | Local CI — PASS (see #154)             | 2026-06-20    |
 | CI: Rust (fmt+clippy+test+build)                                     | Local CI — PASS (see #154)             | 2026-06-20    |
 | CI: Secret Scan                                                      | NOT_RUN_TOOL_MISSING (local)           | 2026-06-20    |
