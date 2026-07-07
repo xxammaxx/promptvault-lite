@@ -61,3 +61,18 @@ __pycache__/
 
 # Local test evidence (screenshots, reports with private paths/content)
 evidence/
+
+# Playwright E2E Outputs (Privacy: contains screenshots, traces, videos)
+test-results/
+playwright-report/
+playwright/.cache/
+playwright/.auth/
+*.trace.zip
+
+# Playwright Visual Comparison Snapshots
+**/__snapshots__/
+
+# E2E configuration with private paths (NEVER commit)
+tests/e2e/.env.local
+tests/e2e/corpus-config.ts
+playwright.config.local.ts

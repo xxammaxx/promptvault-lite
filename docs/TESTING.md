@@ -70,9 +70,52 @@ Die meisten Tests liegen direkt in den Modulen als `#[cfg(test)]`-Einheiten:
 
 ## Optional: Playwright E2E
 
+### Standard Run
+
 ```bash
+pnpm test:e2e
+# or
 pnpm exec playwright test
 ```
+
+Standard run executes app-shell smoke tests only. These always pass without corpus.
+
+### USB Corpus Run (Requires Local Corpus)
+
+```bash
+PROMPTVAULT_USB_CORPUS="/path/to/corpus" pnpm test:e2e:usb
+```
+
+USB corpus integration tests require:
+
+- A local directory with `.md`/`.markdown`/`.txt` files.
+- The `PROMPTVAULT_USB_CORPUS` environment variable set to that directory.
+
+Without the variable, USB corpus tests are **skipped automatically** (no fail).
+
+### Privacy Rules for USB Corpus Testing
+
+- **Never** commit corpus files to the repository.
+- **Never** commit screenshots, traces, or videos with real content.
+- **Never** log real filenames or prompt contents.
+- **Never** post private paths in GitHub issues/PRs/comments.
+- Test data injected into the browser is **100% synthetic** — only aggregate counts reflect the real corpus.
+- All Playwright output (`test-results/`, `playwright-report/`) is gitignored.
+
+### Configuration
+
+- Root-level `playwright.config.ts` starts Vite dev server automatically.
+- Tests use Chromium headless by default.
+- Screenshots, traces, and video recording are **off** by default (privacy-safe).
+- Enable for debugging only: `--screenshot on --trace on`.
+
+### Skip Behavior
+
+When `PROMPTVAULT_USB_CORPUS` is not set:
+
+- USB corpus tests are skipped automatically.
+- Standard app-shell smoke tests run normally.
+- No error, no failure.
 
 Playwright ist optional und unterliegt gelegentlichen Tool-Konflikten. Ergebnisse sind nicht blockierend, solange die normalen Gates grün sind.
 
