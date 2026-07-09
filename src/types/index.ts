@@ -598,3 +598,175 @@ export interface ActionResult<T = unknown> {
   error?: string;
   evidence?: EvidenceLogEntry;
 }
+
+// =============================================================================
+// Missing-Info-Gate Types (#216)
+// =============================================================================
+
+/** Supported input widget types for missing-info questions. */
+export type MissingInfoInputType =
+  | "free_text"
+  | "free_multiline"
+  | "single_select"
+  | "multi_select"
+  | "boolean";
+
+/** Classification tier for detected gaps. */
+export type MissingInfoCategory = "REQUIRED" | "RECOMMENDED" | "OPTIONAL";
+
+/** Sources from which a gap was detected. */
+export type MissingInfoSource =
+  | "prompt_engineering"
+  | "context_engineering"
+  | "agent_readiness"
+  | "blueprint"
+  | "risk_flag"
+  | "hygiene";
+
+/**
+ * A raw detected gap — before classification.
+ * Produced by `missingInfoDetector.ts`.
+ */
+export interface MissingInfoItem {
+  /** Unique ID (e.g. "MISS_PE_001"). */
+  id: string;
+  /** Origin dimension of the gap. */
+  source: MissingInfoSource;
+  /** Human-readable name (e.g. "Zieldefinition"). */
+  label: string;
+  /** Concrete question for the user (German). */
+  question: string;
+  /** Short rationale why this information matters. */
+  rationale: string;
+  /** Expected answer format — determines the UI widget. */
+  inputType: MissingInfoInputType;
+  /** For select/multi_select: available options. */
+  options?: string[];
+  /** Placeholder text for the input field. */
+  placeholder?: string;
+  /** Suggested default value (used for "Mit Annahmen fortfahren"). */
+  defaultValue?: string;
+  /** Maximum answer length in characters (0 = unlimited). */
+  maxLength?: number;
+}
+
+/**
+ * A classified gap with tier and reason.
+ * Produced by `missingInfoClassifier.ts`.
+ */
+export interface ClassifiedMissingInfo extends MissingInfoItem {
+  /** Classification tier. */
+  tier: MissingInfoCategory;
+  /** Rationale for the classification (for dev/debug mode). */
+  classificationReason: string;
+}
+
+/** A user's answer to a missing-info question. */
+export interface MissingInfoAnswer {
+  /** ID of the associated question. */
+  itemId: string;
+  /** The user-entered/selected value. */
+  value: string;
+  /** Timestamp of the answer. */
+  answeredAt: string;
+}
+
+/** Lifecycle status of a gate session. */
+export type GateSessionStatus =
+  | "ACTIVE"
+  | "COMPLETED"
+  | "SKIPPED"
+  | "ASSUMPTIONS"
+  | "CANCELLED";
+
+/** Outcome when the gate session ends with a decision. */
+export type GateOutcome = "COMPLETED" | "SKIPPED" | "ASSUMPTIONS";
+
+/** A single gate session — ephemeral, per promptId. */
+export interface MissingInfoSession {
+  sessionId: string;
+  promptId: string;
+  startedAt: string;
+  /** All classified questions. */
+  items: ClassifiedMissingInfo[];
+  /** User answers (itemId → answer). */
+  answers: Record<string, MissingInfoAnswer>;
+  /** Current lifecycle status. */
+  status: GateSessionStatus;
+  /** Outcome if the session was ended. */
+  outcome: GateOutcome | null;
+  /** Enriched prompt content (original + answers as Markdown). */
+  enrichedContent: string | null;
+}
+
+/** Enriched prompt context stored after gate completion. */
+export interface EnrichedPromptContext {
+  originalContent: string;
+  enrichedContent: string;
+  answers: MissingInfoAnswer[];
+  gateOutcome: GateOutcome;
+  sessionId: string;
+  enrichedAt: string;
+}
+
+// =============================================================================
+// Constraint Checker Types (shared with #215)
+// =============================================================================
+
+/** Categories of hard constraints extractable from prompt text. */
+export type ConstraintCategory =
+  | "offline_only"
+  | "max_length"
+  | "no_examples"
+  | "language"
+  | "format_lock"
+  | "tool_restriction"
+  | "approval_required"
+  | "scope_boundary";
+
+/** A hard constraint extracted from prompt text. */
+export interface HardConstraint {
+  id: string;
+  constraintText: string;
+  category: ConstraintCategory;
+  severity: "hard" | "soft";
+  position: { line: number; column: number } | null;
+}
+
+/** A conflict between a user answer and a hard constraint. */
+export interface ConstraintConflict {
+  id: string;
+  constraint: HardConstraint;
+  conflictingSource: string;
+  description: string;
+  severity: "blocking" | "warning";
+  resolutions: ConflictResolutionOption[];
+  selectedResolution: ConflictResolution | null;
+}
+
+/** An option the user can choose to resolve a conflict. */
+export interface ConflictResolutionOption {
+  id: string;
+  label: string;
+  description: string;
+  consequence: string;
+}
+
+/** The resolution the user selected for a conflict. */
+export interface ConflictResolution {
+  optionId: string;
+  resolvedAt: string;
+}
+
+/**
+ * Optional forward-reference for DirectionProfile from #215.
+ * Defined here so constraintChecker can reference it without importing #215 code.
+ */
+export interface DirectionProfileReference {
+  profileId: string;
+  label: string;
+  /** Constraint categories this profile is compatible with. */
+  compatibleConstraintCategories: ConstraintCategory[];
+  /** Constraint categories that conflict with this profile. */
+  conflictingConstraintCategories: ConstraintCategory[];
+}
