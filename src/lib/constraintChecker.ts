@@ -125,20 +125,40 @@ const CONSTRAINT_PATTERNS: ConstraintPattern[] = [
 ];
 
 // =============================================================================
-// Extraction
+// Deterministic ID Generation
 // =============================================================================
 
-let constraintIdCounter = 0;
-
-function nextConstraintId(): string {
-  constraintIdCounter += 1;
-  return `HC_${String(constraintIdCounter).padStart(3, "0")}`;
+/**
+ * djb2 hash algorithm — simple, fast, deterministic.
+ * Returns an 8-character uppercase hex string.
+ * Same input always produces the same hash.
+ */
+function hashString(input: string): string {
+  let hash = 5381;
+  for (let i = 0; i < input.length; i++) {
+    hash = ((hash << 5) + hash) ^ input.charCodeAt(i);
+    hash = hash >>> 0; // force unsigned 32-bit
+  }
+  return hash.toString(16).padStart(8, "0").toUpperCase();
 }
 
-/** Reset the counter (for test determinism). */
-export function resetConstraintIdCounter(): void {
-  constraintIdCounter = 0;
+/**
+ * Generate a deterministic constraint ID from category, text, and position.
+ * Same input → same ID — idempotent, reproducible across calls.
+ */
+function generateConstraintId(
+  category: ConstraintCategory,
+  constraintText: string,
+  line: number,
+  column: number,
+): string {
+  const seed = `${category}:${constraintText}:${line}:${column}`;
+  return `HC_${hashString(seed)}`;
 }
+
+// =============================================================================
+// Extraction
+// =============================================================================
 
 /**
  * Extract hard constraints from prompt text using regex/heuristic patterns.
@@ -171,7 +191,12 @@ export function extractHardConstraints(content: string): HardConstraint[] {
           match.index - (lastNewline >= 0 ? lastNewline + 1 : 0) + 1;
 
         constraints.push({
-          id: nextConstraintId(),
+          id: generateConstraintId(
+            pattern.category,
+            match[0].trim(),
+            line,
+            column,
+          ),
           constraintText: match[0].trim(),
           category: pattern.category,
           severity: pattern.severity,
@@ -268,6 +293,34 @@ const CONFLICT_RULES: ConflictRule[] = [
     defaultSeverity: "blocking",
   },
   {
+    category: "approval_required",
+    conflictingKeywords: [
+      "automatisch",
+      "automatic",
+      "auto-deploy",
+      "deployen",
+      "ohne freigabe",
+      "ohne genehmigung",
+      "ohne review",
+      "skip review",
+      "auto-merge",
+    ],
+    defaultSeverity: "blocking",
+  },
+  {
+    category: "format_lock",
+    conflictingKeywords: [
+      "markdown",
+      "plain text",
+      "csv",
+      "yaml",
+      "xml",
+      "html",
+      "text",
+    ],
+    defaultSeverity: "warning",
+  },
+  {
     category: "scope_boundary",
     conflictingKeywords: [
       "refactoring",
@@ -281,36 +334,74 @@ const CONFLICT_RULES: ConflictRule[] = [
 ];
 
 /**
+ * Security-critical constraint categories.
+ * For these, a silent "change_constraint" is NOT allowed.
+ * The user must explicitly request human approval before weakening.
+ */
+const SECURITY_CATEGORIES: Set<ConstraintCategory> = new Set([
+  "offline_only",
+  "approval_required",
+  "scope_boundary",
+]);
+
+/**
  * Generate resolution options for a given conflict.
+ *
+ * Security categories (offline_only, approval_required, scope_boundary)
+ * get hardened options: "change_constraint" is replaced by
+ * "require_human_approval" to prevent silent weakening of security rules.
+ *
+ * Non-security categories keep the standard "change_constraint" option.
  */
 function buildResolutionOptions(
   constraint: HardConstraint,
   _conflictingSource: string,
 ): ConflictResolutionOption[] {
-  return [
+  const isSecurityCritical = SECURITY_CATEGORIES.has(constraint.category);
+
+  const options: ConflictResolutionOption[] = [
     {
       id: "keep_constraint",
       label: "Constraint behalten",
-      description: `Die Regel "${constraint.constraintText}" bleibt erhalten. Die widersprechende Eingabe wird ignoriert oder angepasst.`,
+      description: isSecurityCritical
+        ? `Die Sicherheitsregel "${constraint.constraintText}" bleibt zwingend erhalten. Die widersprechende Eingabe wird ignoriert oder angepasst.`
+        : `Die Regel "${constraint.constraintText}" bleibt erhalten. Die widersprechende Eingabe wird ignoriert oder angepasst.`,
       consequence:
         "Der Constraint wird beibehalten; die widersprechende Angabe wird nicht übernommen.",
     },
-    {
+  ];
+
+  if (isSecurityCritical) {
+    // Security categories: require human approval instead of silent change
+    options.push({
+      id: "require_human_approval",
+      label: "Menschliche Freigabe erforderlich",
+      description: `Die Änderung des Sicherheits-Constraints "${constraint.constraintText}" erfordert eine explizite menschliche Prüfung und Freigabe. Eine automatische Aufweichung ist nicht zulässig.`,
+      consequence:
+        "Der Constraint bleibt vorerst erhalten. Eine manuelle Überprüfung und explizite Freigabe durch eine autorisierte Person ist erforderlich, bevor er geändert werden kann.",
+    });
+  } else {
+    // Non-security categories: allow direct constraint modification
+    options.push({
       id: "change_constraint",
       label: "Constraint ändern",
       description: `Die Regel "${constraint.constraintText}" wird gelockert oder entfernt.`,
       consequence:
         "Der Constraint wird aufgehoben; die neue Angabe wird übernommen.",
-    },
-    {
-      id: "save_as_review",
-      label: "Als Review-Fall speichern",
-      description:
-        "Keine automatische Änderung. Der Konflikt wird für eine spätere manuelle Prüfung markiert.",
-      consequence:
-        "Keine Änderung am Prompt. Der Konflikt bleibt als offener Punkt erhalten.",
-    },
-  ];
+    });
+  }
+
+  // Always available: defer to manual review
+  options.push({
+    id: "save_as_review",
+    label: "Als Review-Fall speichern",
+    description:
+      "Keine automatische Änderung. Der Konflikt wird für eine spätere manuelle Prüfung markiert.",
+    consequence:
+      "Keine Änderung am Prompt. Der Konflikt bleibt als offener Punkt erhalten.",
+  });
+
+  return options;
 }
 
 /**

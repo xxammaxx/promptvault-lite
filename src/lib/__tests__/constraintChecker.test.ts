@@ -2,12 +2,8 @@
 // PromptVault Lite — Constraint Checker Tests (Phase 1 — Basis)
 // =============================================================================
 
-import { describe, it, expect, beforeEach } from "vitest";
-import {
-  extractHardConstraints,
-  checkConflicts,
-  resetConstraintIdCounter,
-} from "../constraintChecker";
+import { describe, it, expect } from "vitest";
+import { extractHardConstraints, checkConflicts } from "../constraintChecker";
 import type { HardConstraint, MissingInfoAnswer } from "@/types";
 
 // =============================================================================
@@ -23,10 +19,6 @@ function ans(itemId: string, value: string): MissingInfoAnswer {
 // =============================================================================
 
 describe("extractHardConstraints", () => {
-  beforeEach(() => {
-    resetConstraintIdCounter();
-  });
-
   // --- Empty / No match ---
 
   it("returns empty array for empty string", () => {
@@ -323,5 +315,199 @@ describe("checkConflicts", () => {
       ans("2", "Zielgruppe sind Entwickler"),
     ]);
     expect(result).toEqual([]);
+  });
+});
+
+// =============================================================================
+// Deterministic Constraint IDs (Batch 2 — mutable counter replacement)
+// =============================================================================
+
+describe("deterministic constraint IDs", () => {
+  it("produces the same ID for the same constraint across multiple calls", () => {
+    const result1 = extractHardConstraints("Keine Cloud verwenden");
+    const result2 = extractHardConstraints("Keine Cloud verwenden");
+
+    expect(result1.length).toBeGreaterThanOrEqual(1);
+    expect(result2.length).toBeGreaterThanOrEqual(1);
+
+    const found1 = result1.find((c) => c.category === "offline_only");
+    const found2 = result2.find((c) => c.category === "offline_only");
+
+    expect(found1).toBeDefined();
+    expect(found2).toBeDefined();
+    if (found1 && found2) {
+      expect(found1.id).toBe(found2.id);
+    }
+  });
+
+  it("produces different IDs for different constraints in the same text", () => {
+    const result = extractHardConstraints(
+      "Keine Cloud verwenden. Maximal 200 Wörter. Nur auf Deutsch.",
+    );
+
+    // Should have at least 3 constraints
+    expect(result.length).toBeGreaterThanOrEqual(3);
+
+    // All IDs should be unique
+    const ids = result.map((c) => c.id);
+    const uniqueIds = new Set(ids);
+    expect(uniqueIds.size).toBe(ids.length);
+  });
+
+  it("does not require counter reset between calls", () => {
+    // Multiple calls should work without any reset
+    extractHardConstraints("Keine Cloud verwenden");
+    extractHardConstraints("Nur auf Deutsch");
+    const result = extractHardConstraints("Keine Cloud verwenden");
+
+    const found = result.find((c) => c.category === "offline_only");
+    expect(found).toBeDefined();
+    // Should still have an ID (not undefined or stale)
+    if (found) {
+      expect(found.id).toMatch(/^HC_[A-F0-9]+$/);
+    }
+  });
+});
+
+// =============================================================================
+// Security-Hardened Resolution Options (Batch 2)
+// =============================================================================
+
+describe("security-hardened resolution options", () => {
+  it("replaces change_constraint with require_human_approval for offline_only", () => {
+    const constraints: HardConstraint[] = [
+      {
+        id: "HC_SEC_001",
+        constraintText: "Keine Cloud verwenden",
+        category: "offline_only",
+        severity: "hard",
+        position: null,
+      },
+    ];
+    const result = checkConflicts(constraints, [
+      ans("1", "Cloud-Dienst nutzen"),
+    ]);
+    expect(result.length).toBe(1);
+
+    const optionIds = result[0].resolutions.map((r) => r.id);
+    expect(optionIds).toContain("require_human_approval");
+    expect(optionIds).not.toContain("change_constraint");
+    expect(optionIds).toContain("keep_constraint");
+    expect(optionIds).toContain("save_as_review");
+    expect(result[0].resolutions.length).toBe(3);
+  });
+
+  it("replaces change_constraint with require_human_approval for approval_required", () => {
+    const constraints: HardConstraint[] = [
+      {
+        id: "HC_SEC_002",
+        constraintText: "vor der Ausführung bestätigen",
+        category: "approval_required",
+        severity: "hard",
+        position: null,
+      },
+    ];
+    const result = checkConflicts(constraints, [
+      ans("1", "Automatisch deployen"),
+    ]);
+    expect(result.length).toBe(1);
+
+    const optionIds = result[0].resolutions.map((r) => r.id);
+    expect(optionIds).toContain("require_human_approval");
+    expect(optionIds).not.toContain("change_constraint");
+  });
+
+  it("replaces change_constraint with require_human_approval for scope_boundary", () => {
+    const constraints: HardConstraint[] = [
+      {
+        id: "HC_SEC_003",
+        constraintText: "nur diese Datei ändern",
+        category: "scope_boundary",
+        severity: "hard",
+        position: null,
+      },
+    ];
+    const result = checkConflicts(constraints, [
+      ans("1", "Refactoring des gesamten Projekts"),
+    ]);
+    expect(result.length).toBe(1);
+
+    const optionIds = result[0].resolutions.map((r) => r.id);
+    expect(optionIds).toContain("require_human_approval");
+    expect(optionIds).not.toContain("change_constraint");
+  });
+
+  it("includes change_constraint for non-security categories (max_length)", () => {
+    const constraints: HardConstraint[] = [
+      {
+        id: "HC_NS_001",
+        constraintText: "Maximal 200 Wörter",
+        category: "max_length",
+        severity: "hard",
+        position: null,
+      },
+    ];
+    const result = checkConflicts(constraints, [
+      ans("1", "Ausführliche Variante"),
+    ]);
+    expect(result.length).toBe(1);
+
+    const optionIds = result[0].resolutions.map((r) => r.id);
+    expect(optionIds).toContain("change_constraint");
+    expect(optionIds).not.toContain("require_human_approval");
+    expect(optionIds).toContain("keep_constraint");
+    expect(optionIds).toContain("save_as_review");
+    expect(result[0].resolutions.length).toBe(3);
+  });
+
+  it("includes change_constraint for non-security categories (format_lock)", () => {
+    const constraints: HardConstraint[] = [
+      {
+        id: "HC_NS_002",
+        constraintText: "als JSON ausgeben",
+        category: "format_lock",
+        severity: "hard",
+        position: null,
+      },
+    ];
+    const result = checkConflicts(constraints, [
+      ans("1", "Als Markdown ausgeben"),
+    ]);
+    expect(result.length).toBe(1);
+
+    const optionIds = result[0].resolutions.map((r) => r.id);
+    expect(optionIds).toContain("change_constraint");
+    expect(optionIds).not.toContain("require_human_approval");
+  });
+
+  it("security option descriptions mention the security implication", () => {
+    const constraints: HardConstraint[] = [
+      {
+        id: "HC_SEC_004",
+        constraintText: "Keine Cloud verwenden",
+        category: "offline_only",
+        severity: "hard",
+        position: null,
+      },
+    ];
+    const result = checkConflicts(constraints, [ans("1", "Cloud-LLM nutzen")]);
+    expect(result.length).toBe(1);
+
+    const keepOption = result[0].resolutions.find(
+      (r) => r.id === "keep_constraint",
+    );
+    expect(keepOption).toBeDefined();
+    if (keepOption) {
+      expect(keepOption.description).toMatch(/Sicherheitsregel/i);
+    }
+
+    const humanOption = result[0].resolutions.find(
+      (r) => r.id === "require_human_approval",
+    );
+    expect(humanOption).toBeDefined();
+    if (humanOption) {
+      expect(humanOption.description).toMatch(/Freigabe|Prüfung/i);
+      expect(humanOption.consequence).toMatch(/erhalten/i);
+    }
   });
 });
