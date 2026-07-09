@@ -8,6 +8,10 @@ import type {
   PromptContextEvaluation,
   BlueprintDetectOutput,
   BlueprintEvaluation,
+  MissingInfoSession,
+  MissingInfoAnswer,
+  EnrichedPromptContext,
+  GateOutcome,
 } from "@/types";
 import {
   scanDirectory,
@@ -26,6 +30,13 @@ import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type { HandlerContext } from "@/actions/handlers";
 import type { CreatePromptInput, UpdatePromptInput } from "@/types";
+import { detectGaps } from "@/lib/missingInfoDetector";
+import {
+  classify,
+  type ClassificationContext,
+} from "@/lib/missingInfoClassifier";
+import { mergeAnswers } from "@/lib/gateContentMerger";
+import { isMissingInfoGateEnabled } from "@/lib/missingInfoFeatureFlag";
 
 // --- Theme Types ---
 
@@ -210,6 +221,14 @@ interface AppState {
   blueprintDetections: Record<string, BlueprintDetectOutput>;
   blueprintEvaluations: Record<string, BlueprintEvaluation>;
 
+  // Missing-Info-Gate (#216, Batch 3 — Session-Only, No Persistence)
+  missingInfoSessions: Record<string, MissingInfoSession>;
+  enrichedContexts: Record<string, EnrichedPromptContext>;
+  isGateOpen: boolean;
+  activeGatePromptId: string | null;
+  /** Skipped gate item IDs per promptId (not in MissingInfoSession type). */
+  gateSkippedItems: Record<string, string[]>;
+
   // UI
   isLoading: boolean;
   isAnalyzing: boolean;
@@ -291,6 +310,15 @@ interface AppState {
   allCategories: () => string[];
   allTags: () => string[];
 
+  // Missing-Info-Gate Actions (#216, Batch 3)
+  openMissingInfoGate: (promptId: string) => void;
+  answerGateItem: (promptId: string, answer: MissingInfoAnswer) => void;
+  skipGateItem: (promptId: string, itemId: string) => void;
+  completeGate: (promptId: string, outcome: GateOutcome) => void;
+  closeGate: () => void;
+  resetGateSession: (promptId: string) => void;
+  getSessionForPrompt: (promptId: string) => MissingInfoSession | undefined;
+
   // Async actions
   scanFolder: (path: string) => Promise<void>;
   analyzeSelected: () => Promise<void>;
@@ -317,6 +345,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   contextEvaluations: {},
   blueprintDetections: {},
   blueprintEvaluations: {},
+
+  // Missing-Info-Gate initial state (Batch 3 — Session-Only)
+  missingInfoSessions: {},
+  enrichedContexts: {},
+  isGateOpen: false,
+  activeGatePromptId: null,
+  gateSkippedItems: {},
+
   isLoading: false,
   isAnalyzing: false,
   error: null,
@@ -352,6 +388,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   selectPrompt: (id) => {
+    const current = get();
+    // Close gate when switching to a different prompt (architecture review R2)
+    if (current.isGateOpen && current.activeGatePromptId !== id) {
+      set({ isGateOpen: false, activeGatePromptId: null });
+    }
     set({ selectedPromptId: id });
   },
 
@@ -561,6 +602,398 @@ export const useAppStore = create<AppState>((set, get) => ({
         return tauriUpdatePrompt(input);
       },
     };
+  },
+
+  // ==========================================================================
+  // Missing-Info-Gate Actions (Batch 3 — #233-#236)
+  // ==========================================================================
+
+  /**
+   * Opens the Missing-Info-Gate for a given promptId.
+   * Detects gaps from existing analysis data, classifies them,
+   * and creates a new session (or reopens an existing one).
+   *
+   * Gate is feature-flag gated: no-op if PROMPTVAULT_MISSING_INFO_GATE is disabled.
+   * BLOCKING_SENSITIVE_CONTENT: gate never opens.
+   * Existing session: just sets isGateOpen=true (edit mode, answers pre-filled).
+   */
+  openMissingInfoGate: (promptId: string) => {
+    // Feature-flag gate
+    if (
+      !isMissingInfoGateEnabled(
+        (typeof process !== "undefined" ? process.env : undefined) as
+          | Record<string, string | undefined>
+          | undefined,
+      )
+    ) {
+      return;
+    }
+
+    const state = get();
+    const existingSession = state.missingInfoSessions[promptId];
+
+    // Reopen existing session (edit mode — answers are pre-filled)
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard: Record<T> is always truthy per TS but may be undefined at runtime
+    if (existingSession) {
+      set({
+        isGateOpen: true,
+        activeGatePromptId: promptId,
+        // Reset status to ACTIVE if it was CANCELLED or completed
+        missingInfoSessions: {
+          ...state.missingInfoSessions,
+          [promptId]: {
+            ...existingSession,
+            status: "ACTIVE" as const,
+          },
+        },
+      });
+      return;
+    }
+
+    // Need analysis data to detect gaps
+    const contextEval = state.contextEvaluations[promptId];
+    const hygiene = state.hygiene[promptId];
+    const blueprintEval = state.blueprintEvaluations[promptId];
+    const prompt = state.prompts.find((p) => p.id === promptId);
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard: Record<T> may not have key
+    if (!contextEval) {
+      set({
+        error: "Keine Analyse-Daten vorhanden. Bitte zuerst analysieren.",
+      });
+      return;
+    }
+
+    // BLOCKING_SENSITIVE_CONTENT gate (security boundary)
+    /* eslint-disable @typescript-eslint/no-unnecessary-condition */
+    if (
+      state.blueprintDetections[promptId]?.contamination_status ===
+        "BLOCKING_SENSITIVE_CONTENT" ||
+      blueprintEval?.contamination_status === "BLOCKING_SENSITIVE_CONTENT"
+    ) {
+      /* eslint-enable @typescript-eslint/no-unnecessary-condition */
+      return; // Gate never opens
+    }
+
+    try {
+      // 1. Detect gaps from analysis data
+      const rawItems = detectGaps({
+        contextEval,
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard
+        hygiene: hygiene ?? {
+          id: `hyg-${promptId}`,
+          prompt_id: promptId,
+          hygiene_score: 100,
+          status: "clean",
+          artifacts: [],
+          analyzed_at: new Date().toISOString(),
+        },
+        blueprintEval,
+        promptContentLength: prompt?.content.length,
+        contaminationStatusOverride:
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+          blueprintEval?.contamination_status,
+      });
+
+      if (rawItems.length === 0) {
+        // No gaps detected — still create a session for potential manual trigger
+        set({
+          missingInfoSessions: {
+            ...state.missingInfoSessions,
+            [promptId]: {
+              sessionId: `MIG-${promptId}-${Date.now()}`,
+              promptId,
+              startedAt: new Date().toISOString(),
+              items: [],
+              answers: {},
+              status: "ACTIVE",
+              outcome: null,
+              enrichedContent: null,
+            },
+          },
+          isGateOpen: true,
+          activeGatePromptId: promptId,
+        });
+        return;
+      }
+
+      // 2. Build classification context map from raw evaluation data
+      const isSimplePrompt =
+        contextEval.detected_prompt_type === "simple_prompt";
+      const isAgenticPrompt =
+        contextEval.detected_prompt_type === "agentic_prompt";
+      const isMinimalContext =
+        contextEval.detected_context_profile === "minimal";
+
+      const contextMap: Record<string, ClassificationContext> = {};
+
+      for (const item of rawItems) {
+        const ctx: ClassificationContext = { source: item.source };
+
+        if (item.source === "risk_flag") {
+          const flag = contextEval.risk_flags.find(
+            (f) => f.flag === item.label,
+          );
+          if (flag) {
+            ctx.riskSeverity = flag.severity;
+          }
+        } else if (
+          item.source === "prompt_engineering" ||
+          item.source === "context_engineering" ||
+          item.source === "agent_readiness"
+        ) {
+          const criterion = contextEval.criteria.find(
+            (c) => c.name === item.label,
+          );
+          if (criterion) {
+            ctx.criterionScore = criterion.score;
+            ctx.criterionDimension = criterion.dimension;
+          }
+          // Check for suggested improvements
+          const improvement = contextEval.suggested_improvements.find(
+            (si) => si.criterion === item.label,
+          );
+          if (improvement) {
+            ctx.improvementPriority = improvement.priority;
+          }
+        } else if (item.source === "hygiene") {
+          ctx.hygieneScore = hygiene.hygiene_score;
+        }
+
+        ctx.isSimplePrompt = isSimplePrompt;
+        ctx.isAgenticPrompt = isAgenticPrompt;
+        ctx.isMinimalContext = isMinimalContext;
+
+        contextMap[item.id] = ctx;
+      }
+
+      // 3. Classify
+      const classificationResult = classify(rawItems, contextMap);
+
+      // 4. Create session
+      const session: MissingInfoSession = {
+        sessionId: `MIG-${promptId}-${Date.now()}`,
+        promptId,
+        startedAt: new Date().toISOString(),
+        items: classificationResult.items,
+        answers: {},
+        status: "ACTIVE",
+        outcome: null,
+        enrichedContent: null,
+      };
+
+      set({
+        missingInfoSessions: {
+          ...state.missingInfoSessions,
+          [promptId]: session,
+        },
+        isGateOpen: true,
+        activeGatePromptId: promptId,
+        // Reset skipped items for new session
+        gateSkippedItems: {
+          ...state.gateSkippedItems,
+          [promptId]: [],
+        },
+      });
+    } catch (err) {
+      set({ error: `Gate-Öffnung fehlgeschlagen: ${String(err)}` });
+    }
+  },
+
+  /** Stores an answer for a gate item. Answers are editable (no overwrite guard). */
+  answerGateItem: (promptId: string, answer: MissingInfoAnswer) => {
+    set((state) => {
+      const session = state.missingInfoSessions[promptId];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard: Record key may not exist
+      if (!session || session.status !== "ACTIVE") return {};
+      return {
+        missingInfoSessions: {
+          ...state.missingInfoSessions,
+          [promptId]: {
+            ...session,
+            answers: {
+              ...session.answers,
+              [answer.itemId]: answer,
+            },
+          },
+        },
+      };
+    });
+  },
+
+  /** Marks a gate item as skipped. Only RECOMMENDED/OPTIONAL items can be skipped. */
+  skipGateItem: (promptId: string, itemId: string) => {
+    set((state) => {
+      const session = state.missingInfoSessions[promptId];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard
+      if (!session || session.status !== "ACTIVE") return {};
+
+      const item = session.items.find((i) => i.id === itemId);
+      // REQUIRED items cannot be skipped
+      if (!item || item.tier === "REQUIRED") return {};
+
+      const existingSkipped = state.gateSkippedItems[promptId] ?? [];
+      if (existingSkipped.includes(itemId)) return {};
+
+      return {
+        gateSkippedItems: {
+          ...state.gateSkippedItems,
+          [promptId]: [...existingSkipped, itemId],
+        },
+        missingInfoSessions: {
+          ...state.missingInfoSessions,
+          [promptId]: {
+            ...session,
+            // Remove answer if previously answered
+            answers: Object.fromEntries(
+              Object.entries(session.answers).filter(([key]) => key !== itemId),
+            ),
+          },
+        },
+      };
+    });
+  },
+
+  /**
+   * Completes the gate session for a promptId.
+   * Merges answers via gateContentMerger and creates an EnrichedPromptContext.
+   * Only possible if all REQUIRED items are answered OR outcome is SKIPPED/ASSUMPTIONS.
+   */
+  completeGate: (promptId: string, outcome: GateOutcome) => {
+    set((state) => {
+      const session = state.missingInfoSessions[promptId];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard
+      if (!session) return {};
+
+      const prompt = state.prompts.find((p) => p.id === promptId);
+      if (!prompt) return {};
+
+      // Validate: all REQUIRED items must be answered (unless SKIPPED/ASSUMPTIONS)
+      if (outcome === "COMPLETED") {
+        const requiredItems = session.items.filter(
+          (i) => i.tier === "REQUIRED",
+        );
+        const requiredUnanswered = requiredItems.some(
+          (item) =>
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard
+            !session.answers[item.id]?.value?.trim() &&
+            !(state.gateSkippedItems[promptId] ?? []).includes(item.id),
+        );
+        if (requiredUnanswered) {
+          // Can't complete — missing required answers
+          return {};
+        }
+      }
+
+      // Collect answers as array for mergeAnswers
+      const answersArray = Object.values(session.answers);
+      const skippedItemIds = new Set(state.gateSkippedItems[promptId] ?? []);
+
+      // Merge answers into original content
+      const mergeResult = mergeAnswers(
+        prompt.content,
+        answersArray,
+        session.items,
+        outcome,
+        { skippedItemIds },
+      );
+
+      // Determine enriched content: null for SKIPPED, merged for COMPLETED/ASSUMPTIONS
+      const enrichedContent =
+        outcome === "SKIPPED" ? null : mergeResult.enrichedContent;
+
+      const enrichedContext: EnrichedPromptContext = {
+        originalContent: prompt.content,
+        enrichedContent: enrichedContent ?? prompt.content,
+        answers: answersArray,
+        gateOutcome: outcome,
+        sessionId: session.sessionId,
+        enrichedAt: new Date().toISOString(),
+      };
+
+      return {
+        missingInfoSessions: {
+          ...state.missingInfoSessions,
+          [promptId]: {
+            ...session,
+            status: outcome,
+            outcome,
+            enrichedContent,
+          },
+        },
+        enrichedContexts: {
+          ...state.enrichedContexts,
+          [promptId]: enrichedContext,
+        },
+        isGateOpen: false,
+        activeGatePromptId: null,
+      };
+    });
+  },
+
+  /** Closes the gate modal without discarding the session (CANCELLED status). */
+  closeGate: () => {
+    set((state) => {
+      const promptId = state.activeGatePromptId;
+      if (!promptId) {
+        return { isGateOpen: false, activeGatePromptId: null };
+      }
+      const session = state.missingInfoSessions[promptId];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard
+      if (!session) {
+        return { isGateOpen: false, activeGatePromptId: null };
+      }
+      return {
+        isGateOpen: false,
+        activeGatePromptId: null,
+        missingInfoSessions: {
+          ...state.missingInfoSessions,
+          [promptId]: {
+            ...session,
+            status: "CANCELLED",
+          },
+        },
+      };
+    });
+  },
+
+  /**
+   * Discards the gate session and enriched context for a promptId.
+   * Used for invalidation (e.g., after analyzeSelected).
+   */
+  resetGateSession: (promptId: string) => {
+    set((state) => {
+      const {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        [promptId]: _removedSession,
+        ...remainingSessions
+      } = state.missingInfoSessions;
+      const {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        [promptId]: _removedContext,
+        ...remainingContexts
+      } = state.enrichedContexts;
+      const {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        [promptId]: _removedSkipped,
+        ...remainingSkipped
+      } = state.gateSkippedItems;
+
+      return {
+        missingInfoSessions: remainingSessions,
+        enrichedContexts: remainingContexts,
+        gateSkippedItems: remainingSkipped,
+        // If this was the active gate, close it
+        ...(state.activeGatePromptId === promptId
+          ? { isGateOpen: false, activeGatePromptId: null }
+          : {}),
+      };
+    });
+  },
+
+  /** Selector: get the session for a given promptId. */
+  getSessionForPrompt: (promptId: string): MissingInfoSession | undefined => {
+    return get().missingInfoSessions[promptId];
   },
 
   // Derived data
@@ -819,6 +1252,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         },
         isAnalyzing: false,
       }));
+
+      // Invalidate stale gate session (new analysis = new gaps)
+      get().resetGateSession(prompt.id);
     } catch (err) {
       set({ error: String(err), isAnalyzing: false });
     }
