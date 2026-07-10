@@ -761,6 +761,7 @@ export interface ConflictResolution {
 /**
  * Optional forward-reference for DirectionProfile from #215.
  * Defined here so constraintChecker can reference it without importing #215 code.
+ * NOT modified by #215 — DirectionProfile (below) extends this concept.
  */
 export interface DirectionProfileReference {
   profileId: string;
@@ -769,4 +770,207 @@ export interface DirectionProfileReference {
   compatibleConstraintCategories: ConstraintCategory[];
   /** Constraint categories that conflict with this profile. */
   conflictingConstraintCategories: ConstraintCategory[];
+}
+
+// =============================================================================
+// Direction Profiles Types (#215)
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// 1. DirectionProfile — vollständiges Profil (erweitert DirectionProfileReference)
+// ---------------------------------------------------------------------------
+
+/**
+ * Vollständiges Direction Profile.
+ * Erweitert das Konzept von DirectionProfileReference mit vollständigen Metadaten
+ * für die Variantengenerierung.
+ */
+export interface DirectionProfile {
+  /** Eindeutige ID (z.B. "sachlich", "technisch"). */
+  profileId: string;
+
+  /** Menschenlesbares Label (z.B. "Sachlich / Neutral"). */
+  label: string;
+
+  /** Kurzbeschreibung für Tooltip/Info. */
+  description: string;
+
+  /** Kategorie für Gruppierung/Filterung. */
+  category: "sachlich" | "verkaeuferisch" | "technisch" | "kreativ" | "custom";
+
+  /** Instruction-Präfix, der dem Prompt vorangestellt wird. */
+  promptPrefix: string;
+
+  /** Constraint-Kategorien, mit denen dieses Profil kompatibel ist. */
+  compatibleConstraintCategories: ConstraintCategory[];
+
+  /** Constraint-Kategorien, die mit diesem Profil kollidieren. */
+  conflictingConstraintCategories: ConstraintCategory[];
+
+  /** Empfehlungstext: Wofür ist dieses Profil geeignet? */
+  recommendation: string;
+}
+
+// ---------------------------------------------------------------------------
+// 2. DirectionProfileId — vordefinierte Profil-IDs
+// ---------------------------------------------------------------------------
+
+/** Vordefinierte Profil-IDs (Union-Type für Type-Safety). */
+export type DirectionProfileId =
+  | "sachlich"
+  | "verkaeuferisch"
+  | "technisch"
+  | "kurz"
+  | "ausfuehrlich"
+  | "kreativ"
+  | "kritisch"
+  | "anfaenger"
+  | "experte"
+  | "deep_research"
+  | "agentisch"
+  | "compliance"
+  | "custom";
+
+// ---------------------------------------------------------------------------
+// 3. DirectionProfileSelection — Nutzer-Auswahl
+// ---------------------------------------------------------------------------
+
+/** Nutzer-Auswahl: ein oder mehrere Profile + optionaler Custom-Text. */
+export interface DirectionProfileSelection {
+  /** Ausgewählte Profil-IDs. */
+  selectedProfileIds: DirectionProfileId[];
+
+  /** Benutzerdefinierter Richtungstext (nur wenn "custom" ausgewählt). */
+  customDirectionText?: string;
+}
+
+// ---------------------------------------------------------------------------
+// 4. VariantConflict — Profil-gegen-Constraint-Konflikt (pro Variante)
+// ---------------------------------------------------------------------------
+
+/** Ein Konflikt zwischen einem Direction Profile und einem Constraint. */
+export interface VariantConflict {
+  /** Eindeutige ID. */
+  id: string;
+
+  /** Betroffenes Profil. */
+  profileId: string;
+
+  /** Betroffener Constraint. */
+  constraint: HardConstraint;
+
+  /** Beschreibung des Konflikts. */
+  description: string;
+
+  /** Schweregrad. */
+  severity: "blocking" | "warning";
+
+  /** Wie wurde der Konflikt behandelt? */
+  resolution:
+    | "constraint_preserved"
+    | "profile_adjusted"
+    | "manual_review"
+    | "ignored";
+}
+
+// ---------------------------------------------------------------------------
+// 5. PreservedConstraintReference — erhaltener Constraint in einer Variante
+// ---------------------------------------------------------------------------
+
+/** Referenz auf einen erhaltenen Constraint in einer Variante. */
+export interface PreservedConstraintReference {
+  /** ID des ursprünglichen Constraints. */
+  constraintId: string;
+
+  /** Text des Constraints. */
+  constraintText: string;
+
+  /** Kategorie. */
+  category: ConstraintCategory;
+
+  /** Wurde der Constraint durch das Profil beeinflusst? */
+  affectedByProfile: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// 6. PromptVariant — einzelne generierte Variante
+// ---------------------------------------------------------------------------
+
+/** Eine einzelne generierte Prompt-Variante. */
+export interface PromptVariant {
+  /** Eindeutige Varianten-ID. */
+  variantId: string;
+
+  /** Referenz auf das verwendete Direction Profile. */
+  profileId: string;
+
+  /** Label der Variante (z.B. "Sachlich / Neutral"). */
+  label: string;
+
+  /** Der vollständige, generierte Varianten-Prompt. */
+  content: string;
+
+  /** Kurzbeschreibung der Zielrichtung. */
+  directionExplanation: string;
+
+  /** Welche harten Constraints wurden aus dem Original erhalten? */
+  preservedConstraints: PreservedConstraintReference[];
+
+  /** Aufgetretene Konflikte (falls vorhanden). */
+  conflicts: VariantConflict[];
+
+  /** Verwendete Annahmen (was das System ergänzt/interpretiert hat). */
+  assumptions: string[];
+
+  /** Offene Punkte / Risiken (falls vorhanden). */
+  openPoints: string[];
+
+  /** Empfehlung: Wofür ist diese Variante geeignet? */
+  recommendation: string;
+
+  /** Metadata. */
+  metadata: {
+    generatedAt: string;
+    /** Wurde enrichedContent verwendet? */
+    sourceContent: "original" | "enriched";
+    appliedProfileId: string;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 7. VariantGenerationResult — Ergebnis einer Variantengenerierung
+// ---------------------------------------------------------------------------
+
+/** Ergebnis einer Variantengenerierung. */
+export interface VariantGenerationResult {
+  /** Ursprungs-Prompt (original ODER enriched). */
+  sourceContent: string;
+
+  /** Wurde enrichedContent verwendet? */
+  enrichedContentUsed: boolean;
+
+  /** Alle generierten Varianten. */
+  variants: PromptVariant[];
+
+  /** Aufgetretene Profil-Konflikte. */
+  profileConflicts: ConstraintConflict[];
+
+  /** Zeitstempel der Generierung. */
+  appliedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// 8. VariantRecommendation — Empfehlung für Variantennutzung
+// ---------------------------------------------------------------------------
+
+/** Empfehlung für die Verwendung einer Variante. */
+export interface VariantRecommendation {
+  /** Für welchen Einsatzzweck? */
+  useCase: string;
+
+  /** Für welche Zielgruppe? */
+  targetAudience: string;
+
+  /** Risikohinweise (falls vorhanden). */
+  cautions: string[];
 }
