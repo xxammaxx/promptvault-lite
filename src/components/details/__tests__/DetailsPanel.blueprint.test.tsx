@@ -15,6 +15,14 @@ import type {
 } from "@/types";
 
 // ---------------------------------------------------------------------------
+// Mock missingInfoFeatureFlag — controlled per test
+// ---------------------------------------------------------------------------
+const mockIsGateEnabled = vi.fn(() => false); // OFF by default for regression safety
+vi.mock("@/lib/missingInfoFeatureFlag", () => ({
+  isMissingInfoGateEnabled: () => mockIsGateEnabled(),
+}));
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -77,6 +85,12 @@ function resetStore() {
     isLoading: false,
     isAnalyzing: false,
     error: null,
+    // Gate-related fields (Batch 6A)
+    missingInfoSessions: {},
+    enrichedContexts: {},
+    isGateOpen: false,
+    activeGatePromptId: null,
+    gateSkippedItems: {},
   });
 }
 
@@ -736,5 +750,106 @@ describe("DetailsPanel — BlueprintOptimizationPanel Modal", () => {
     expect(
       screen.queryByText("🔷 Blueprint-Optimierung"),
     ).not.toBeInTheDocument();
+  });
+});
+
+// =============================================================================
+// Batch 6A — Missing-Info-Gate Trigger Tests (#243)
+// =============================================================================
+
+describe("DetailsPanel — Gate Trigger (Batch 6A)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetStore();
+    mockIsGateEnabled.mockReturnValue(false); // Default: OFF for regression
+  });
+
+  // -------------------------------------------------------------------------
+  // ActionBar Gate Button Visibility
+  // -------------------------------------------------------------------------
+
+  it("ActionBar does NOT show gate button when feature flag is disabled", () => {
+    mockIsGateEnabled.mockReturnValue(false);
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<ActionBar onOptimize={vi.fn()} onMissingInfoGate={vi.fn()} />);
+
+    expect(screen.queryByTestId("gate-actionbar-btn")).toBeNull();
+  });
+
+  it("ActionBar shows gate button when feature flag is enabled", () => {
+    mockIsGateEnabled.mockReturnValue(true);
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<ActionBar onOptimize={vi.fn()} onMissingInfoGate={vi.fn()} />);
+
+    expect(screen.getByTestId("gate-actionbar-btn")).toBeTruthy();
+  });
+
+  it("gate button calls onMissingInfoGate on click", () => {
+    mockIsGateEnabled.mockReturnValue(true);
+    const onGate = vi.fn();
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<ActionBar onOptimize={vi.fn()} onMissingInfoGate={onGate} />);
+
+    const gateBtn = screen.getByTestId("gate-actionbar-btn");
+    fireEvent.click(gateBtn);
+
+    expect(onGate).toHaveBeenCalled();
+  });
+
+  it("gate button is NOT rendered when onMissingInfoGate prop is absent", () => {
+    mockIsGateEnabled.mockReturnValue(true);
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    // NO onMissingInfoGate prop
+    render(<ActionBar onOptimize={vi.fn()} />);
+
+    expect(screen.queryByTestId("gate-actionbar-btn")).toBeNull();
+  });
+
+  it("existing buttons remain visible when gate button is present", () => {
+    mockIsGateEnabled.mockReturnValue(true);
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<ActionBar onOptimize={vi.fn()} onMissingInfoGate={vi.fn()} />);
+
+    // All existing buttons should still be visible
+    expect(screen.getByText("✨ Optimieren")).toBeTruthy();
+    expect(screen.getByText("📋 Kopieren")).toBeTruthy();
+    expect(screen.getByText("📂 Öffnen")).toBeTruthy();
+  });
+
+  // -------------------------------------------------------------------------
+  // DetailsPanel Gate Rendering
+  // -------------------------------------------------------------------------
+
+  it("DetailsPanel does NOT render gate when feature flag is disabled", () => {
+    mockIsGateEnabled.mockReturnValue(false);
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<DetailsPanel />);
+
+    // Gate modal should NOT be rendered
+    expect(
+      screen.queryByText("❓ Fehlende Informationen"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("DetailsPanel renders ActionBar with gate button when feature flag enabled", () => {
+    mockIsGateEnabled.mockReturnValue(true);
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<DetailsPanel />);
+
+    expect(screen.getByTestId("gate-actionbar-btn")).toBeTruthy();
   });
 });

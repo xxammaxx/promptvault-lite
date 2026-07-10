@@ -232,10 +232,10 @@ export const ActionBar: React.FC<{
 
   const gateSession = gateEnabled
     ? useAppStore.getState().missingInfoSessions[prompt.id]
-    : { items: [] as { tier: string }[] };
-  const gateRequiredCount = gateSession.items.filter(
-    (item) => item.tier === "REQUIRED",
-  ).length;
+    : undefined;
+  const gateRequiredCount = gateSession
+    ? gateSession.items.filter((item) => item.tier === "REQUIRED").length
+    : 0;
   const gateLabel =
     gateRequiredCount > 0
       ? `❓ ${gateRequiredCount} fehlende Info${gateRequiredCount === 1 ? "" : "s"}`

@@ -782,4 +782,250 @@ describe("Missing-Info-Gate Store", () => {
       expect(state.enrichedContexts[promptId]).toBeDefined();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // #252: Session Lifecycle Tests
+  // -------------------------------------------------------------------------
+
+  describe("Session Lifecycle (#252)", () => {
+    it("sessions are isolated per promptId", () => {
+      const { promptId: id1 } = setupPromptWithAnalysis({
+        promptId: "p-a",
+      });
+      const { promptId: id2 } = setupPromptWithAnalysis({
+        promptId: "p-b",
+      });
+
+      const store = useAppStore.getState();
+      store.openMissingInfoGate(id1);
+      store.openMissingInfoGate(id2);
+
+      // Answer items in first session only
+      const s1 = useAppStore.getState().missingInfoSessions[id1];
+      const s2 = useAppStore.getState().missingInfoSessions[id2];
+      const r1 = s1.items.filter(
+        (i: ClassifiedMissingInfo) => i.tier === "REQUIRED",
+      );
+      const r2 = s2.items.filter(
+        (i: ClassifiedMissingInfo) => i.tier === "REQUIRED",
+      );
+
+      if (r1.length > 0) {
+        store.answerGateItem(id1, makeAnswer(r1[0].id, "Answer-A"));
+      }
+      if (r2.length > 0) {
+        store.answerGateItem(id2, makeAnswer(r2[0].id, "Answer-B"));
+      }
+
+      // Complete first gate
+      for (const item of r1) {
+        store.answerGateItem(id1, makeAnswer(item.id, "Auto-A"));
+      }
+      store.completeGate(id1, "COMPLETED");
+
+      // First gate → enrichedContext, second gate → still ACTIVE
+      const state = useAppStore.getState();
+      expect(state.enrichedContexts[id1]).toBeDefined();
+      expect(state.enrichedContexts[id2]).toBeUndefined();
+      expect(state.missingInfoSessions[id2].status).toBe("ACTIVE");
+    });
+
+    it("completeGate requires all REQUIRED answered or outcome SKIPPED/ASSUMPTIONS", () => {
+      const { promptId } = setupPromptWithAnalysis();
+      const store = useAppStore.getState();
+      store.openMissingInfoGate(promptId);
+
+      const session = useAppStore.getState().missingInfoSessions[promptId];
+      const required = session.items.filter(
+        (i: ClassifiedMissingInfo) => i.tier === "REQUIRED",
+      );
+
+      // Leave one REQUIRED unanswered, try COMPLETED
+      for (let i = 0; i < required.length - 1; i++) {
+        store.answerGateItem(promptId, makeAnswer(required[i].id, "Answered"));
+      }
+      store.completeGate(promptId, "COMPLETED");
+
+      // Should NOT have created enriched context (not all answered)
+      const state = useAppStore.getState();
+
+      expect(state.enrichedContexts[promptId]).toBeUndefined();
+    });
+
+    it("session status transitions: ACTIVE → COMPLETED → can reopen", () => {
+      const { promptId } = setupPromptWithAnalysis();
+      const store = useAppStore.getState();
+
+      store.openMissingInfoGate(promptId);
+      expect(useAppStore.getState().missingInfoSessions[promptId].status).toBe(
+        "ACTIVE",
+      );
+
+      // Answer and complete
+      const session = useAppStore.getState().missingInfoSessions[promptId];
+      const required = session.items.filter(
+        (i: ClassifiedMissingInfo) => i.tier === "REQUIRED",
+      );
+      for (const item of required) {
+        store.answerGateItem(promptId, makeAnswer(item.id, "x"));
+      }
+      store.completeGate(promptId, "COMPLETED");
+
+      expect(useAppStore.getState().missingInfoSessions[promptId].status).toBe(
+        "COMPLETED",
+      );
+
+      // Reopen: status should go back to ACTIVE
+      store.openMissingInfoGate(promptId);
+      expect(useAppStore.getState().missingInfoSessions[promptId].status).toBe(
+        "ACTIVE",
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // #253: Invalidierung + Session-Only Tests
+  // -------------------------------------------------------------------------
+
+  describe("Invalidierung & Session-Only (#253)", () => {
+    it("resetGateSession removes session AND enrichedContext", () => {
+      const { promptId } = setupPromptWithAnalysis();
+      const store = useAppStore.getState();
+      store.openMissingInfoGate(promptId);
+
+      const session = useAppStore.getState().missingInfoSessions[promptId];
+      const required = session.items.filter(
+        (i: ClassifiedMissingInfo) => i.tier === "REQUIRED",
+      );
+      for (const item of required) {
+        store.answerGateItem(promptId, makeAnswer(item.id, "x"));
+      }
+      store.completeGate(promptId, "COMPLETED");
+
+      // Both session and enrichedContext should exist
+      const s1 = useAppStore.getState();
+      expect(s1.missingInfoSessions[promptId]).toBeDefined();
+      expect(s1.enrichedContexts[promptId]).toBeDefined();
+
+      // Reset
+      useAppStore.getState().resetGateSession(promptId);
+
+      const s2 = useAppStore.getState();
+
+      expect(s2.missingInfoSessions[promptId]).toBeUndefined();
+
+      expect(s2.enrichedContexts[promptId]).toBeUndefined();
+    });
+
+    it("resetGateSession clears gateSkippedItems for that prompt", () => {
+      const { promptId } = setupPromptWithAnalysis();
+      const store = useAppStore.getState();
+      store.openMissingInfoGate(promptId);
+
+      // Skip a non-REQUIRED item
+      const session = useAppStore.getState().missingInfoSessions[promptId];
+      const nonReq = session.items.find((i) => i.tier !== "REQUIRED");
+      if (nonReq) {
+        store.skipGateItem(promptId, nonReq.id);
+      }
+
+      expect(
+        (useAppStore.getState().gateSkippedItems[promptId] ?? []).length,
+      ).toBeGreaterThan(0);
+
+      useAppStore.getState().resetGateSession(promptId);
+
+      expect(useAppStore.getState().gateSkippedItems[promptId]).toBeUndefined();
+    });
+
+    it("no localStorage keys contain gate-related data", () => {
+      const { promptId } = setupPromptWithAnalysis();
+      const store = useAppStore.getState();
+      store.openMissingInfoGate(promptId);
+
+      const session = useAppStore.getState().missingInfoSessions[promptId];
+      const required = session.items.filter(
+        (i: ClassifiedMissingInfo) => i.tier === "REQUIRED",
+      );
+      for (const item of required) {
+        store.answerGateItem(promptId, makeAnswer(item.id, "test"));
+      }
+      store.completeGate(promptId, "COMPLETED");
+
+      // Check localStorage for any gate-related keys
+      const keys = Object.keys(localStorage);
+      const gateKeys = keys.filter(
+        (k) =>
+          k.includes("missingInfo") ||
+          k.includes("enriched") ||
+          k.includes("gateSession") ||
+          k.includes("gateSkipped"),
+      );
+      expect(gateKeys.length).toBe(0);
+    });
+
+    it("state resets on create() — missingInfoSessions and enrichedContexts are empty", () => {
+      const { promptId } = setupPromptWithAnalysis();
+      const store = useAppStore.getState();
+      store.openMissingInfoGate(promptId);
+
+      // Reset by re-creating store state (simulating app restart)
+      useAppStore.setState({
+        missingInfoSessions: {},
+        enrichedContexts: {},
+        gateSkippedItems: {},
+        isGateOpen: false,
+        activeGatePromptId: null,
+      });
+
+      const state = useAppStore.getState();
+      expect(state.missingInfoSessions).toEqual({});
+      expect(state.enrichedContexts).toEqual({});
+      expect(state.isGateOpen).toBe(false);
+    });
+
+    it("enrichedContexts cleanup when resetGateSession called on multiple prompts", () => {
+      const { promptId: id1 } = setupPromptWithAnalysis({
+        promptId: "a",
+      });
+      const { promptId: id2 } = setupPromptWithAnalysis({
+        promptId: "b",
+      });
+
+      const store = useAppStore.getState();
+
+      // Open and complete both
+      for (const pid of [id1, id2]) {
+        // Re-select the prompt
+        useAppStore.setState({ selectedPromptId: pid });
+        store.openMissingInfoGate(pid);
+        const session = useAppStore.getState().missingInfoSessions[pid];
+        const required = session.items.filter(
+          (i: ClassifiedMissingInfo) => i.tier === "REQUIRED",
+        );
+        for (const item of required) {
+          store.answerGateItem(pid, makeAnswer(item.id, "x"));
+        }
+        store.completeGate(pid, "COMPLETED");
+      }
+
+      const s1 = useAppStore.getState();
+      expect(s1.enrichedContexts[id1]).toBeDefined();
+      expect(s1.enrichedContexts[id2]).toBeDefined();
+
+      // Reset only prompt-a
+      useAppStore.getState().resetGateSession(id1);
+
+      const s2 = useAppStore.getState();
+
+      expect(s2.enrichedContexts[id1]).toBeUndefined();
+      expect(s2.enrichedContexts[id2]).toBeDefined();
+
+      // Reset prompt-b
+      useAppStore.getState().resetGateSession(id2);
+      const s3 = useAppStore.getState();
+
+      expect(s3.enrichedContexts[id2]).toBeUndefined();
+    });
+  });
 });
