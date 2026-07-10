@@ -1,6 +1,6 @@
 # Roadmap — PromptVault Lite
 
-**Last updated:** 2026-07-06
+**Last updated:** 2026-07-10
 **Current version:** v1.7.1 (stable release)
 **Next target:** v1.7.2 (Docs Sync completed via PR #208, release readiness reviewed)
 
@@ -30,23 +30,25 @@
 
 ## In Progress
 
-| Priority | Task                                    | Issue | Status                                       |
-| -------- | --------------------------------------- | ----- | -------------------------------------------- |
-| P0       | Docs Baseline Sync (pre v1.7.2 release) | #207  | ✅ Completed (PR #208 merged)                |
-| P1       | v1.7.2 Release Readiness                | #209  | 🔄 Reviewed — manual owner approval required |
+| Priority | Task                                    | Issue | Status                                                     |
+| -------- | --------------------------------------- | ----- | ---------------------------------------------------------- |
+| P0       | Docs Baseline Sync (pre v1.7.2 release) | #207  | ✅ Completed (PR #208 merged)                              |
+| P1       | v1.7.2 Release Readiness                | #209  | 🔄 Reviewed — manual owner approval required               |
+| P2       | Missing-Info-Gate                       | #216  | ✅ Implemented — ready for owner review (ADR-002 accepted) |
 
 ---
 
 ## Short-Term (Next Sprints)
 
-| Priority | Task                                   | Issue | Status                     |
-| -------- | -------------------------------------- | ----- | -------------------------- |
-| P2       | Embeddings Phase 2: DB schema/storage  | #199  | Planned (no real provider) |
-| P2       | Architecture Contract Audit            | —     | Planned                    |
-| P2       | Security Posture Review                | —     | Planned                    |
-| P2       | Tool-Gap Closure (mkdocs, secret scan) | —     | Planned                    |
-| P2       | Agentic Browser Repair Kit             | #71   | Planned                    |
-| P2       | Prompt suggestions workflow            | #45   | Planned                    |
+| Priority | Task                                   | Issue | Status                      |
+| -------- | -------------------------------------- | ----- | --------------------------- |
+| P2       | Embeddings Phase 2: DB schema/storage  | #199  | Planned (no real provider)  |
+| P2       | Architecture Contract Audit            | —     | Planned                     |
+| P2       | Security Posture Review                | —     | Planned                     |
+| P2       | Tool-Gap Closure (mkdocs, secret scan) | —     | Planned                     |
+| P2       | VariantGenerator / Direction Profiles  | #215  | Planned (dependent on #216) |
+| P2       | Agentic Browser Repair Kit             | #71   | Planned                     |
+| P2       | Prompt suggestions workflow            | #45   | Planned                     |
 
 ---
 

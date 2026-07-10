@@ -442,7 +442,7 @@ describe("MissingInfoGate — Integration: Gate → Optimizer Flow (#254)", () =
       />,
     );
 
-    const input = screen.getByTestId("gate-input-Q1") as HTMLInputElement;
+    const input = screen.getByTestId<HTMLInputElement>("gate-input-Q1");
     expect(input.value).toBe("Erste Antwort");
   });
 });
