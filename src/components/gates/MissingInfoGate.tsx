@@ -1,6 +1,10 @@
 import React, { useState, useCallback, useMemo } from "react";
 import { useAppStore } from "@/stores/appStore";
 import { isMissingInfoGateEnabled } from "@/lib/missingInfoFeatureFlag";
+import {
+  extractHardConstraints,
+  checkConflicts,
+} from "@/lib/constraintChecker";
 import type {
   MissingInfoAnswer,
   GateOutcome,
@@ -21,6 +25,8 @@ import type {
 interface MissingInfoGateProps {
   /** ID of the prompt the gate is open for. */
   promptId: string;
+  /** Original prompt content (used for constraint detection). */
+  originalContent: string;
   /** Called when the user closes the gate (✕ button). */
   onClose: () => void;
   /** Optional: called when the gate completes with an outcome. */
@@ -243,6 +249,7 @@ const GateQuestionInput: React.FC<GateInputProps> = (props) => {
 
 export const MissingInfoGate: React.FC<MissingInfoGateProps> = ({
   promptId,
+  originalContent,
   onClose,
   onComplete,
 }) => {
@@ -344,13 +351,24 @@ export const MissingInfoGate: React.FC<MissingInfoGateProps> = ({
   const hasNoItems = !session || totalItems === 0;
   const onlyOptional = !hasRequired && optionalItems.length > 0;
 
-  // Conflict state: placeholder for future constraintChecker integration
-  const hasConflicts = false;
-  const requireHumanApproval = items.some(
-    (i) =>
-      i.label === "Keine menschliche Freigabe definiert" ||
-      i.id.includes("approval"),
-  );
+  // Conflict state: uses constraintChecker (Batch 5 integration).
+  const conflicts = useMemo(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- session at runtime may be undefined (Record key)
+    if (!originalContent || !session) return [];
+    const constraints = extractHardConstraints(originalContent);
+    const answersArray = Object.values(session.answers);
+    return checkConflicts(constraints, answersArray);
+  }, [originalContent, session]);
+
+  const hasConflicts = conflicts.length > 0;
+
+  // Human approval requirement: detected from the prompt's hard constraints
+  // (not fragile string matching on detector-generated labels).
+  const requireHumanApproval = useMemo(() => {
+    if (!originalContent) return false;
+    const constraints = extractHardConstraints(originalContent);
+    return constraints.some((c) => c.category === "approval_required");
+  }, [originalContent]);
 
   // --- Handlers ---
 
@@ -402,8 +420,8 @@ export const MissingInfoGate: React.FC<MissingInfoGateProps> = ({
 
   /** Handle "Fortfahren" (only if all REQUIRED answered, no conflicts). */
   const handleProceed = useCallback(() => {
-    // Guard: conflicts block proceeding
-    if (!allRequiredAnswered) return;
+    // Guard: all REQUIRED must be answered, no conflicts may exist
+    if (!allRequiredAnswered || hasConflicts) return;
     // Commit all pending local answers first
     for (const [itemId, value] of Object.entries(localAnswers)) {
       commitAnswer(itemId, value);
@@ -413,6 +431,7 @@ export const MissingInfoGate: React.FC<MissingInfoGateProps> = ({
     onClose();
   }, [
     allRequiredAnswered,
+    hasConflicts,
     localAnswers,
     commitAnswer,
     completeGate,
@@ -729,8 +748,7 @@ export const MissingInfoGate: React.FC<MissingInfoGateProps> = ({
             )}
           </div>
 
-          {/* Conflict State (placeholder — future constraintChecker) */}
-          {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- future constraintChecker */}
+          {/* Conflict State */}
           {hasConflicts && (
             <div
               className="gate-conflict-banner"
@@ -851,12 +869,14 @@ export const MissingInfoGate: React.FC<MissingInfoGateProps> = ({
             <button
               className="btn btn-primary"
               onClick={handleProceed}
-              disabled={!allRequiredAnswered}
+              disabled={!allRequiredAnswered || hasConflicts}
               data-testid="gate-btn-proceed"
               title={
-                !allRequiredAnswered
-                  ? `${requiredItems.length - answeredRequiredCount} erforderliche Fragen sind noch nicht beantwortet`
-                  : "Angaben übernehmen und fortfahren"
+                hasConflicts
+                  ? "Konflikte mit bestehenden Constraints müssen zuerst gelöst werden"
+                  : !allRequiredAnswered
+                    ? `${requiredItems.length - answeredRequiredCount} erforderliche Fragen sind noch nicht beantwortet`
+                    : "Angaben übernehmen und fortfahren"
               }
             >
               ▶ Angaben übernehmen

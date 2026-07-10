@@ -3,9 +3,11 @@ import { useAppStore } from "@/stores/appStore";
 import ReactMarkdown from "react-markdown";
 import { OptimizationPanel } from "@/components/optimization/OptimizationPanel";
 import { BlueprintOptimizationPanel } from "@/components/optimization/BlueprintOptimizationPanel";
+import { MissingInfoGate } from "@/components/gates/MissingInfoGate";
+import { isMissingInfoGateEnabled } from "@/lib/missingInfoFeatureFlag";
 import ContentClassBadge from "@/components/common/ContentClassBadge";
 import { PromptAudioSummary } from "@/components/details/PromptAudioSummary";
-import type { BlueprintContamination } from "@/types";
+import type { BlueprintContamination, GateOutcome } from "@/types";
 
 // ---------------------------------------------------------------------------
 // PromptContent — renders markdown for the selected prompt
@@ -177,7 +179,8 @@ export const BlockingMessage: React.FC = () => (
 export const ActionBar: React.FC<{
   onOptimize?: () => void;
   onBlueprintOptimize?: () => void;
-}> = ({ onOptimize, onBlueprintOptimize }) => {
+  onMissingInfoGate?: () => void;
+}> = ({ onOptimize, onBlueprintOptimize, onMissingInfoGate }) => {
   const prompt = useAppStore((s) => s.selectedPrompt)();
   const detection = useAppStore((s) => s.selectedBlueprintDetection)();
   const toggleFavorite = useAppStore((s) => s.toggleFavorite);
@@ -219,6 +222,24 @@ export const ActionBar: React.FC<{
     contentClass === "PROMPT_BLUEPRINT_HYBRID" ||
     contentClass === "GUIDELINE";
   const blueprintBlocked = contaminationStatus === "BLOCKING_SENSITIVE_CONTENT";
+
+  // Missing-Info-Gate feature flag and session state (Batch 5)
+  const gateEnabled = isMissingInfoGateEnabled(
+    (typeof process !== "undefined" ? process.env : undefined) as
+      | Record<string, string | undefined>
+      | undefined,
+  );
+
+  const gateSession = gateEnabled
+    ? useAppStore.getState().missingInfoSessions[prompt.id]
+    : { items: [] as { tier: string }[] };
+  const gateRequiredCount = gateSession.items.filter(
+    (item) => item.tier === "REQUIRED",
+  ).length;
+  const gateLabel =
+    gateRequiredCount > 0
+      ? `❓ ${gateRequiredCount} fehlende Info${gateRequiredCount === 1 ? "" : "s"}`
+      : "❓ Fehlende Infos prüfen";
 
   return (
     <div className="action-bar">
@@ -288,6 +309,16 @@ export const ActionBar: React.FC<{
           🔷 BP optimieren
         </button>
       )}
+      {gateEnabled && onMissingInfoGate && (
+        <button
+          className="btn"
+          onClick={onMissingInfoGate}
+          title="Fehlende Informationen prüfen und ergänzen"
+          data-testid="gate-actionbar-btn"
+        >
+          {gateLabel}
+        </button>
+      )}
     </div>
   );
 };
@@ -301,24 +332,97 @@ export const DetailsPanel: React.FC = () => {
   const detection = useAppStore((s) => s.selectedBlueprintDetection)();
   const [showOptimizer, setShowOptimizer] = useState(false);
   const [showBlueprintOptimizer, setShowBlueprintOptimizer] = useState(false);
+  const [showGate, setShowGate] = useState(false);
 
-  const handleOpenOptimizer = useCallback(() => {
-    if (prompt) {
-      setShowOptimizer(true);
-    }
-  }, [prompt]);
-
-  // Determine if content should be blocked (must be declared before handleBlueprintOptimize)
+  // Determine if content should be blocked
   const isBlocked =
     detection?.contamination_status === "BLOCKING_SENSITIVE_CONTENT";
+
+  // Gate feature-flag check
+  const gateEnabled = isMissingInfoGateEnabled(
+    (typeof process !== "undefined" ? process.env : undefined) as
+      | Record<string, string | undefined>
+      | undefined,
+  );
+
+  /** Open the MissingInfoGate (via ActionBar button or auto-trigger). */
+  const handleOpenGate = useCallback(() => {
+    if (!prompt) return;
+    const store = useAppStore.getState();
+    store.openMissingInfoGate(prompt.id);
+    setShowGate(true);
+  }, [prompt]);
+
+  /** Gate completion callback: close gate, optionally auto-open optimizer. */
+  const handleGateComplete = useCallback((outcome: GateOutcome) => {
+    setShowGate(false);
+    if (outcome !== "SKIPPED") {
+      setShowOptimizer(true);
+    }
+  }, []);
+
+  /** Gate closed by user (✕ button). */
+  const handleGateClose = useCallback(() => {
+    setShowGate(false);
+  }, []);
+
+  const handleOpenOptimizer = useCallback(() => {
+    if (!prompt) return;
+
+    // Gate check: auto-open gate if REQUIRED items exist (Batch 5)
+    if (gateEnabled && !isBlocked) {
+      const store = useAppStore.getState();
+      const session = store.missingInfoSessions[prompt.id];
+      const skipped = store.gateSkippedItems[prompt.id] ?? [];
+      const hasRequired =
+        session.items.length > 0 &&
+        session.items.some(
+          (item) => item.tier === "REQUIRED" && !skipped.includes(item.id),
+        );
+
+      if (hasRequired) {
+        setShowGate(true);
+        return;
+      }
+    }
+
+    setShowOptimizer(true);
+  }, [prompt, gateEnabled, isBlocked]);
 
   // Blueprint optimize — opens the optimization modal for BLUEPRINT/HYBRID content.
   // Disabled when BLOCKING_SENSITIVE_CONTENT (button stays disabled at the ActionBar level).
   const handleBlueprintOptimize = useCallback(() => {
-    if (prompt && !isBlocked) {
-      setShowBlueprintOptimizer(true);
+    if (!prompt || isBlocked) return;
+
+    // Same gate check as optimizer (Batch 5)
+    if (gateEnabled) {
+      const store = useAppStore.getState();
+      const session = store.missingInfoSessions[prompt.id];
+      const skipped = store.gateSkippedItems[prompt.id] ?? [];
+      const hasRequired =
+        session.items.length > 0 &&
+        session.items.some(
+          (item) => item.tier === "REQUIRED" && !skipped.includes(item.id),
+        );
+
+      if (hasRequired) {
+        setShowGate(true);
+        return;
+      }
     }
-  }, [prompt, isBlocked]);
+
+    setShowBlueprintOptimizer(true);
+  }, [prompt, isBlocked, gateEnabled]);
+
+  // Determine content to pass to optimizers: enriched if available, else original
+  const optimizerContent = (() => {
+    if (!prompt) return "";
+    // Using type assertion because Record<string, EnrichedPromptContext>
+    // doesn't reflect optional keys at runtime — guard with truthiness.
+    const ctx = useAppStore.getState().enrichedContexts[prompt.id];
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime key may be absent
+    return ctx && ctx.enrichedContent ? ctx.enrichedContent : prompt.content;
+  })();
 
   if (!prompt) {
     return (
@@ -349,12 +453,21 @@ export const DetailsPanel: React.FC = () => {
         <ActionBar
           onOptimize={handleOpenOptimizer}
           onBlueprintOptimize={handleBlueprintOptimize}
+          onMissingInfoGate={handleOpenGate}
         />
         {isBlocked ? <BlockingMessage /> : <PromptContent />}
       </div>
+      {showGate && (
+        <MissingInfoGate
+          promptId={prompt.id}
+          originalContent={prompt.content}
+          onClose={handleGateClose}
+          onComplete={handleGateComplete}
+        />
+      )}
       {showOptimizer && (
         <OptimizationPanel
-          promptContent={prompt.content}
+          promptContent={optimizerContent}
           onClose={() => {
             setShowOptimizer(false);
           }}
@@ -362,14 +475,12 @@ export const DetailsPanel: React.FC = () => {
       )}
       {showBlueprintOptimizer && (
         <BlueprintOptimizationPanel
-          content={prompt.content}
+          content={optimizerContent}
           onClose={() => {
             setShowBlueprintOptimizer(false);
           }}
           onApply={(optimizedContent) => {
             // Safe onApply: copies result to clipboard as default action.
-            // Auto-saving optimized content back to disk is a follow-up feature —
-            // the app currently has no direct file-write mechanism for prompt content.
             navigator.clipboard.writeText(optimizedContent).catch(() => {});
             setShowBlueprintOptimizer(false);
           }}

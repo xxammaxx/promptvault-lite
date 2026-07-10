@@ -149,7 +149,13 @@ describe("MissingInfoGate", () => {
   describe("rendering", () => {
     it("renders the modal with header when session exists", () => {
       seedSession(promptId, [makeClassifiedItem("Q1")]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       expect(
         screen.getByRole("heading", { name: /Fehlende Informationen/i }),
       ).toBeTruthy();
@@ -157,7 +163,13 @@ describe("MissingInfoGate", () => {
 
     it("renders REQUIRED badge on required items", () => {
       seedSession(promptId, [makeClassifiedItem("Q1", { tier: "REQUIRED" })]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       expect(screen.getByText("REQUIRED")).toBeTruthy();
     });
 
@@ -166,14 +178,26 @@ describe("MissingInfoGate", () => {
         makeClassifiedItem("Q1", { tier: "REQUIRED" }),
         makeClassifiedItem("Q2", { tier: "REQUIRED" }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       expect(screen.getByTestId("gate-summary")).toBeTruthy();
       expect(screen.getByText(/2 Fragen müssen beantwortet/)).toBeTruthy();
     });
 
     it("renders singular summary when only 1 required question", () => {
       seedSession(promptId, [makeClassifiedItem("Q1", { tier: "REQUIRED" })]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       expect(screen.getByText(/1 Frage muss beantwortet/)).toBeTruthy();
     });
 
@@ -182,7 +206,13 @@ describe("MissingInfoGate", () => {
         makeClassifiedItem("Q1", { tier: "REQUIRED" }),
         makeClassifiedItem("Q2", { tier: "RECOMMENDED" }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       // Advanced section should exist
       expect(screen.getByTestId("gate-advanced-section")).toBeTruthy();
       // Toggle it open
@@ -196,7 +226,13 @@ describe("MissingInfoGate", () => {
         makeClassifiedItem("Q1", { tier: "REQUIRED" }),
         makeClassifiedItem("Q2", { tier: "OPTIONAL" }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       fireEvent.click(screen.getByTestId("gate-toggle-advanced"));
       expect(screen.getByTestId("gate-question-Q2")).toBeTruthy();
     });
@@ -216,7 +252,13 @@ describe("MissingInfoGate", () => {
       items.push(makeClassifiedItem("RM1", { tier: "RECOMMENDED" }));
 
       seedSession(promptId, items);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
 
       // First 5 REQUIRED should be directly visible
       expect(screen.getByTestId("gate-question-RQ1")).toBeTruthy();
@@ -233,7 +275,13 @@ describe("MissingInfoGate", () => {
         items.push(makeClassifiedItem(`RQ${i}`, { tier: "REQUIRED" }));
       }
       seedSession(promptId, items);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
 
       // RQ6 and RQ7 should NOT be visible until toggle
       expect(screen.queryByTestId("gate-question-RQ6")).toBeNull();
@@ -259,7 +307,13 @@ describe("MissingInfoGate", () => {
           placeholder: "Gib etwas ein",
         }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       const input = screen.getByTestId("gate-input-FT");
       expect(input).toBeInstanceOf(HTMLInputElement);
       expect((input as HTMLInputElement).type).toBe("text");
@@ -276,7 +330,13 @@ describe("MissingInfoGate", () => {
       seedSession(promptId, [
         makeClassifiedItem("ML", { inputType: "free_multiline" }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       const textarea = screen.getByTestId("gate-input-ML");
       expect(textarea).toBeInstanceOf(HTMLTextAreaElement);
 
@@ -293,7 +353,13 @@ describe("MissingInfoGate", () => {
           options: ["Option A", "Option B", "Option C"],
         }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       const select = screen.getByTestId("gate-input-SS");
       expect(select).toBeInstanceOf(HTMLSelectElement);
 
@@ -311,7 +377,13 @@ describe("MissingInfoGate", () => {
           options: ["Rot", "Grün", "Blau"],
         }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
 
       const checkboxes = screen
         .getByTestId("gate-input-MS")
@@ -331,7 +403,13 @@ describe("MissingInfoGate", () => {
       seedSession(promptId, [
         makeClassifiedItem("BOOL", { inputType: "boolean" }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
 
       const container = screen.getByTestId("gate-input-BOOL");
       const jaRadio = container.querySelector('input[value="Ja"]');
@@ -360,7 +438,13 @@ describe("MissingInfoGate", () => {
         makeClassifiedItem("RQ", { tier: "REQUIRED" }),
         makeClassifiedItem("RM", { tier: "RECOMMENDED" }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
 
       // Open advanced section to see RECOMMENDED
       fireEvent.click(screen.getByTestId("gate-toggle-advanced"));
@@ -377,7 +461,13 @@ describe("MissingInfoGate", () => {
         makeClassifiedItem("RQ", { tier: "REQUIRED" }),
         makeClassifiedItem("OP", { tier: "OPTIONAL" }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
 
       fireEvent.click(screen.getByTestId("gate-toggle-advanced"));
 
@@ -389,7 +479,13 @@ describe("MissingInfoGate", () => {
 
     it("does NOT show skip button for REQUIRED items", () => {
       seedSession(promptId, [makeClassifiedItem("RQ", { tier: "REQUIRED" })]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
 
       expect(screen.queryByTestId("gate-skip-RQ")).toBeNull();
     });
@@ -405,7 +501,13 @@ describe("MissingInfoGate", () => {
         makeClassifiedItem("Q1", { tier: "REQUIRED" }),
         makeClassifiedItem("Q2", { tier: "REQUIRED" }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
 
       const proceedBtn = screen.getByTestId("gate-btn-proceed");
       expect(proceedBtn).toBeDisabled();
@@ -415,7 +517,13 @@ describe("MissingInfoGate", () => {
       seedSession(promptId, [makeClassifiedItem("Q1", { tier: "REQUIRED" })], {
         answers: { Q1: makeAnswer("Q1", "Antwort") },
       });
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
 
       const proceedBtn2 = screen.getByTestId("gate-btn-proceed");
       expect(proceedBtn2).not.toBeDisabled();
@@ -426,6 +534,7 @@ describe("MissingInfoGate", () => {
       render(
         <MissingInfoGate
           promptId={promptId}
+          originalContent="test content"
           onClose={onClose}
           onComplete={onComplete}
         />,
@@ -447,6 +556,7 @@ describe("MissingInfoGate", () => {
       render(
         <MissingInfoGate
           promptId={promptId}
+          originalContent="test content"
           onClose={onClose}
           onComplete={onComplete}
         />,
@@ -463,7 +573,13 @@ describe("MissingInfoGate", () => {
 
     it('"Abbrechen" calls onClose', () => {
       seedSession(promptId, [makeClassifiedItem("Q1")]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
 
       fireEvent.click(screen.getByTestId("gate-btn-cancel"));
       expect(onClose).toHaveBeenCalled();
@@ -477,7 +593,13 @@ describe("MissingInfoGate", () => {
   describe("edge cases", () => {
     it("renders empty state when no items in session", () => {
       seedSession(promptId, []);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       expect(screen.getByTestId("gate-no-items")).toBeTruthy();
       expect(
         screen.getByText("Keine fehlenden Informationen erkannt."),
@@ -490,7 +612,13 @@ describe("MissingInfoGate", () => {
         isGateOpen: true,
         activeGatePromptId: promptId,
       });
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       expect(screen.getByTestId("gate-empty-session")).toBeTruthy();
       expect(screen.getByText("Keine Analyse-Daten vorhanden.")).toBeTruthy();
     });
@@ -500,7 +628,13 @@ describe("MissingInfoGate", () => {
         makeClassifiedItem("OP1", { tier: "OPTIONAL" }),
         makeClassifiedItem("OP2", { tier: "OPTIONAL" }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       expect(screen.getByTestId("gate-optional-only")).toBeTruthy();
       expect(screen.getByText(/nur optionale Verbesserungen/)).toBeTruthy();
     });
@@ -511,7 +645,13 @@ describe("MissingInfoGate", () => {
         makeClassifiedItem("RM", { tier: "RECOMMENDED" }),
         makeClassifiedItem("OP", { tier: "OPTIONAL" }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
 
       // Advanced section should be collapsed initially
       expect(screen.getByTestId("gate-toggle-advanced")).toBeTruthy();
@@ -531,7 +671,13 @@ describe("MissingInfoGate", () => {
           label: "Keine menschliche Freigabe definiert",
         }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="Menschliche Freigabe erforderlich für diesen Prompt."
+          onClose={onClose}
+        />,
+      );
       expect(screen.getByTestId("gate-approval-banner")).toBeTruthy();
       expect(
         screen.getByText(/Menschliche Freigabe erforderlich/),
@@ -542,7 +688,11 @@ describe("MissingInfoGate", () => {
       mockIsGateEnabled.mockReturnValue(false);
       seedSession(promptId, [makeClassifiedItem("Q1")]);
       const { container } = render(
-        <MissingInfoGate promptId={promptId} onClose={onClose} />,
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
       );
       // When feature flag is disabled, the component returns null
       expect(container.innerHTML).toBe("");
@@ -554,7 +704,13 @@ describe("MissingInfoGate", () => {
           rationale: "Begründung für Testfrage 1",
         }),
       ]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       expect(screen.getByTestId("gate-rationale-Q1")).toBeTruthy();
       expect(screen.getByText("Begründung für Testfrage 1")).toBeTruthy();
     });
@@ -563,7 +719,13 @@ describe("MissingInfoGate", () => {
       seedSession(promptId, [makeClassifiedItem("Q1", { tier: "REQUIRED" })], {
         status: "COMPLETED",
       });
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       expect(screen.getByTestId("gate-status-notice")).toBeTruthy();
       expect(screen.getByText(/COMPLETED/)).toBeTruthy();
     });
@@ -591,7 +753,13 @@ describe("MissingInfoGate", () => {
       });
 
       seedSession(promptId, [makeClassifiedItem("Q1", { tier: "REQUIRED" })]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
 
       // Type an answer
       const input = screen.getByTestId("gate-input-Q1");
@@ -611,7 +779,13 @@ describe("MissingInfoGate", () => {
   describe("accessibility", () => {
     it("has dialog role and aria-label", () => {
       seedSession(promptId, [makeClassifiedItem("Q1")]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       const dialog = screen.getByRole("dialog");
       expect(dialog).toBeTruthy();
       expect(dialog.getAttribute("aria-label")).toBe("Fehlende Informationen");
@@ -619,13 +793,25 @@ describe("MissingInfoGate", () => {
 
     it("close button has accessible label", () => {
       seedSession(promptId, [makeClassifiedItem("Q1")]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       expect(screen.getByLabelText("Schließen")).toBeTruthy();
     });
 
     it("proceed button has descriptive title when disabled", () => {
       seedSession(promptId, [makeClassifiedItem("Q1", { tier: "REQUIRED" })]);
-      render(<MissingInfoGate promptId={promptId} onClose={onClose} />);
+      render(
+        <MissingInfoGate
+          promptId={promptId}
+          originalContent="test content"
+          onClose={onClose}
+        />,
+      );
       const btn = screen.getByTestId("gate-btn-proceed");
       expect(btn.getAttribute("title")).toContain("noch nicht beantwortet");
     });
