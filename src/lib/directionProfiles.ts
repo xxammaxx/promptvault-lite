@@ -225,9 +225,9 @@ export const DIRECTION_PROFILES: DirectionProfile[] = [
     promptPrefix:
       "Du erstellst ausführbare Anweisungen für autonome Agenten. Formuliere den folgenden Prompt so um, dass das Ergebnis klare, schrittweise und überprüfbare Anweisungen enthält.",
     compatibleConstraintCategories: ALL_CONSTRAINT_CATEGORIES.filter(
-      (c) => c !== "approval_required",
+      (c) => c !== "approval_required" && c !== "scope_boundary",
     ),
-    conflictingConstraintCategories: ["approval_required"],
+    conflictingConstraintCategories: ["approval_required", "scope_boundary"],
     recommendation:
       "Empfohlen für CI/CD-Pipelines, Automatisierungs-Workflows und autonome Agenten-Instruktionen.",
   },

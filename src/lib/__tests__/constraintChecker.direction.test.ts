@@ -146,18 +146,21 @@ describe("checkDirectionProfileConflicts", () => {
   // --- Security BLOCKING: scope_boundary ---
 
   it("detects BLOCKING conflict: agentisch + scope_boundary", () => {
-    // agentisch has approval_required as conflicting, but let's check if
-    // scope_boundary also triggers. Per the current profile definition,
-    // agentisch only conflicts with approval_required. scope_boundary is not
-    // in agentisch's conflictingConstraintCategories.
-    // This test documents that behavior.
+    // scope_boundary IS in agentisch's conflicting categories per spec §7.3
+    // ("Keine neuen Dateien" + agentisch → BLOCKING).
     const constraints = [hc("scope_boundary", "nur diese Datei ändern")];
     const result = checkDirectionProfileConflicts(
       agentischProfile,
       constraints,
     );
-    // scope_boundary is NOT in agentisch's conflicting categories
-    expect(result).toEqual([]);
+    expect(result).toHaveLength(1);
+    expect(result[0].severity).toBe("blocking");
+    expect(result[0].constraint.category).toBe("scope_boundary");
+    expect(result[0].conflictingSource).toBe(agentischProfile.label);
+    // Security categories: require_human_approval, NOT change_constraint
+    const optionIds = result[0].resolutions.map((r) => r.id);
+    expect(optionIds).toContain("require_human_approval");
+    expect(optionIds).not.toContain("change_constraint");
   });
 
   // --- WARNING: Non-security categories ---
@@ -418,6 +421,76 @@ describe("checkDirectionProfileConflicts", () => {
 
     // IDs are sequential (DPC_001, DPC_001) — same input, same order
     expect(result1[0].id).toBe(result2[0].id);
+  });
+
+  // --- Agent + multiple security constraints ---
+
+  it("agentisch detects both approval_required AND scope_boundary as BLOCKING", () => {
+    const constraints = [
+      hc("approval_required", "vor der Ausführung bestätigen"),
+      hc("scope_boundary", "nur diese Datei ändern"),
+    ];
+    const result = checkDirectionProfileConflicts(
+      agentischProfile,
+      constraints,
+    );
+    expect(result).toHaveLength(2);
+    expect(result.map((c) => c.constraint.category).sort()).toEqual(
+      ["approval_required", "scope_boundary"].sort(),
+    );
+    for (const conflict of result) {
+      expect(conflict.severity).toBe("blocking");
+      const optionIds = conflict.resolutions.map((r) => r.id);
+      expect(optionIds).toContain("require_human_approval");
+      expect(optionIds).not.toContain("change_constraint");
+    }
+  });
+
+  // --- scope_boundary: only conflicts where defined ---
+
+  it("deep_research: scope_boundary does NOT conflict (not in conflicting categories)", () => {
+    const constraints = [hc("scope_boundary", "nur diese Datei ändern")];
+    const result = checkDirectionProfileConflicts(
+      deepResearchProfile,
+      constraints,
+    );
+    // scope_boundary is NOT in deep_research's conflicting categories → no conflict
+    expect(result).toEqual([]);
+  });
+
+  it("kritisch: scope_boundary does NOT conflict (universally compatible)", () => {
+    const constraints = [hc("scope_boundary", "nur diese Datei ändern")];
+    const result = checkDirectionProfileConflicts(kritischProfile, constraints);
+    expect(result).toEqual([]);
+  });
+
+  // --- All 3 SECURITY_CATEGORIES produce BLOCKING when conflicting ---
+
+  it("all SECURITY_CATEGORIES (offline_only, approval_required, scope_boundary) produce BLOCKING severity", () => {
+    // offline_only → conflicts with deep_research
+    const r1 = checkDirectionProfileConflicts(deepResearchProfile, [
+      hc("offline_only", "Keine Cloud verwenden"),
+    ]);
+    expect(r1[0].severity).toBe("blocking");
+
+    // approval_required → conflicts with agentisch
+    const r2 = checkDirectionProfileConflicts(agentischProfile, [
+      hc("approval_required", "vor der Ausführung bestätigen"),
+    ]);
+    expect(r2[0].severity).toBe("blocking");
+
+    // scope_boundary → conflicts with agentisch
+    const r3 = checkDirectionProfileConflicts(agentischProfile, [
+      hc("scope_boundary", "nur diese Datei ändern"),
+    ]);
+    expect(r3[0].severity).toBe("blocking");
+
+    // All three have require_human_approval, NOT change_constraint
+    for (const result of [r1, r2, r3]) {
+      const optionIds = result[0].resolutions.map((r) => r.id);
+      expect(optionIds).toContain("require_human_approval");
+      expect(optionIds).not.toContain("change_constraint");
+    }
   });
 });
 

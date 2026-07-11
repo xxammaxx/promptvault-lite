@@ -154,10 +154,13 @@ describe("DIRECTION_PROFILES", () => {
     expect(p.compatibleConstraintCategories).not.toContain("offline_only");
   });
 
-  it("agentisch conflicts with approval_required", () => {
+  it("agentisch conflicts with approval_required and scope_boundary", () => {
     const p = expectProfile("agentisch");
-    expect(p.conflictingConstraintCategories).toEqual(["approval_required"]);
+    expect(p.conflictingConstraintCategories.sort()).toEqual(
+      ["approval_required", "scope_boundary"].sort(),
+    );
     expect(p.compatibleConstraintCategories).not.toContain("approval_required");
+    expect(p.compatibleConstraintCategories).not.toContain("scope_boundary");
   });
 
   it("compliance is universally compatible", () => {
@@ -257,20 +260,41 @@ describe("getDefaultSelection", () => {
 // =============================================================================
 
 describe("getProfilesByCategory", () => {
-  it("returns all technisch profiles", () => {
+  it("returns all 4 technisch profiles", () => {
     const tech = getProfilesByCategory("technisch");
-    expect(tech.length).toBeGreaterThan(0);
+    expect(tech).toHaveLength(4);
     for (const p of tech) {
       expect(p.category).toBe("technisch");
     }
+    const ids = tech.map((p) => p.profileId).sort();
+    expect(ids).toEqual(
+      ["technisch", "experte", "deep_research", "agentisch"].sort(),
+    );
   });
 
-  it("returns only sachlich profiles", () => {
+  it("returns all 6 sachlich profiles", () => {
     const sach = getProfilesByCategory("sachlich");
-    expect(sach.length).toBeGreaterThan(0);
+    expect(sach).toHaveLength(6);
     for (const p of sach) {
       expect(p.category).toBe("sachlich");
     }
+    const ids = sach.map((p) => p.profileId).sort();
+    expect(ids).toEqual(
+      [
+        "sachlich",
+        "kurz",
+        "ausfuehrlich",
+        "kritisch",
+        "anfaenger",
+        "compliance",
+      ].sort(),
+    );
+  });
+
+  it("returns exactly the 1 verkaeuferisch profile", () => {
+    const verk = getProfilesByCategory("verkaeuferisch");
+    expect(verk).toHaveLength(1);
+    expect(verk[0].profileId).toBe("verkaeuferisch");
   });
 
   it("returns exactly the kreativ profile", () => {
