@@ -4,7 +4,9 @@ import ReactMarkdown from "react-markdown";
 import { OptimizationPanel } from "@/components/optimization/OptimizationPanel";
 import { BlueprintOptimizationPanel } from "@/components/optimization/BlueprintOptimizationPanel";
 import { MissingInfoGate } from "@/components/gates/MissingInfoGate";
+import { VariantPanel } from "@/components/variants/VariantPanel";
 import { isMissingInfoGateEnabled } from "@/lib/missingInfoFeatureFlag";
+import { isDirectionProfilesEnabled } from "@/lib/directionFeatureFlag";
 import ContentClassBadge from "@/components/common/ContentClassBadge";
 import { PromptAudioSummary } from "@/components/details/PromptAudioSummary";
 import type { BlueprintContamination, GateOutcome } from "@/types";
@@ -180,7 +182,13 @@ export const ActionBar: React.FC<{
   onOptimize?: () => void;
   onBlueprintOptimize?: () => void;
   onMissingInfoGate?: () => void;
-}> = ({ onOptimize, onBlueprintOptimize, onMissingInfoGate }) => {
+  onOpenVariantPanel?: () => void;
+}> = ({
+  onOptimize,
+  onBlueprintOptimize,
+  onMissingInfoGate,
+  onOpenVariantPanel,
+}) => {
   const prompt = useAppStore((s) => s.selectedPrompt)();
   const detection = useAppStore((s) => s.selectedBlueprintDetection)();
   const toggleFavorite = useAppStore((s) => s.toggleFavorite);
@@ -240,6 +248,13 @@ export const ActionBar: React.FC<{
     gateRequiredCount > 0
       ? `❓ ${gateRequiredCount} fehlende Info${gateRequiredCount === 1 ? "" : "s"}`
       : "❓ Fehlende Infos prüfen";
+
+  // Direction Profiles feature flag (Batch 6)
+  const variantEnabled = isDirectionProfilesEnabled(
+    (typeof process !== "undefined" ? process.env : undefined) as
+      | Record<string, string | undefined>
+      | undefined,
+  );
 
   return (
     <div className="action-bar">
@@ -319,6 +334,17 @@ export const ActionBar: React.FC<{
           {gateLabel}
         </button>
       )}
+      {variantEnabled && onOpenVariantPanel && (
+        <button
+          className="btn btn-primary"
+          onClick={onOpenVariantPanel}
+          title="Varianten mit Richtungsprofilen erzeugen"
+          aria-label="Varianten erzeugen"
+          data-testid="variant-actionbar-btn"
+        >
+          🧭 Varianten erzeugen
+        </button>
+      )}
     </div>
   );
 };
@@ -333,6 +359,7 @@ export const DetailsPanel: React.FC = () => {
   const [showOptimizer, setShowOptimizer] = useState(false);
   const [showBlueprintOptimizer, setShowBlueprintOptimizer] = useState(false);
   const [showGate, setShowGate] = useState(false);
+  const [showVariantPanel, setShowVariantPanel] = useState(false);
 
   // Determine if content should be blocked
   const isBlocked =
@@ -351,6 +378,14 @@ export const DetailsPanel: React.FC = () => {
     const store = useAppStore.getState();
     store.openMissingInfoGate(prompt.id);
     setShowGate(true);
+  }, [prompt]);
+
+  /** Open the Variant Panel (Direction Profiles, Batch 6). */
+  const handleOpenVariantPanel = useCallback(() => {
+    if (!prompt) return;
+    const store = useAppStore.getState();
+    store.openVariantPanel(prompt.id);
+    setShowVariantPanel(true);
   }, [prompt]);
 
   /** Gate completion callback: close gate, optionally auto-open optimizer. */
@@ -424,6 +459,20 @@ export const DetailsPanel: React.FC = () => {
     return ctx && ctx.enrichedContent ? ctx.enrichedContent : prompt.content;
   })();
 
+  // Determine content for VariantPanel: enriched if available, else original (Batch 6)
+  const variantSourceContent = (() => {
+    if (!prompt) return "";
+    const ctx = useAppStore.getState().enrichedContexts[prompt.id];
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime key may be absent
+    return ctx && ctx.enrichedContent ? ctx.enrichedContent : prompt.content;
+  })();
+  const variantEnrichedContentUsed = (() => {
+    if (!prompt) return false;
+    const ctx = useAppStore.getState().enrichedContexts[prompt.id];
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime key may be absent
+    return !!(ctx && ctx.enrichedContent);
+  })();
+
   if (!prompt) {
     return (
       <div className="panel panel-details">
@@ -454,6 +503,7 @@ export const DetailsPanel: React.FC = () => {
           onOptimize={handleOpenOptimizer}
           onBlueprintOptimize={handleBlueprintOptimize}
           onMissingInfoGate={handleOpenGate}
+          onOpenVariantPanel={handleOpenVariantPanel}
         />
         {isBlocked ? <BlockingMessage /> : <PromptContent />}
       </div>
@@ -483,6 +533,16 @@ export const DetailsPanel: React.FC = () => {
             // Safe onApply: copies result to clipboard as default action.
             navigator.clipboard.writeText(optimizedContent).catch(() => {});
             setShowBlueprintOptimizer(false);
+          }}
+        />
+      )}
+      {showVariantPanel && (
+        <VariantPanel
+          promptId={prompt.id}
+          sourceContent={variantSourceContent}
+          enrichedContentUsed={variantEnrichedContentUsed}
+          onClose={() => {
+            setShowVariantPanel(false);
           }}
         />
       )}
