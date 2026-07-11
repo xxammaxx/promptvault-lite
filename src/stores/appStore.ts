@@ -12,6 +12,9 @@ import type {
   MissingInfoAnswer,
   EnrichedPromptContext,
   GateOutcome,
+  DirectionProfileId,
+  DirectionProfileSelection,
+  VariantGenerationResult,
 } from "@/types";
 import {
   scanDirectory,
@@ -37,6 +40,8 @@ import {
 } from "@/lib/missingInfoClassifier";
 import { mergeAnswers } from "@/lib/gateContentMerger";
 import { isMissingInfoGateEnabled } from "@/lib/missingInfoFeatureFlag";
+import { generateVariants as generateDirectionVariants } from "@/lib/variantGenerator";
+import { getDefaultSelection } from "@/lib/directionProfiles";
 
 // --- Theme Types ---
 
@@ -229,6 +234,15 @@ interface AppState {
   /** Skipped gate item IDs per promptId (not in MissingInfoSession type). */
   gateSkippedItems: Record<string, string[]>;
 
+  // Direction Profiles / Variant Panel State (#215, Batch 4 — Session-Only, No Persistence)
+  variantResults: Record<string, VariantGenerationResult>;
+  showVariantPanel: boolean;
+  activeVariantPromptId: string | null;
+  selectedProfileIds: DirectionProfileId[];
+  customDirectionInput: string;
+  isGeneratingVariants: boolean;
+  variantGenerationError: string | null;
+
   // UI
   isLoading: boolean;
   isAnalyzing: boolean;
@@ -319,6 +333,26 @@ interface AppState {
   resetGateSession: (promptId: string) => void;
   getSessionForPrompt: (promptId: string) => MissingInfoSession | undefined;
 
+  // Direction Profiles / Variant Panel Actions (#215, Batch 4)
+  openVariantPanel: (promptId: string) => void;
+  closeVariantPanel: () => void;
+  generateVariants: (
+    promptId: string,
+    selection: DirectionProfileSelection,
+  ) => void;
+  selectProfile: (profileId: DirectionProfileId) => void;
+  toggleProfileSelection: (profileId: DirectionProfileId) => void;
+  clearVariantResults: (promptId: string) => void;
+  resetVariantSession: (promptId: string) => void;
+  getVariantResultForPrompt: (
+    promptId: string,
+  ) => VariantGenerationResult | undefined;
+  setSelectedDirectionProfiles: (
+    promptId: string,
+    profileIds: DirectionProfileId[],
+  ) => void;
+  setCustomDirectionInput: (promptId: string, value: string) => void;
+
   // Async actions
   scanFolder: (path: string) => Promise<void>;
   analyzeSelected: () => Promise<void>;
@@ -352,6 +386,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   isGateOpen: false,
   activeGatePromptId: null,
   gateSkippedItems: {},
+
+  // Direction Profiles / Variant Panel initial state (Batch 4 — Session-Only)
+  variantResults: {},
+  showVariantPanel: false,
+  activeVariantPromptId: null,
+  selectedProfileIds: [],
+  customDirectionInput: "",
+  isGeneratingVariants: false,
+  variantGenerationError: null,
 
   isLoading: false,
   isAnalyzing: false,
@@ -994,6 +1037,188 @@ export const useAppStore = create<AppState>((set, get) => ({
   /** Selector: get the session for a given promptId. */
   getSessionForPrompt: (promptId: string): MissingInfoSession | undefined => {
     return get().missingInfoSessions[promptId];
+  },
+
+  // ==========================================================================
+  // Direction Profiles / Variant Panel Actions (#215, Batch 4)
+  // ==========================================================================
+
+  /**
+   * Opens the Variant Panel for a given promptId.
+   * Resets selectedProfileIds to default selection and clears any
+   * previous generation error.
+   */
+  openVariantPanel: (promptId: string) => {
+    set({
+      showVariantPanel: true,
+      activeVariantPromptId: promptId,
+      selectedProfileIds: getDefaultSelection(),
+      isGeneratingVariants: false,
+      variantGenerationError: null,
+    });
+  },
+
+  /**
+   * Closes the Variant Panel without discarding variant results.
+   * selectedProfileIds and isGeneratingVariants are preserved so that
+   * reopening the panel restores the last selection state.
+   */
+  closeVariantPanel: () => {
+    set({
+      showVariantPanel: false,
+      activeVariantPromptId: null,
+      variantGenerationError: null,
+    });
+  },
+
+  /**
+   * Generates prompt variants for a given promptId using the provided
+   * DirectionProfileSelection.
+   *
+   * Prefers enrichedContent from the Missing-Info-Gate (#216) if available;
+   * falls back to the original prompt content. Max 5 variants per run.
+   * Constraint conflicts from Batch 3 are preserved in the result.
+   */
+  generateVariants: (
+    promptId: string,
+    selection: DirectionProfileSelection,
+  ) => {
+    set({ isGeneratingVariants: true, variantGenerationError: null });
+
+    try {
+      const state = get();
+
+      // Determine source content: prefer enriched, fall back to original
+      const enrichedContext = state.enrichedContexts[promptId];
+      const prompt = state.prompts.find((p) => p.id === promptId);
+
+      const sourceContent =
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard: Record<T> may not have key, PromptItem | undefined
+        enrichedContext?.enrichedContent ?? prompt?.content ?? "";
+
+      if (!sourceContent) {
+        set({
+          variantGenerationError:
+            "Kein Prompt-Inhalt verfügbar. Bitte wählen Sie einen Prompt aus.",
+          isGeneratingVariants: false,
+        });
+        return;
+      }
+
+      // Invoke the template-based variant generator
+      const result = generateDirectionVariants(sourceContent, selection, {
+        maxVariants: 5,
+        enrichedContentUsed: !!enrichedContext,
+      });
+
+      set((s) => ({
+        variantResults: {
+          ...s.variantResults,
+          [promptId]: result,
+        },
+        isGeneratingVariants: false,
+      }));
+    } catch (err) {
+      set({
+        variantGenerationError: String(err),
+        isGeneratingVariants: false,
+      });
+    }
+  },
+
+  /**
+   * Single-select: replaces selectedProfileIds with a single profile ID.
+   * Uses the currently activeVariantPromptId to scope the selection.
+   */
+  selectProfile: (profileId: DirectionProfileId) => {
+    set({ selectedProfileIds: [profileId] });
+  },
+
+  /**
+   * Toggles a profile ID in selectedProfileIds (multi-select).
+   * If present → remove. If absent → add.
+   */
+  toggleProfileSelection: (profileId: DirectionProfileId) => {
+    set((state) => {
+      const current = state.selectedProfileIds;
+      if (current.includes(profileId)) {
+        return {
+          selectedProfileIds: current.filter((id) => id !== profileId),
+        };
+      }
+      return {
+        selectedProfileIds: [...current, profileId],
+      };
+    });
+  },
+
+  /**
+   * Clears variant results for a specific promptId.
+   * Resets selectedProfileIds to default selection.
+   * Does NOT touch enrichedContexts or any #216 state.
+   */
+  clearVariantResults: (promptId: string) => {
+    set((state) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [promptId]: _removed, ...rest } = state.variantResults;
+      return {
+        variantResults: rest,
+        selectedProfileIds: getDefaultSelection(),
+      };
+    });
+  },
+
+  /**
+   * Full reset of the variant session for a promptId.
+   * Clears variantResults, resets selectedProfileIds, and resets
+   * any customDirectionInput. Does NOT touch #216 state.
+   */
+  resetVariantSession: (promptId: string) => {
+    set((state) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [promptId]: _removed, ...rest } = state.variantResults;
+      return {
+        variantResults: rest,
+        selectedProfileIds: getDefaultSelection(),
+        customDirectionInput: "",
+        variantGenerationError: null,
+        // If this was the active panel, close it
+        ...(state.activeVariantPromptId === promptId
+          ? { showVariantPanel: false, activeVariantPromptId: null }
+          : {}),
+      };
+    });
+  },
+
+  /**
+   * Selector: get the variant generation result for a given promptId.
+   * Returns undefined if no variants have been generated.
+   */
+  getVariantResultForPrompt: (
+    promptId: string,
+  ): VariantGenerationResult | undefined => {
+    return get().variantResults[promptId];
+  },
+
+  /**
+   * Batch-set selected direction profiles for a given promptId.
+   * Accepts promptId for future multi-panel support; currently sets
+   * the global selectedProfileIds.
+   */
+  setSelectedDirectionProfiles: (
+    _promptId: string,
+    profileIds: DirectionProfileId[],
+  ) => {
+    set({ selectedProfileIds: profileIds });
+  },
+
+  /**
+   * Set the custom direction input text for a given promptId.
+   * Accepts promptId for future multi-panel support; currently sets
+   * the global customDirectionInput.
+   */
+  setCustomDirectionInput: (_promptId: string, value: string) => {
+    set({ customDirectionInput: value });
   },
 
   // Derived data
