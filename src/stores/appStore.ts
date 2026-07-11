@@ -15,6 +15,7 @@ import type {
   DirectionProfileId,
   DirectionProfileSelection,
   VariantGenerationResult,
+  PromptVariant,
 } from "@/types";
 import {
   scanDirectory,
@@ -352,6 +353,9 @@ interface AppState {
     profileIds: DirectionProfileId[],
   ) => void;
   setCustomDirectionInput: (promptId: string, value: string) => void;
+
+  // Save-as-New-Version (Batch 7)
+  saveVariantAsPrompt: (variant: PromptVariant) => Promise<void>;
 
   // Async actions
   scanFolder: (path: string) => Promise<void>;
@@ -1219,6 +1223,83 @@ export const useAppStore = create<AppState>((set, get) => ({
    */
   setCustomDirectionInput: (_promptId: string, value: string) => {
     set({ customDirectionInput: value });
+  },
+
+  // ==========================================================================
+  // Save-as-New-Version (#215, Batch 7 — T-215-018)
+  // ==========================================================================
+
+  /**
+   * Saves a generated variant as a new prompt file in the vault.
+   *
+   * Uses the existing tauriCreatePrompt bridge (imported as tauriCreatePrompt).
+   * After a successful save, scans the current folder to refresh the prompt
+   * list and closes the variant panel.
+   *
+   * The original prompt is NEVER modified — a new file is created.
+   * BLOCKING conflicts are enforced at the UI level (buttons disabled).
+   */
+  saveVariantAsPrompt: async (variant: PromptVariant) => {
+    const state = get();
+    const folderPath = state.currentFolderPath;
+
+    if (!folderPath) {
+      set({
+        error:
+          "Kein Vault-Ordner ausgewählt. Bitte zuerst einen Ordner scannen.",
+      });
+      return;
+    }
+
+    // Determine the prompt that was the source of this variant
+    const activePromptId = state.activeVariantPromptId;
+    const sourcePrompt = activePromptId
+      ? state.prompts.find((p) => p.id === activePromptId)
+      : undefined;
+
+    // Build tags: default variant tag + profile ID + source info
+    const tags = ["variant", variant.profileId];
+    if (sourcePrompt) {
+      tags.push(`source:${sourcePrompt.title.slice(0, 30)}`);
+    }
+
+    // Build a description that captures variant metadata
+    const metaDescription = [
+      `Variante des Profils "${variant.label}"`,
+      `Richtung: ${variant.directionExplanation}`,
+      variant.recommendation
+        ? `Empfehlung: ${variant.recommendation}`
+        : undefined,
+      variant.conflicts.length > 0
+        ? `${variant.conflicts.length} Konflikt(e) — siehe Original-Variantenansicht`
+        : undefined,
+    ]
+      .filter(Boolean)
+      .join(". ");
+
+    try {
+      await tauriCreatePrompt({
+        title: variant.label,
+        content: variant.content,
+        category: "Variante",
+        tags,
+        description: metaDescription,
+      });
+
+      // Re-scan the vault folder to pick up the new file
+      await get().scanFolder(folderPath);
+
+      // Close the variant panel
+      get().closeVariantPanel();
+
+      // Set success state (error cleared)
+      set({ error: null });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      set({
+        error: `Fehler beim Speichern der Variante: ${message}`,
+      });
+    }
   },
 
   // Derived data

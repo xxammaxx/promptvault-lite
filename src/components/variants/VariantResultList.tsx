@@ -23,6 +23,10 @@ export interface VariantResultListProps {
   enrichedContentUsed: boolean;
   /** Source content (for copy-to-clipboard reference). */
   sourceContent: string;
+  /** Called when the user clicks "↔️ Vergleichen" on a variant. */
+  onCompare?: (variant: PromptVariant) => void;
+  /** Called when the user clicks "💾 Speichern" on a variant. */
+  onSave?: (variant: PromptVariant) => void;
 }
 
 // =============================================================================
@@ -52,9 +56,15 @@ const PROFILE_ICONS: Record<string, string> = {
 
 interface VariantResultCardProps {
   variant: PromptVariant;
+  onCompare?: (variant: PromptVariant) => void;
+  onSave?: (variant: PromptVariant) => void;
 }
 
-const VariantResultCard: React.FC<VariantResultCardProps> = ({ variant }) => {
+const VariantResultCard: React.FC<VariantResultCardProps> = ({
+  variant,
+  onCompare,
+  onSave,
+}) => {
   const [conflictsExpanded, setConflictsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -225,8 +235,17 @@ const VariantResultCard: React.FC<VariantResultCardProps> = ({ variant }) => {
         <button
           type="button"
           className="btn btn-sm variant-action-btn"
-          disabled
-          title="Speichern in Batch 7"
+          onClick={() => {
+            if (onSave) onSave(variant);
+          }}
+          disabled={!onSave || blockingConflicts.length > 0}
+          title={
+            blockingConflicts.length > 0
+              ? "Speichern bei BLOCKING-Konflikten nicht möglich"
+              : !onSave
+                ? "Speichern nicht verfügbar"
+                : "Variante als neue Version speichern"
+          }
           data-testid={`variant-save-btn-${variant.variantId}`}
         >
           💾 Speichern
@@ -234,8 +253,15 @@ const VariantResultCard: React.FC<VariantResultCardProps> = ({ variant }) => {
         <button
           type="button"
           className="btn btn-sm variant-action-btn"
-          disabled
-          title="Vergleichen in Batch 7"
+          onClick={() => {
+            if (onCompare) onCompare(variant);
+          }}
+          disabled={!onCompare}
+          title={
+            !onCompare
+              ? "Vergleichen nicht verfügbar"
+              : "Mit Original vergleichen"
+          }
           data-testid={`variant-compare-btn-${variant.variantId}`}
         >
           ↔️ Vergleichen
@@ -263,6 +289,8 @@ export const VariantResultList: React.FC<VariantResultListProps> = ({
   variants,
   enrichedContentUsed,
   sourceContent: _sourceContent,
+  onCompare,
+  onSave,
 }) => {
   // ---------------------------------------------------------------------------
   // Empty state
@@ -305,7 +333,12 @@ export const VariantResultList: React.FC<VariantResultListProps> = ({
       {/* Variant cards */}
       <div className="variant-result-cards" data-testid="variant-result-cards">
         {variants.map((variant) => (
-          <VariantResultCard key={variant.variantId} variant={variant} />
+          <VariantResultCard
+            key={variant.variantId}
+            variant={variant}
+            onCompare={onCompare}
+            onSave={onSave}
+          />
         ))}
       </div>
     </div>

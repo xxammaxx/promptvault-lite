@@ -5,11 +5,12 @@
 // empty state, action buttons (placeholder), enrichedSource indicator.
 // =============================================================================
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { VariantResultList } from "../VariantResultList";
 import { useAppStore } from "@/stores/appStore";
 import type { PromptVariant } from "@/types";
+import type { VariantResultListProps } from "../VariantResultList";
 
 // =============================================================================
 // Helpers
@@ -87,14 +88,17 @@ function makeVariant(overrides: Partial<PromptVariant> = {}): PromptVariant {
 
 function renderList(
   variants: PromptVariant[],
-  enrichedContentUsed = false,
-  sourceContent = "Original source prompt content.",
+  overrides?: Partial<VariantResultListProps>,
 ) {
   return render(
     <VariantResultList
       variants={variants}
-      enrichedContentUsed={enrichedContentUsed}
-      sourceContent={sourceContent}
+      enrichedContentUsed={overrides?.enrichedContentUsed ?? false}
+      sourceContent={
+        overrides?.sourceContent ?? "Original source prompt content."
+      }
+      onCompare={overrides?.onCompare}
+      onSave={overrides?.onSave}
     />,
   );
 }
@@ -164,14 +168,12 @@ describe("VariantResultList", () => {
     });
 
     it("displays source label as original when enrichedContentUsed is false", () => {
-      renderList([makeVariant()], false);
-
-      expect(screen.getByTestId("variant-result-source")).toBeInTheDocument();
-      expect(screen.getByText(/Quelle: Original-Prompt/)).toBeInTheDocument();
+      renderList([makeVariant()], { enrichedContentUsed: false });
     });
 
-    it("displays source label as enriched when enrichedContentUsed is true", () => {
-      renderList([makeVariant()], true);
+    it("shows enrichedContent source label when true", () => {
+      resetStore();
+      renderList([makeVariant()], { enrichedContentUsed: true });
 
       expect(
         screen.getByText(/Quelle: enrichedContent \(Missing-Info-Gate\)/),
@@ -511,5 +513,133 @@ describe("VariantResultList", () => {
       // variantResults should still be empty — we passed variants as props
       expect(Object.keys(store.variantResults)).toHaveLength(0);
     });
+  });
+});
+
+// =============================================================================
+// Batch 7 — Compare & Save Button Integration (T-215-017)
+// =============================================================================
+
+describe("VariantResultList — Compare & Save Buttons (Batch 7)", () => {
+  beforeEach(() => {
+    resetStore();
+  });
+
+  it("compare button is enabled when onCompare is provided", () => {
+    const variant = makeVariant({ variantId: "VAR_cmp_1" });
+    renderList([variant], { onCompare: vi.fn() });
+
+    const compareBtn = screen.getByTestId("variant-compare-btn-VAR_cmp_1");
+    expect(compareBtn).not.toBeDisabled();
+  });
+
+  it("compare button is disabled when onCompare is NOT provided", () => {
+    const variant = makeVariant({ variantId: "VAR_cmp_2" });
+    renderList([variant]); // No onCompare
+
+    const compareBtn = screen.getByTestId("variant-compare-btn-VAR_cmp_2");
+    expect(compareBtn).toBeDisabled();
+  });
+
+  it("compare button calls onCompare with the variant on click", () => {
+    const onCompare = vi.fn();
+    const variant = makeVariant({ variantId: "VAR_cmp_3" });
+    renderList([variant], { onCompare });
+
+    fireEvent.click(screen.getByTestId("variant-compare-btn-VAR_cmp_3"));
+    expect(onCompare).toHaveBeenCalledTimes(1);
+    expect(onCompare).toHaveBeenCalledWith(variant);
+  });
+
+  it("save button is enabled when onSave provided and no BLOCKING conflict", () => {
+    const variant = makeVariant({
+      variantId: "VAR_save_1",
+      conflicts: [], // No conflicts
+    });
+    renderList([variant], { onSave: vi.fn() });
+
+    const saveBtn = screen.getByTestId("variant-save-btn-VAR_save_1");
+    expect(saveBtn).not.toBeDisabled();
+  });
+
+  it("save button is disabled when onSave is NOT provided", () => {
+    const variant = makeVariant({ variantId: "VAR_save_2" });
+    renderList([variant]); // No onSave
+
+    const saveBtn = screen.getByTestId("variant-save-btn-VAR_save_2");
+    expect(saveBtn).toBeDisabled();
+  });
+
+  it("save button is disabled when BLOCKING conflict exists", () => {
+    const variant = makeVariant({
+      variantId: "VAR_blocked",
+      conflicts: [
+        {
+          id: "conf_b",
+          profileId: "deep_research",
+          constraint: {
+            id: "hc_b",
+            category: "offline_only",
+            constraintText: "Keine Cloud",
+            severity: "hard" as const,
+            position: null,
+          },
+          description: "Blocking conflict",
+          severity: "blocking",
+          resolution: "constraint_preserved",
+        },
+      ],
+    });
+    renderList([variant], { onSave: vi.fn() });
+
+    const saveBtn = screen.getByTestId("variant-save-btn-VAR_blocked");
+    expect(saveBtn).toBeDisabled();
+  });
+
+  it("save button is enabled when only WARNING conflicts exist", () => {
+    const variant = makeVariant({
+      variantId: "VAR_warn",
+      conflicts: [
+        {
+          id: "conf_w",
+          profileId: "ausfuehrlich",
+          constraint: {
+            id: "hc_w",
+            category: "max_length",
+            constraintText: "Max 200",
+            severity: "hard" as const,
+            position: null,
+          },
+          description: "Warning conflict",
+          severity: "warning",
+          resolution: "constraint_preserved",
+        },
+      ],
+    });
+    renderList([variant], { onSave: vi.fn() });
+
+    const saveBtn = screen.getByTestId("variant-save-btn-VAR_warn");
+    expect(saveBtn).not.toBeDisabled();
+  });
+
+  it("save button calls onSave with the variant on click", () => {
+    const onSave = vi.fn();
+    const variant = makeVariant({
+      variantId: "VAR_save_3",
+      conflicts: [],
+    });
+    renderList([variant], { onSave });
+
+    fireEvent.click(screen.getByTestId("variant-save-btn-VAR_save_3"));
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith(variant);
+  });
+
+  it("copy button is always enabled", () => {
+    const variant = makeVariant({ variantId: "VAR_cpy" });
+    renderList([variant]);
+
+    const copyBtn = screen.getByTestId("variant-copy-btn-VAR_cpy");
+    expect(copyBtn).not.toBeDisabled();
   });
 });

@@ -13,7 +13,8 @@ import { useAppStore } from "@/stores/appStore";
 import { isDirectionProfilesEnabled } from "@/lib/directionFeatureFlag";
 import { DirectionProfileSelector } from "./DirectionProfileSelector";
 import { VariantResultList } from "./VariantResultList";
-import type { DirectionProfileSelection } from "@/types";
+import { VariantCompare } from "./VariantCompare";
+import type { DirectionProfileSelection, PromptVariant } from "@/types";
 
 // =============================================================================
 // Types
@@ -67,10 +68,16 @@ export const VariantPanel: React.FC<VariantPanelProps> = ({
   // Local state
   // ---------------------------------------------------------------------------
   const [phase, setPhase] = useState<VariantPanelPhase>("select");
+  const [showCompare, setShowCompare] = useState(false);
+  const [compareVariant, setCompareVariant] = useState<PromptVariant | null>(
+    null,
+  );
 
   // Reset phase when prompt changes (new panel open)
   useEffect(() => {
     setPhase("select");
+    setShowCompare(false);
+    setCompareVariant(null);
   }, [promptId]);
 
   // ---------------------------------------------------------------------------
@@ -125,6 +132,33 @@ export const VariantPanel: React.FC<VariantPanelProps> = ({
     storeCloseVariantPanel();
     onClose();
   }, [storeCloseVariantPanel, onClose]);
+
+  /** Open the VariantCompare for a specific variant. */
+  const handleCompareOpen = useCallback((variant: PromptVariant) => {
+    setCompareVariant(variant);
+    setShowCompare(true);
+  }, []);
+
+  /** Close the VariantCompare and return to results. */
+  const handleCompareClose = useCallback(() => {
+    setShowCompare(false);
+    setCompareVariant(null);
+  }, []);
+
+  /** Save a variant as a new prompt version. */
+  const handleSaveVariant = useCallback(
+    (variant: PromptVariant) => {
+      const store = useAppStore.getState();
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard for test environments
+      if (store.saveVariantAsPrompt) {
+        void store.saveVariantAsPrompt(variant);
+      }
+      // Close everything after save
+      storeCloseVariantPanel();
+      onClose();
+    },
+    [storeCloseVariantPanel, onClose],
+  );
 
   // ---------------------------------------------------------------------------
   // Feature-flag guard — after all hooks
@@ -246,6 +280,8 @@ export const VariantPanel: React.FC<VariantPanelProps> = ({
                   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard
                   variantResult?.sourceContent ?? sourceContent
                 }
+                onCompare={handleCompareOpen}
+                onSave={handleSaveVariant}
               />
             </div>
 
@@ -270,6 +306,22 @@ export const VariantPanel: React.FC<VariantPanelProps> = ({
               </button>
             </div>
           </>
+        )}
+        {/* Phase: compare */}
+        {showCompare && compareVariant && (
+          <VariantCompare
+            sourceContent={
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard
+              variantResult?.sourceContent ?? sourceContent
+            }
+            enrichedContentUsed={
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard
+              variantResult?.enrichedContentUsed ?? enrichedContentUsed
+            }
+            variant={compareVariant}
+            onSave={handleSaveVariant}
+            onClose={handleCompareClose}
+          />
         )}
       </div>
     </div>
