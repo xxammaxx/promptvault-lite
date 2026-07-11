@@ -23,6 +23,14 @@ vi.mock("@/lib/missingInfoFeatureFlag", () => ({
 }));
 
 // ---------------------------------------------------------------------------
+// Mock directionFeatureFlag — controlled per test (Batch 6)
+// ---------------------------------------------------------------------------
+const mockIsDirectionEnabled = vi.fn(() => false); // OFF by default
+vi.mock("@/lib/directionFeatureFlag", () => ({
+  isDirectionProfilesEnabled: () => mockIsDirectionEnabled(),
+}));
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -851,5 +859,329 @@ describe("DetailsPanel — Gate Trigger (Batch 6A)", () => {
     render(<DetailsPanel />);
 
     expect(screen.getByTestId("gate-actionbar-btn")).toBeTruthy();
+  });
+});
+
+// =============================================================================
+// Batch 6 — Variant Button & VariantPanel Integration Tests (#270, #271)
+// =============================================================================
+
+describe("ActionBar — Variant Button (Batch 6)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetStore();
+    mockIsDirectionEnabled.mockReturnValue(false); // Default: OFF
+    mockIsGateEnabled.mockReturnValue(false); // Default: OFF
+  });
+
+  it("does NOT show variant button when feature flag is disabled", () => {
+    mockIsDirectionEnabled.mockReturnValue(false);
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<ActionBar onOpenVariantPanel={vi.fn()} />);
+
+    expect(screen.queryByTestId("variant-actionbar-btn")).toBeNull();
+  });
+
+  it("shows variant button when feature flag is enabled", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<ActionBar onOpenVariantPanel={vi.fn()} />);
+
+    expect(screen.getByTestId("variant-actionbar-btn")).toBeTruthy();
+    expect(screen.getByText("🧭 Varianten erzeugen")).toBeTruthy();
+  });
+
+  it("variant button has correct accessibility attributes", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<ActionBar onOpenVariantPanel={vi.fn()} />);
+
+    const btn = screen.getByTestId("variant-actionbar-btn");
+    expect(btn.getAttribute("aria-label")).toBe("Varianten erzeugen");
+    expect(btn.getAttribute("title")).toBe(
+      "Varianten mit Richtungsprofilen erzeugen",
+    );
+  });
+
+  it("variant button is NOT rendered when onOpenVariantPanel prop is absent", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    // NO onOpenVariantPanel prop
+    render(<ActionBar onOptimize={vi.fn()} />);
+
+    expect(screen.queryByTestId("variant-actionbar-btn")).toBeNull();
+  });
+
+  it("variant button calls onOpenVariantPanel on click", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    const onVariant = vi.fn();
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<ActionBar onOpenVariantPanel={onVariant} />);
+
+    const btn = screen.getByTestId("variant-actionbar-btn");
+    fireEvent.click(btn);
+
+    expect(onVariant).toHaveBeenCalledTimes(1);
+  });
+
+  it("existing buttons remain visible when variant button is present", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<ActionBar onOptimize={vi.fn()} onOpenVariantPanel={vi.fn()} />);
+
+    // All existing standard buttons should still be visible
+    expect(screen.getByText("✨ Optimieren")).toBeTruthy();
+    expect(screen.getByText("📋 Kopieren")).toBeTruthy();
+    expect(screen.getByText("📂 Öffnen")).toBeTruthy();
+    expect(screen.getByText(/Analysieren/)).toBeTruthy();
+    // And the variant button
+    expect(screen.getByText("🧭 Varianten erzeugen")).toBeTruthy();
+  });
+
+  it("variant button works alongside gate button when both flags enabled", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    mockIsGateEnabled.mockReturnValue(true);
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(
+      <ActionBar
+        onOptimize={vi.fn()}
+        onMissingInfoGate={vi.fn()}
+        onOpenVariantPanel={vi.fn()}
+      />,
+    );
+
+    // Both buttons should be visible
+    expect(screen.getByTestId("variant-actionbar-btn")).toBeTruthy();
+    expect(screen.getByTestId("gate-actionbar-btn")).toBeTruthy();
+    expect(screen.getByText("✨ Optimieren")).toBeTruthy();
+  });
+});
+
+describe("DetailsPanel — VariantPanel Integration (Batch 6)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetStore();
+    mockIsDirectionEnabled.mockReturnValue(false); // Default: OFF
+    mockIsGateEnabled.mockReturnValue(false); // Default: OFF
+  });
+
+  it("does NOT render VariantPanel when feature flag is disabled", () => {
+    mockIsDirectionEnabled.mockReturnValue(false);
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<DetailsPanel />);
+
+    expect(screen.queryByTestId("variant-panel-overlay")).toBeNull();
+    expect(screen.queryByTestId("variant-actionbar-btn")).toBeNull();
+  });
+
+  it("renders ActionBar with variant button when feature flag enabled", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    const prompt = makePrompt();
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<DetailsPanel />);
+
+    expect(screen.getByTestId("variant-actionbar-btn")).toBeTruthy();
+  });
+
+  it("clicking variant button opens VariantPanel modal", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    const prompt = makePrompt({ content: "Test prompt content" });
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<DetailsPanel />);
+
+    // Click the variant button
+    const variantBtn = screen.getByTestId("variant-actionbar-btn");
+    fireEvent.click(variantBtn);
+
+    // VariantPanel modal should be visible
+    expect(screen.getByTestId("variant-panel-overlay")).toBeTruthy();
+    expect(screen.getByTestId("variant-panel")).toBeTruthy();
+    expect(
+      screen.getByText(/🧭 Varianten erzeugen — Richtungsprofile/),
+    ).toBeTruthy();
+  });
+
+  it("DetailsPanel calls openVariantPanel with correct prompt ID", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    const prompt = makePrompt({
+      id: "direction-test-prompt-123",
+      content: "Test",
+    });
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<DetailsPanel />);
+
+    // Click the variant button
+    const variantBtn = screen.getByTestId("variant-actionbar-btn");
+    fireEvent.click(variantBtn);
+
+    // Check store state: activeVariantPromptId should be set
+    const store = useAppStore.getState();
+    expect(store.showVariantPanel).toBe(true);
+    expect(store.activeVariantPromptId).toBe("direction-test-prompt-123");
+  });
+
+  it("uses enrichedContent as variant source when available", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    const prompt = makePrompt({
+      id: "enriched-prompt-1",
+      content: "Original prompt content",
+    });
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    // Set up enriched content in store
+    useAppStore.setState({
+      enrichedContexts: {
+        "enriched-prompt-1": {
+          originalContent: "Original prompt content",
+          enrichedContent: "Enriched content with extra info",
+          answers: [],
+          gateOutcome: "COMPLETED",
+          sessionId: "session-1",
+          enrichedAt: "2024-01-01T00:00:00Z",
+        },
+      },
+    });
+
+    render(<DetailsPanel />);
+
+    // Click the variant button
+    fireEvent.click(screen.getByTestId("variant-actionbar-btn"));
+
+    // The source info banner should show enrichedContent
+    expect(screen.getByTestId("variant-source-info")).toBeTruthy();
+    expect(screen.getByText(/enrichedContent/)).toBeTruthy();
+  });
+
+  it("falls back to original prompt when no enriched content", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    const prompt = makePrompt({
+      id: "plain-prompt-1",
+      content: "Plain original content",
+    });
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    // No enriched content
+    useAppStore.setState({ enrichedContexts: {} });
+
+    render(<DetailsPanel />);
+
+    // Click the variant button
+    fireEvent.click(screen.getByTestId("variant-actionbar-btn"));
+
+    // The source info banner should show "Original-Prompt"
+    const sourceInfo = screen.getByTestId("variant-source-info");
+    expect(sourceInfo.textContent).toContain("Original-Prompt");
+  });
+
+  it("does NOT modify MissingInfoGate state when opening variant panel", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    mockIsGateEnabled.mockReturnValue(true);
+    const prompt = makePrompt({
+      id: "gate-prompt-1",
+      content: "Content for gate test",
+    });
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    // Set up initial gate state
+    useAppStore.setState({
+      isGateOpen: false,
+      activeGatePromptId: null,
+      missingInfoSessions: {},
+      enrichedContexts: {},
+    });
+
+    render(<DetailsPanel />);
+
+    // Click the variant button
+    fireEvent.click(screen.getByTestId("variant-actionbar-btn"));
+
+    // Gate state should be untouched
+    const store = useAppStore.getState();
+    expect(store.isGateOpen).toBe(false);
+    expect(store.activeGatePromptId).toBeNull();
+    expect(store.missingInfoSessions).toEqual({});
+    expect(store.enrichedContexts).toEqual({});
+  });
+
+  it("closing VariantPanel via onClose cleans up local state", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    const prompt = makePrompt({ content: "Test" });
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<DetailsPanel />);
+
+    // Open the panel
+    fireEvent.click(screen.getByTestId("variant-actionbar-btn"));
+    expect(screen.getByTestId("variant-panel-overlay")).toBeTruthy();
+
+    // Close via the X icon in the Panel header
+    const closeIcon = screen.getByTestId("variant-panel-close-icon");
+    fireEvent.click(closeIcon);
+
+    // Panel should be gone
+    expect(screen.queryByTestId("variant-panel-overlay")).toBeNull();
+  });
+
+  it("no compare/save buttons are present in ActionBar or VariantPanel", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    const prompt = makePrompt({ content: "Test" });
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<DetailsPanel />);
+
+    // ActionBar must not have Compare or Save buttons
+    expect(screen.queryByText(/Vergleichen/i)).toBeNull();
+    expect(screen.queryByText(/Speichern/i)).toBeNull();
+
+    // Open variant panel
+    fireEvent.click(screen.getByTestId("variant-actionbar-btn"));
+
+    // VariantPanel must not have Compare or Save buttons
+    const panel = screen.getByTestId("variant-panel");
+    expect(panel.textContent).not.toContain("Vergleichen");
+    expect(panel.textContent).not.toContain("Speichern");
+  });
+
+  it("optimizer and gate flow remain regression-free with variant button present", () => {
+    mockIsDirectionEnabled.mockReturnValue(true);
+    // Keep gate disabled for this regression test to avoid triggering
+    // the gate pre-check in handleOpenOptimizer (requires a session to exist).
+    mockIsGateEnabled.mockReturnValue(false);
+    const prompt = makePrompt({
+      content: "Test content for regression",
+    });
+    setupStore(prompt, makeDetection("PROMPT"));
+
+    render(<DetailsPanel />);
+
+    // All standard buttons must still be visible
+    expect(screen.getByText("✨ Optimieren")).toBeTruthy();
+    expect(screen.getByText("📋 Kopieren")).toBeTruthy();
+    expect(screen.getByText("📂 Öffnen")).toBeTruthy();
+    expect(screen.getByText(/Analysieren/)).toBeTruthy();
+    // Variant button visible
+    expect(screen.getByTestId("variant-actionbar-btn")).toBeTruthy();
+
+    // Gate button should NOT be visible (flag OFF)
+    expect(screen.queryByTestId("gate-actionbar-btn")).toBeNull();
   });
 });

@@ -14,6 +14,7 @@ import type {
   ConstraintCategory,
   ConflictResolutionOption,
   MissingInfoAnswer,
+  DirectionProfile,
 } from "@/types";
 
 // =============================================================================
@@ -454,6 +455,78 @@ export function checkConflicts(
         });
       }
     }
+  }
+
+  return conflicts;
+}
+
+// =============================================================================
+// Direction Profile Conflict Detection (Phase 2 — #215 Batch 3)
+// =============================================================================
+
+/**
+ * Check direction profile compatibility against extracted hard constraints.
+ *
+ * Uses the profile's `conflictingConstraintCategories` as the primary conflict
+ * detector. Security-critical categories (offline_only, approval_required,
+ * scope_boundary) produce BLOCKING conflicts with `require_human_approval`
+ * resolution options. Non-security categories produce WARNING conflicts.
+ *
+ * The original prompt content is NEVER modified by this function — it is a
+ * pure detector that only returns conflict data.
+ *
+ * @param profile       The selected DirectionProfile to check.
+ * @param constraints   Hard constraints extracted from the prompt.
+ * @returns Array of ConstraintConflict objects. Empty if fully compatible.
+ */
+export function checkDirectionProfileConflicts(
+  profile: DirectionProfile,
+  constraints: HardConstraint[],
+): ConstraintConflict[] {
+  if (!constraints.length) {
+    return [];
+  }
+
+  const conflicts: ConstraintConflict[] = [];
+  let conflictIdCounter = 0;
+
+  for (const constraint of constraints) {
+    const category = constraint.category;
+
+    // Check if this constraint category conflicts with the profile
+    const isConflicting =
+      profile.conflictingConstraintCategories.includes(category);
+
+    if (!isConflicting) {
+      // No conflict — profile is compatible with this constraint
+      continue;
+    }
+
+    conflictIdCounter += 1;
+
+    // Security-critical categories → BLOCKING
+    // Non-security categories → WARNING
+    const isSecurityCategory = SECURITY_CATEGORIES.has(category);
+    const severity: "blocking" | "warning" = isSecurityCategory
+      ? "blocking"
+      : "warning";
+
+    // Build human-readable conflict description
+    const description = isSecurityCategory
+      ? `Das Profil "${profile.label}" steht im Konflikt mit der Sicherheitsregel "${constraint.constraintText}". ` +
+        `Sicherheitsregeln können nicht automatisch abgeschwächt werden. Die Regel bleibt zwingend erhalten.`
+      : `Das Profil "${profile.label}" kollidiert mit der Regel "${constraint.constraintText}". ` +
+        `Die Regel bleibt erhalten, was die Profil-Wirkung einschränken kann.`;
+
+    conflicts.push({
+      id: `DPC_${String(conflictIdCounter).padStart(3, "0")}`,
+      constraint,
+      conflictingSource: profile.label,
+      description,
+      severity,
+      resolutions: buildResolutionOptions(constraint, profile.label),
+      selectedResolution: null,
+    });
   }
 
   return conflicts;
