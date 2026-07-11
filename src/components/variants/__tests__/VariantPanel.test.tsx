@@ -96,6 +96,32 @@ function renderPanel(
   };
 }
 
+/** Create a minimal PromptVariant for test results. */
+function makeTestVariant(
+  variantId: string,
+  profileId: string,
+  label: string,
+  content: string,
+) {
+  return {
+    variantId,
+    profileId,
+    label,
+    content,
+    directionExplanation: "Test Richtung.",
+    preservedConstraints: [],
+    conflicts: [],
+    assumptions: [],
+    openPoints: [],
+    recommendation: "Test Empfehlung.",
+    metadata: {
+      generatedAt: new Date().toISOString(),
+      sourceContent: "original" as const,
+      appliedProfileId: profileId,
+    },
+  };
+}
+
 // =============================================================================
 // Tests
 // =============================================================================
@@ -339,6 +365,45 @@ describe("VariantPanel", () => {
         screen.queryByTestId("variant-generate-error"),
       ).not.toBeInTheDocument();
     });
+
+    it("returns to select phase after generation error", async () => {
+      useAppStore.setState({
+        selectedProfileIds: getDefaultSelection(),
+        prompts: [
+          {
+            id: "test-prompt-1",
+            file_path: "/test/test.md",
+            file_name: "test.md",
+            title: "Test",
+            description: "",
+            category: "Test",
+            version: "1.0",
+            tags: [],
+            content: "Test content",
+            raw_frontmatter: {},
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_favorite: false,
+          },
+        ],
+      });
+
+      // Mock generateVariants to throw
+      vi.mocked(generateDirectionVariants).mockImplementation(() => {
+        throw new Error("Generation failed");
+      });
+
+      renderPanel();
+
+      fireEvent.click(screen.getByTestId("variant-generate-btn"));
+
+      // After microtask, phase should return to select (error shown)
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("direction-profile-selector"),
+        ).toBeInTheDocument();
+      });
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -417,53 +482,201 @@ describe("VariantPanel", () => {
       });
     });
 
-    it("renders close and back buttons in results phase", () => {
+    it("shows close and back-to-select buttons in results phase", async () => {
       useAppStore.setState({
         selectedProfileIds: getDefaultSelection(),
-        variantResults: {
-          "test-prompt-1": {
-            sourceContent: "Test",
-            enrichedContentUsed: false,
-            variants: [
-              {
-                variantId: "VAR_btn_test",
-                profileId: "sachlich",
-                label: "Test",
-                content: "Content",
-                directionExplanation: "Dir",
-                preservedConstraints: [],
-                conflicts: [],
-                assumptions: [],
-                openPoints: [],
-                recommendation: "Rec",
-                metadata: {
-                  generatedAt: new Date().toISOString(),
-                  sourceContent: "original" as const,
-                  appliedProfileId: "sachlich",
-                },
-              },
-            ],
-            profileConflicts: [],
-            appliedAt: new Date().toISOString(),
+        prompts: [
+          {
+            id: "test-prompt-1",
+            file_path: "/test/test.md",
+            file_name: "test.md",
+            title: "Test",
+            description: "",
+            category: "Test",
+            version: "1.0",
+            tags: [],
+            content: "Test content",
+            raw_frontmatter: {},
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_favorite: false,
           },
-        },
+        ],
+      });
+
+      const mockResult = {
+        sourceContent: "Test",
+        enrichedContentUsed: false,
+        variants: [
+          makeTestVariant("VAR_btn_test", "sachlich", "Test Label", "Content"),
+        ],
+        profileConflicts: [],
+        appliedAt: new Date().toISOString(),
+      };
+
+      vi.mocked(generateDirectionVariants).mockReturnValue(mockResult);
+
+      renderPanel();
+
+      // Click generate to transition through generating → results
+      fireEvent.click(screen.getByTestId("variant-generate-btn"));
+
+      // Wait for results phase
+      await waitFor(() => {
+        expect(screen.getByTestId("variant-result-list")).toBeInTheDocument();
+      });
+
+      // Both buttons should be present
+      expect(
+        screen.getByTestId("variant-results-close-btn"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("variant-back-to-select-btn"),
+      ).toBeInTheDocument();
+    });
+
+    it("closes panel from results phase via close button", async () => {
+      useAppStore.setState({
+        selectedProfileIds: getDefaultSelection(),
+        prompts: [
+          {
+            id: "test-prompt-1",
+            file_path: "/test/test.md",
+            file_name: "test.md",
+            title: "Test",
+            description: "",
+            category: "Test",
+            version: "1.0",
+            tags: [],
+            content: "Test content",
+            raw_frontmatter: {},
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_favorite: false,
+          },
+        ],
+      });
+
+      vi.mocked(generateDirectionVariants).mockReturnValue({
+        sourceContent: "Test",
+        enrichedContentUsed: false,
+        variants: [
+          makeTestVariant("VAR_close_1", "sachlich", "Sachlich", "Content"),
+        ],
+        profileConflicts: [],
+        appliedAt: new Date().toISOString(),
+      });
+
+      const onClose = vi.fn();
+      renderPanel({ onClose });
+
+      // Navigate to results
+      fireEvent.click(screen.getByTestId("variant-generate-btn"));
+      await waitFor(() => {
+        expect(screen.getByTestId("variant-result-list")).toBeInTheDocument();
+      });
+
+      // Click close in results
+      fireEvent.click(screen.getByTestId("variant-results-close-btn"));
+
+      const store = useAppStore.getState();
+      expect(store.showVariantPanel).toBe(false);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns to select phase when back button is clicked", async () => {
+      useAppStore.setState({
+        selectedProfileIds: getDefaultSelection(),
+        prompts: [
+          {
+            id: "test-prompt-1",
+            file_path: "/test/test.md",
+            file_name: "test.md",
+            title: "Test",
+            description: "",
+            category: "Test",
+            version: "1.0",
+            tags: [],
+            content: "Test content",
+            raw_frontmatter: {},
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_favorite: false,
+          },
+        ],
+      });
+
+      vi.mocked(generateDirectionVariants).mockReturnValue({
+        sourceContent: "Test",
+        enrichedContentUsed: false,
+        variants: [
+          makeTestVariant("VAR_back_1", "sachlich", "Sachlich", "Content"),
+        ],
+        profileConflicts: [],
+        appliedAt: new Date().toISOString(),
       });
 
       renderPanel();
 
-      // We're already in results phase because variantResult exists
-      // but the phase state starts at "select"...
-      // Let me check: the phase is initialized as "select" in the component.
-      // We need to click generate to transition to results.
-      // But without mocking generateVariants properly, let's just verify
-      // the buttons exist after we manually force results.
+      // Navigate to results
+      fireEvent.click(screen.getByTestId("variant-generate-btn"));
+      await waitFor(() => {
+        expect(screen.getByTestId("variant-result-list")).toBeInTheDocument();
+      });
 
-      // Since the generate is synchronous, we need to mock and click.
-      // For simplicity, let's directly test the close/results buttons by
-      // navigating through the flow.
+      // Click back to select
+      fireEvent.click(screen.getByTestId("variant-back-to-select-btn"));
 
-      // Actually, let's just test that the phase-dependent rendering works.
-      // We'll get the buttons by triggering the generate flow.
+      // Should be back in select phase — profile selector visible
+      expect(
+        screen.getByTestId("direction-profile-selector"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("variant-result-list"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Generation Safety
+  // ---------------------------------------------------------------------------
+
+  describe("Generation Safety", () => {
+    it("prevents double-submit when isGeneratingVariants is true", () => {
+      useAppStore.setState({
+        selectedProfileIds: getDefaultSelection(),
+        isGeneratingVariants: true,
+        prompts: [
+          {
+            id: "test-prompt-1",
+            file_path: "/test/test.md",
+            file_name: "test.md",
+            title: "Test",
+            description: "",
+            category: "Test",
+            version: "1.0",
+            tags: [],
+            content: "Test content",
+            raw_frontmatter: {},
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_favorite: false,
+          },
+        ],
+      });
+
+      const mockGenerate = vi.mocked(generateDirectionVariants);
+      mockGenerate.mockClear();
+
+      renderPanel();
+
+      // Click generate while already generating
+      const btn = screen.getByTestId("variant-generate-btn");
+      expect(btn).toBeDisabled(); // Button disabled during generation
+      fireEvent.click(btn);
+
+      // generateVariants should NOT have been called
+      expect(mockGenerate).not.toHaveBeenCalled();
     });
   });
 
