@@ -141,3 +141,128 @@ Optimizer-Integration → Tests → Dokumentation
 - Die bestehende Analyse-Pipeline bleibt unverändert
 - Keine neuen externen npm-Dependencies
 - Die Architektur erlaubt eine nahtlose Erweiterung durch #215 (VariantGenerator)
+
+---
+
+## ADR-003: Direction Profiles — Template-basierte Variantengeneration (#215)
+
+**Status:** Accepted
+
+**Date:** 2026-07-11
+
+**Parent Issue:** [#215](https://github.com/xxammaxx/promptvault-lite/issues/215)
+**Epic:** [#214](https://github.com/xxammaxx/promptvault-lite/issues/214) — Prompt-Optimierung mit Ergebnisvarianten und dynamischen Rückfragen
+**Evidence:** [`docs/specs/0215-direction-profiles/evidence.md`](./specs/0215-direction-profiles/evidence.md)
+
+### Kontext
+
+Der Nutzer benötigt die Fähigkeit, aus einem bestehenden Prompt mehrere strategische Ergebnisvarianten mit unterschiedlichen Zielrichtungen zu erzeugen (sachlich, verkaufsstark, technisch, kurz, ausführlich, kreativ, etc.), **ohne harte Constraints zu entfernen oder zu schwächen**. Der bestehende Optimizer verbessert die Prompt-Qualität, kann aber die Ergebnisrichtung nicht gezielt steuern.
+
+### Entscheidung
+
+Direction Profiles (#215) wird als **parallele, unabhängige Transformationsschicht** zum bestehenden Optimizer positioniert. Beide konsumieren die gleiche Quelldaten (`enrichedContent` oder Original-Prompt), arbeiten aber mit unterschiedlichen Zielen:
+
+```
+Analyse → Missing-Info-Gate → ┬→ Optimierung (bestehend: conservative/balanced/aggressive)
+                               └→ Variantenbildung (#215: Direction Profiles)
+```
+
+### Sub-Decisions
+
+#### ADR-003.1: Template-basierter Generator (Phase 1)
+
+Der `variantGenerator.ts` arbeitet **rein template-basiert** (PromptPrefix + Tonalitäts-Anpassung). Keine strukturellen Änderungen (Sektionen hinzufügen/entfernen) in Phase 1. Keine Remote-LLM-Calls. Begründung: Einfacher zu testen, weniger Risiko, kein Duplikat des bestehenden Optimizers.
+
+#### ADR-003.2: Constraint Preservation vor UI/Save
+
+Harte Constraints aus dem Original-Prompt bleiben in **jeder** Variante **unverändert** erhalten. Security-Kategorien (`offline_only`, `approval_required`, `scope_boundary`) werden **niemals** durch ein Profil abgeschwächt. Konflikte zwischen Profil und Constraint werden **sichtbar** gemeldet (BLOCKING/WARNING), aber **nicht automatisch** gelöst — der Nutzer entscheidet.
+
+#### ADR-003.3: Feature-Flag default disabled
+
+Das Direction-Profiles-Feature ist standardmäßig deaktiviert (`PROMPTVAULT_DIRECTION_PROFILES` env var, default `false`). Aktivierung nur via `=1` oder `=true` (case-sensitive, identisches Pattern zu `PROMPTVAULT_MISSING_INFO_GATE`).
+
+#### ADR-003.4: VariantStore getrennt von enrichedContexts
+
+Der Store-Key `variantResults: Record<string, VariantGenerationResult>` ist strikt getrennt von `enrichedContexts: Record<string, EnrichedPromptContext>`. Keine Vermischung der beiden Datenstrukturen. Separate UI-Flags (`showVariantPanel` ≠ `isGateOpen`).
+
+#### ADR-003.5: Custom Direction session-only
+
+Benutzerdefinierte Richtungen (Freitext) werden **nicht** persistiert. Der Text wird nur im lokalen State des `DirectionProfileSelector` gehalten und bei `closeVariantPanel()` verworfen. Phase 2 kann localStorage-Persistenz hinzufügen.
+
+#### ADR-003.6: Save-as-New-Version nur explizit
+
+Varianten werden **nie** automatisch gespeichert. Der Nutzer speichert eine Variante explizit via „💾 Als neue Version speichern“-Button. Die Variante wird als neue Prompt-Datei im Vault-Ordner gespeichert, ersetzt NICHT den Original-Prompt.
+
+#### ADR-003.7: Keine #216-Duplizierung
+
+#215 dupliziert **keine** Missing-Info-Gate-Funktionalität:
+
+- Keine eigene Gap-Detection (`missingInfoDetector.ts`)
+- Keine eigene Klassifizierung (`missingInfoClassifier.ts`)
+- Kein eigenes Content-Merging (`gateContentMerger.ts`)
+- Keine eigene Missing-Info-Gate-UI (`MissingInfoGate.tsx`)
+
+Der `constraintChecker.ts` wird als **readonly shared-Infrastruktur** genutzt (bestehende API unverändert, neuer Export `checkDirectionProfileConflicts`).
+
+### Konsequenzen
+
+- **Positiv:** Nutzer kann gezielt Ergebnisrichtungen steuern, ohne den Original-Prompt zu verändern. 13 vordefinierte Profile + benutzerdefinierte Richtung. Volle Constraint-Transparenz.
+- **Negativ:** Keine Persistenz von Custom-Profilen in Phase 1. Kein Batch-Flow (nur Einzel-Prompt). Kein Varianten-Scoring/Ranking vor Phase 2.
+- **Risiko:** `handleOpenOptimizer` Null-Check-Bug existiert unabhängig von #215 und muss separat behandelt werden. Remote-CI (#154) weiterhin blockiert.
+
+### Implementierte Batches
+
+| Batch | Commit    | Beschreibung                                                  |
+| ----- | --------- | ------------------------------------------------------------- |
+| B1    | `9c17c8c` | Foundation: Types + Feature-Flag                              |
+| B2    | `cb2a3e4` | Profiles + Generator: directionProfiles, variantGenerator     |
+| B3    | `2e77409` | Safety: Constraint Preservation, Security Hardening           |
+| B4    | `2633513` | Store: variantResults State + Actions                         |
+| B5    | `3daa988` | UI: VariantPanel, DirectionProfileSelector, VariantResultList |
+| B6    | `e13ae04` | Integration: ActionBar Button, handleOpenVariantPanel         |
+| B7    | `48b973b` | Compare + Save: VariantCompare, Save-as-New-Version           |
+| B8A   | `8648f43` | Tests: Unit-Tests                                             |
+| B8B   | `efd0d7d` | Tests: UI-Tests                                               |
+| B8C   | `9dd3c10` | Tests: Integration + Regression                               |
+| B9    | (pending) | Docs / Evidence / Final Gates                                 |
+
+### Testnachweis
+
+- **Unit-Tests:** 4 Suiten (featureFlag: 17, profiles: 47, generator: 80, constraintChecker: 35) — gesamt 179
+- **Store-Tests:** `appStore.variantResults.test.ts` (35 Tests)
+- **UI-Tests:** 4 Suiten (Selector: 30, Panel: 32, ResultList: 34, Compare: 18) — gesamt 114
+- **Integrationstests:** `VariantPanel.integration.test.tsx` (48 Tests)
+- **DetailsPanel-Tests:** `DetailsPanel.blueprint.test.tsx` (70 Tests inkl. 10 VariantPanel-Integration)
+- **Gesamt:** 1438 Tests im Workspace, alle grün
+- **Lokale Gates:** `tsc --noEmit` ✅, `lint --max-warnings 0` ✅, `pnpm test` ✅, `cargo fmt --check` ✅, `cargo clippy` ✅
+
+### Neue Module
+
+| Modul                          | Pfad                                                   |
+| ------------------------------ | ------------------------------------------------------ |
+| `directionFeatureFlag.ts`      | `src/lib/directionFeatureFlag.ts`                      |
+| `directionProfiles.ts`         | `src/lib/directionProfiles.ts`                         |
+| `variantGenerator.ts`          | `src/lib/variantGenerator.ts`                          |
+| `VariantPanel.tsx`             | `src/components/variants/VariantPanel.tsx`             |
+| `DirectionProfileSelector.tsx` | `src/components/variants/DirectionProfileSelector.tsx` |
+| `VariantResultList.tsx`        | `src/components/variants/VariantResultList.tsx`        |
+| `VariantCompare.tsx`           | `src/components/variants/VariantCompare.tsx`           |
+
+### Geänderte Module
+
+| Datei                                     | Änderung                                          |
+| ----------------------------------------- | ------------------------------------------------- |
+| `src/types/index.ts`                      | 8 neue Interfaces/Types (+204 Zeilen)             |
+| `src/lib/constraintChecker.ts`            | `checkDirectionProfileConflicts` (+73 Zeilen)     |
+| `src/stores/appStore.ts`                  | Variant Store State + Actions (+306 Zeilen)       |
+| `src/components/details/DetailsPanel.tsx` | ActionBar-Button + VariantPanel-Integration (+62) |
+
+### Verweise
+
+- Issue #215: https://github.com/xxammaxx/promptvault-lite/issues/215
+- Epic #214: https://github.com/xxammaxx/promptvault-lite/issues/214
+- Issue #216 (Missing-Info-Gate): https://github.com/xxammaxx/promptvault-lite/issues/216
+- Spec: `docs/specs/0215-direction-profiles/spec.md`
+- Plan: `docs/specs/0215-direction-profiles/plan.md`
+- Tasks: `docs/specs/0215-direction-profiles/tasks.md`
+- Evidence: `docs/specs/0215-direction-profiles/evidence.md`

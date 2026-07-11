@@ -40,15 +40,15 @@
 
 ## Short-Term (Next Sprints)
 
-| Priority | Task                                   | Issue | Status                      |
-| -------- | -------------------------------------- | ----- | --------------------------- |
-| P2       | Embeddings Phase 2: DB schema/storage  | #199  | Planned (no real provider)  |
-| P2       | Architecture Contract Audit            | —     | Planned                     |
-| P2       | Security Posture Review                | —     | Planned                     |
-| P2       | Tool-Gap Closure (mkdocs, secret scan) | —     | Planned                     |
-| P2       | VariantGenerator / Direction Profiles  | #215  | Planned (dependent on #216) |
-| P2       | Agentic Browser Repair Kit             | #71   | Planned                     |
-| P2       | Prompt suggestions workflow            | #45   | Planned                     |
+| Priority | Task                                   | Issue | Status                                                                                   |
+| -------- | -------------------------------------- | ----- | ---------------------------------------------------------------------------------------- |
+| P2       | Embeddings Phase 2: DB schema/storage  | #199  | Planned (no real provider)                                                               |
+| P2       | Architecture Contract Audit            | —     | Planned                                                                                  |
+| P2       | Security Posture Review                | —     | Planned                                                                                  |
+| P2       | Tool-Gap Closure (mkdocs, secret scan) | —     | Planned                                                                                  |
+| P2       | VariantGenerator / Direction Profiles  | #215  | ✅ Implemented — ready for owner review (Feature-Flag: `PROMPTVAULT_DIRECTION_PROFILES`) |
+| P2       | Agentic Browser Repair Kit             | #71   | Planned                                                                                  |
+| P2       | Prompt suggestions workflow            | #45   | Planned                                                                                  |
 
 ---
 
