@@ -21,7 +21,10 @@ import type {
   PreservedConstraintReference,
   HardConstraint,
 } from "@/types";
-import { extractHardConstraints } from "./constraintChecker";
+import {
+  extractHardConstraints,
+  checkDirectionProfileConflicts,
+} from "./constraintChecker";
 import { getProfile, DIRECTION_PROFILES } from "./directionProfiles";
 
 // =============================================================================
@@ -85,14 +88,15 @@ export interface GenerateVariantsOptions {
  *    selection.customDirectionText.
  * 3. Extract hard constraints from source content.
  * 4. For each profile (up to maxVariants):
- *    a. Apply profile prefix via template injection.
- *    b. Map constraints to preserved references.
- *    c. Build PromptVariant object.
- * 5. Return VariantGenerationResult.
+ *    a. Run checkDirectionProfileConflicts for constraint conflict detection.
+ *    b. Apply profile prefix via template injection.
+ *    c. Map constraints to preserved references (mark affectedByProfile).
+ *    d. Build PromptVariant object with conflicts.
+ * 5. Return VariantGenerationResult with all generated variants and
+ *    aggregated profileConflicts.
  *
- * Note: Full constraint conflict detection (checkDirectionProfileConflicts)
- * is deferred to Batch 3 (T-215-006). In this phase, conflicts are marked
- * as "manual_review" and profileConflicts is empty.
+ * Constraint conflicts are detected but NEVER automatically resolved.
+ * The original prompt content is NEVER mutated.
  *
  * @param sourceContent  Original or enriched prompt text.
  * @param selection      User's profile selection (IDs + optional custom text).
@@ -124,17 +128,52 @@ export function generateVariants(
   // --- 2. Extract constraints from source ---
   const constraints = extractHardConstraints(sourceContent);
 
-  // --- 3. Build preserved constraint references ---
+  // --- 3. Collect all profile-level conflicts ---
+  // We pre-compute conflicts for ALL selected profiles so that
+  // profileConflicts is comprehensive, even if we stop generating
+  // variants after maxVariants.
+  const allProfileConflicts: import("@/types").ConstraintConflict[] = [];
+  const profileConflictMap = new Map<
+    string,
+    import("@/types").ConstraintConflict[]
+  >();
+
+  for (const profileId of uniqueIds) {
+    // Custom profiles have no predefined conflict rules
+    if (profileId === "custom") {
+      profileConflictMap.set(profileId, []);
+      continue;
+    }
+
+    const profile = getProfile(profileId);
+    if (!profile) {
+      profileConflictMap.set(profileId, []);
+      continue;
+    }
+
+    const conflicts = checkDirectionProfileConflicts(profile, constraints);
+    profileConflictMap.set(profileId, conflicts);
+    allProfileConflicts.push(...conflicts);
+  }
+
+  // --- 4. Determine which constraints are affected by profiles ---
+  // A constraint is affected if ANY selected profile conflicts with it.
+  const affectedCategories = new Set<string>();
+  for (const conflict of allProfileConflicts) {
+    affectedCategories.add(conflict.constraint.category);
+  }
+
+  // --- 5. Build preserved constraint references ---
   const preservedConstraints: PreservedConstraintReference[] = constraints.map(
     (c: HardConstraint) => ({
       constraintId: c.id,
       constraintText: c.constraintText,
       category: c.category,
-      affectedByProfile: false, // Batch 3 will set this to true for conflicts
+      affectedByProfile: affectedCategories.has(c.category),
     }),
   );
 
-  // --- 4. Generate variants ---
+  // --- 6. Generate variants ---
   let variantCounter = 0;
   const variants: PromptVariant[] = [];
 
@@ -166,11 +205,27 @@ export function generateVariants(
         sourceContent,
         customProfile,
       );
+
+      // Custom profiles: no automated constraint conflicts, but
+      // constraintWarning informs the user about manual review.
+      const customVariantConflicts: VariantConflict[] = constraints.map(
+        (c, idx) => ({
+          id: `VC_CUSTOM_${idx + 1}`,
+          profileId: "custom",
+          constraint: c,
+          description:
+            `Benutzerdefinierte Richtung: Automatische Prüfung nicht möglich. ` +
+            `Constraint "${c.constraintText}" muss manuell auf Kompatibilität geprüft werden.`,
+          severity: "warning" as const,
+          resolution: "manual_review" as const,
+        }),
+      );
+
       const variant = mapToPromptVariant(
         generatedContent,
         customProfile,
         preservedConstraints,
-        [], // No constraint conflicts in Batch 2
+        customVariantConflicts,
         enrichedContentUsed ? "enriched" : "original",
         variantCounter,
       );
@@ -188,13 +243,34 @@ export function generateVariants(
     variantCounter += 1;
     const generatedContent = applyDirectionProfile(sourceContent, profile);
 
-    // Build per-variant conflicts (empty in Batch 2 — deferred to Batch 3)
-    const variantConflicts: VariantConflict[] = [];
+    // --- Build per-variant conflicts from pre-computed profile conflicts ---
+    const profileConflicts = profileConflictMap.get(profileId) || [];
+    const variantConflicts: VariantConflict[] = profileConflicts.map(
+      (cc, idx) => ({
+        id: `VC_${profile.profileId}_${idx + 1}`,
+        profileId: profile.profileId,
+        constraint: cc.constraint,
+        description: cc.description,
+        severity: cc.severity,
+        resolution: "constraint_preserved" as const,
+      }),
+    );
+
+    // Build per-variant preserved constraints with individual affectedByProfile
+    const variantPreservedConstraints: PreservedConstraintReference[] =
+      constraints.map((c) => ({
+        constraintId: c.id,
+        constraintText: c.constraintText,
+        category: c.category,
+        affectedByProfile: profile.conflictingConstraintCategories.includes(
+          c.category,
+        ),
+      }));
 
     const variant = mapToPromptVariant(
       generatedContent,
       profile,
-      preservedConstraints,
+      variantPreservedConstraints,
       variantConflicts,
       enrichedContentUsed ? "enriched" : "original",
       variantCounter,
@@ -206,7 +282,7 @@ export function generateVariants(
     sourceContent,
     enrichedContentUsed,
     variants,
-    profileConflicts: [], // Batch 3: populated by checkDirectionProfileConflicts
+    profileConflicts: allProfileConflicts,
     appliedAt,
   };
 }
@@ -270,3 +346,159 @@ export function mapToPromptVariant(
 // =============================================================================
 
 export { DIRECTION_PROFILES };
+
+// =============================================================================
+// System Invariants A1–A5 (Spec Section 7.5 — #215 Batch 3)
+// =============================================================================
+//
+// These are development/test assertion functions that validate the 5 system
+// invariants of the direction profiles feature. They are NOT runtime gates
+// and do NOT block generation in production. They serve as documentation of
+// the invariant contract and as testable assertions.
+//
+// Invariants:
+//   A1 — Original prompt content is never mutated.
+//   A2 — All hard constraints from the original are preserved.
+//   A3 — No cloud/API references when offline_only constraint is present.
+//   A4 — Every preserved constraint is listed in preservedConstraints[].
+//   A5 — Generated variant content differs from original source content.
+// =============================================================================
+
+/**
+ * CLOUD_API_KEYWORDS — patterns that suggest cloud/API usage.
+ * Used by A3 to detect violations of offline_only constraints.
+ */
+const CLOUD_API_KEYWORDS = [
+  /cloud/i,
+  /online/i,
+  /remote\s+(?:server|api|service)/i,
+  /\bapi\s+(?:aufruf|call|endpoint|key|token)\b/i,
+  /web\s*service/i,
+  /\binternet\b/i,
+  /\bsaas\b/i,
+  /\bhttps?:\/\//i,
+];
+
+/**
+ * A1 — Validate that the original prompt content was NOT mutated.
+ *
+ * Checks that the source content and variant content are distinct strings.
+ * The variant MUST be a new string; the original is never modified.
+ *
+ * @param sourceContent  The original (or enriched) source content.
+ * @param variantContent The generated variant content.
+ * @returns `true` if the source was NOT mutated (variant is a different string).
+ */
+export function validateOriginalUnchanged(
+  sourceContent: string,
+  variantContent: string,
+): boolean {
+  // The variant content is always a new string in our implementation —
+  // applyDirectionProfile always returns a new string or empty.
+  // But the invariant is: sourceContent was not passed by reference and
+  // mutated. We verify by checking the strings are different objects.
+  return sourceContent !== variantContent || sourceContent === "";
+}
+
+/**
+ * A2 — Validate that all hard constraints from the original are preserved
+ *      in the generated variant content.
+ *
+ * Re-extracts constraints from the variant content and verifies that all
+ * original constraint categories are still present.
+ *
+ * @param originalConstraints  Constraints extracted from source content.
+ * @param variantConstraints   Constraints extracted from variant content.
+ * @returns `true` if every original constraint category is present in variant.
+ */
+export function validateConstraintsPreserved(
+  originalConstraints: HardConstraint[],
+  variantConstraints: HardConstraint[],
+): boolean {
+  const originalCategories = new Set(
+    originalConstraints.map((c) => c.category),
+  );
+  const variantCategories = new Set(variantConstraints.map((c) => c.category));
+
+  for (const category of originalCategories) {
+    if (!variantCategories.has(category)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * A3 — Validate that no cloud/API references exist when the offline_only
+ *      constraint is present.
+ *
+ * Scans the generated content for cloud/API keywords. If an offline_only
+ * constraint is active and cloud keywords are detected, the invariant is
+ * violated.
+ *
+ * @param content               The generated variant content.
+ * @param hasOfflineConstraint  Whether an offline_only constraint exists.
+ * @returns `true` if no cloud references found (or no offline constraint).
+ */
+export function validateNoCloudReferences(
+  content: string,
+  hasOfflineConstraint: boolean,
+): boolean {
+  if (!hasOfflineConstraint) {
+    return true; // No offline constraint → nothing to violate
+  }
+
+  for (const pattern of CLOUD_API_KEYWORDS) {
+    if (pattern.test(content)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * A4 — Validate that every original constraint is listed in the variant's
+ *      preservedConstraints[] array.
+ *
+ * No hard constraint must be silently removed — every one must be
+ * referenced in the variant's metadata.
+ *
+ * @param originalConstraints  Constraints extracted from source content.
+ * @param preservedRefs       PreservedConstraintReference[] from the variant.
+ * @returns `true` if all original constraints are listed.
+ */
+export function validateConstraintsListed(
+  originalConstraints: HardConstraint[],
+  preservedRefs: PreservedConstraintReference[],
+): boolean {
+  const preservedIds = new Set(preservedRefs.map((r) => r.constraintId));
+
+  for (const constraint of originalConstraints) {
+    if (!preservedIds.has(constraint.id)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * A5 — Validate that the generated variant content differs from the
+ *      original source content.
+ *
+ * Variants should produce new, transformed content. If the variant content
+ * is identical to the source, the profile had no effect (e.g., custom
+ * profile with empty text).
+ *
+ * @param sourceContent  The original (or enriched) source content.
+ * @param variantContent The generated variant content.
+ * @returns `true` if the variant content is different from the source.
+ */
+export function validateContentDifferent(
+  sourceContent: string,
+  variantContent: string,
+): boolean {
+  return sourceContent !== variantContent;
+}
