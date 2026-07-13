@@ -1316,3 +1316,319 @@ describe("DetailsPanel — VariantPanel Integration (Batch 6)", () => {
     expect(screen.queryByTestId("gate-actionbar-btn")).toBeNull();
   });
 });
+
+// =============================================================================
+// #291 — Normal Optimizer Blocking for Sensitive Content
+// =============================================================================
+
+// These tests reproduce the asymmetric guard gap between the normal
+// "✨ Optimieren" button/handler and the blueprint "🔷 BP optimieren"
+// button/handler when contamination_status === BLOCKING_SENSITIVE_CONTENT.
+//
+// Expected: All #291 tests FAIL before the fix (confirming the gap),
+// and PASS after the symmetric UI + handler guards are applied.
+//
+// Protection tests D/E/F must PASS both before and after the fix.
+
+describe("#291 — Normal Optimizer Blocking (Red Tests)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetStore();
+    mockIsGateEnabled.mockReturnValue(false);
+    mockIsDirectionEnabled.mockReturnValue(false);
+  });
+
+  // -------------------------------------------------------------------------
+  // Reproduktion A — Button State
+  // -------------------------------------------------------------------------
+
+  it("RED-A: normal optimizer button is NOT disabled for BLOCKING_SENSITIVE_CONTENT", () => {
+    // REPRODUCTION: The current ActionBar does NOT pass isBlocked to the
+    // normal "✨ Optimieren" button. It should be disabled like the BP button.
+    const prompt = makePrompt({ content: "SENSITIVE_TEST_MARKER_291" });
+    setupStore(
+      prompt,
+      makeDetection("BLUEPRINT", "BLOCKING_SENSITIVE_CONTENT"),
+    );
+
+    render(<ActionBar onOptimize={vi.fn()} />);
+
+    const normalBtn = screen.getByText("✨ Optimieren");
+    // RED: The button is currently NOT disabled — the test asserts it IS.
+    expect(normalBtn).toBeDisabled();
+  });
+
+  it("RED-A2: normal optimizer button title should indicate blocked content", () => {
+    const prompt = makePrompt({ content: "SENSITIVE_TEST_MARKER_291" });
+    setupStore(
+      prompt,
+      makeDetection("BLUEPRINT", "BLOCKING_SENSITIVE_CONTENT"),
+    );
+
+    render(<ActionBar onOptimize={vi.fn()} />);
+
+    const normalBtn = screen.getByText("✨ Optimieren");
+    // The title should indicate the reason for blocking
+    expect(normalBtn.getAttribute("title")).toContain("nicht verfügbar");
+  });
+
+  // -------------------------------------------------------------------------
+  // Reproduktion B — Modal Opening via DetailsPanel
+  // -------------------------------------------------------------------------
+
+  it("RED-B: clicking normal optimizer does NOT open optimization modal for blocked content", () => {
+    // REPRODUCTION: handleOpenOptimizer lacks an early return for isBlocked.
+    // When clicked, setShowOptimizer(true) executes despite blocked content.
+    const prompt = makePrompt({ content: "SENSITIVE_TEST_MARKER_291" });
+    setupStore(
+      prompt,
+      makeDetection("BLUEPRINT", "BLOCKING_SENSITIVE_CONTENT"),
+    );
+
+    render(<DetailsPanel />);
+
+    // BlockingMessage is shown (content display is masked)
+    expect(
+      screen.getByText(
+        /Dieser Inhalt kann aus Sicherheitsgründen nicht angezeigt werden/,
+      ),
+    ).toBeInTheDocument();
+
+    // Try clicking the normal optimizer button
+    const normalBtn = screen.getByText("✨ Optimieren");
+    fireEvent.click(normalBtn);
+
+    // RED: The optimizer modal should NOT have opened
+    expect(screen.queryByText("✨ Prompt-Optimierung")).not.toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // Reproduktion C — Content NOT passed to optimizer
+  // -------------------------------------------------------------------------
+
+  it("RED-C: blocked content marker does NOT appear in optimization panel", () => {
+    // REPRODUCTION: optimizerContent is derived from prompt.content without
+    // an isBlocked guard. If the modal opens, the marker is passed as prop.
+    const prompt = makePrompt({
+      content: "SENSITIVE_TEST_MARKER_291 secret data here",
+    });
+    setupStore(
+      prompt,
+      makeDetection("BLUEPRINT", "BLOCKING_SENSITIVE_CONTENT"),
+    );
+
+    render(<DetailsPanel />);
+
+    // Click the normal optimizer button
+    const normalBtn = screen.getByText("✨ Optimieren");
+    fireEvent.click(normalBtn);
+
+    // RED: No OptimizationPanel should be rendered — therefore
+    // SENSITIVE_TEST_MARKER_291 must NOT appear anywhere in the DOM
+    const html = document.body.innerHTML;
+    expect(html).not.toContain("SENSITIVE_TEST_MARKER_291");
+  });
+
+  it("RED-C2: blocked content is never passed as promptContent prop to OptimizationPanel", () => {
+    // When content is blocked, no OptimizationPanel should render at all.
+    const prompt = makePrompt({
+      content: "SENSITIVE_TEST_MARKER_291 extra secret content",
+    });
+    setupStore(
+      prompt,
+      makeDetection("BLUEPRINT", "BLOCKING_SENSITIVE_CONTENT"),
+    );
+
+    render(<DetailsPanel />);
+
+    fireEvent.click(screen.getByText("✨ Optimieren"));
+
+    // OptimizationPanel must not be in the DOM
+    expect(
+      document.querySelector(".optimization-panel"),
+    ).not.toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // Protection Test D — CLEAN prompt: no regression
+  // -------------------------------------------------------------------------
+
+  it("PROTECTION-D: CLEAN prompt — normal optimizer button remains enabled", () => {
+    const prompt = makePrompt({ content: "Clean, safe content." });
+    setupStore(prompt, makeDetection("PROMPT", "CLEAN"));
+
+    render(<ActionBar onOptimize={vi.fn()} />);
+
+    const normalBtn = screen.getByText("✨ Optimieren");
+    expect(normalBtn).not.toBeDisabled();
+  });
+
+  it("PROTECTION-D2: CLEAN prompt — normal optimizer opens as before", () => {
+    const prompt = makePrompt({ content: "Clean, safe content." });
+    setupStore(prompt, makeDetection("PROMPT", "CLEAN"));
+
+    render(<DetailsPanel />);
+
+    const normalBtn = screen.getByText("✨ Optimieren");
+    fireEvent.click(normalBtn);
+
+    // Optimizer modal should open normally
+    expect(screen.getByText("✨ Prompt-Optimierung")).toBeInTheDocument();
+  });
+
+  it("PROTECTION-D3: CLEAN prompt — content is processed normally", () => {
+    const prompt = makePrompt({ content: "This is clean content." });
+    setupStore(prompt, makeDetection("PROMPT", "CLEAN"));
+
+    render(<DetailsPanel />);
+
+    fireEvent.click(screen.getByText("✨ Optimieren"));
+
+    // The clean prompt content should appear in the DOM
+    const html = document.body.innerHTML;
+    expect(html).toContain("This is clean content.");
+  });
+
+  // -------------------------------------------------------------------------
+  // Protection Test E — Blueprint remains unchanged
+  // -------------------------------------------------------------------------
+
+  it("PROTECTION-E: BP button remains disabled for BLOCKING_SENSITIVE_CONTENT", () => {
+    const prompt = makePrompt({ content: "SENSITIVE_TEST_MARKER_291" });
+    setupStore(
+      prompt,
+      makeDetection("BLUEPRINT", "BLOCKING_SENSITIVE_CONTENT"),
+    );
+
+    render(<ActionBar onBlueprintOptimize={vi.fn()} />);
+
+    const bpBtn = screen.getByText("🔷 BP optimieren");
+    expect(bpBtn).toBeDisabled();
+    expect(bpBtn.getAttribute("title")).toContain("nicht verfügbar");
+  });
+
+  it("PROTECTION-E2: BP handler does NOT open modal for blocked content", () => {
+    const prompt = makePrompt({ content: "SENSITIVE_TEST_MARKER_291" });
+    setupStore(
+      prompt,
+      makeDetection("BLUEPRINT", "BLOCKING_SENSITIVE_CONTENT"),
+    );
+
+    render(<DetailsPanel />);
+
+    const bpBtn = screen.getByText("🔷 BP optimieren");
+    fireEvent.click(bpBtn);
+
+    // BP optimizer should NOT open
+    expect(
+      screen.queryByText("🔷 Blueprint-Optimierung"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("PROTECTION-E3: BP button works normally for CLEAN content", () => {
+    const prompt = makePrompt({ content: "Clean blueprint content." });
+    setupStore(prompt, makeDetection("BLUEPRINT", "CLEAN"));
+
+    render(<DetailsPanel />);
+
+    const bpBtn = screen.getByText("🔷 BP optimieren");
+    expect(bpBtn).not.toBeDisabled();
+
+    fireEvent.click(bpBtn);
+    expect(screen.getByText("🔷 Blueprint-Optimierung")).toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // Protection Test F — Gate Regression (#289)
+  // -------------------------------------------------------------------------
+
+  it("PROTECTION-F: REQUIRED gate still opens for CLEAN content when session has non-skipped items", () => {
+    mockIsGateEnabled.mockReturnValue(true);
+    const prompt = makePrompt({
+      id: "regression-gate-test",
+      content: "Gate regression test content",
+    });
+    setupStore(prompt, makeDetection("PROMPT", "CLEAN"));
+
+    const session = {
+      sessionId: "gate-regression-1",
+      promptId: prompt.id,
+      startedAt: "2024-01-01T00:00:00Z",
+      items: [
+        {
+          id: "REQ_F_001",
+          source: "prompt_engineering" as const,
+          label: "Zieldefinition",
+          question: "Was ist das Ziel?",
+          rationale: "Erforderlich für Optimierung.",
+          inputType: "free_text" as const,
+          tier: "REQUIRED" as const,
+          classificationReason: "Critical",
+        },
+      ],
+      answers: {},
+      status: "ACTIVE" as const,
+      outcome: null,
+      enrichedContent: null,
+    };
+    useAppStore.setState({
+      missingInfoSessions: { [prompt.id]: session },
+    });
+
+    render(<DetailsPanel />);
+
+    fireEvent.click(screen.getByText("✨ Optimieren"));
+
+    // Gate must open, NOT optimizer
+    expect(screen.getByText("❓ Fehlende Informationen")).toBeInTheDocument();
+    expect(screen.queryByText("✨ Prompt-Optimierung")).not.toBeInTheDocument();
+  });
+
+  it("PROTECTION-F2: blocked content opens neither gate nor optimizer", () => {
+    mockIsGateEnabled.mockReturnValue(true);
+    const prompt = makePrompt({
+      id: "blocked-gate-test",
+      content: "SENSITIVE_TEST_MARKER_291",
+    });
+    setupStore(
+      prompt,
+      makeDetection("BLUEPRINT", "BLOCKING_SENSITIVE_CONTENT"),
+    );
+
+    // Even with a REQUIRED session present, blocked content should prevent both
+    const session = {
+      sessionId: "blocked-gate-1",
+      promptId: prompt.id,
+      startedAt: "2024-01-01T00:00:00Z",
+      items: [
+        {
+          id: "REQ_G_001",
+          source: "prompt_engineering" as const,
+          label: "Zieldefinition",
+          question: "Was ist das Ziel?",
+          rationale: "Erforderlich.",
+          inputType: "free_text" as const,
+          tier: "REQUIRED" as const,
+          classificationReason: "Critical",
+        },
+      ],
+      answers: {},
+      status: "ACTIVE" as const,
+      outcome: null,
+      enrichedContent: null,
+    };
+    useAppStore.setState({
+      missingInfoSessions: { [prompt.id]: session },
+    });
+
+    render(<DetailsPanel />);
+
+    fireEvent.click(screen.getByText("✨ Optimieren"));
+
+    // Neither gate nor optimizer should open
+    expect(
+      screen.queryByText("❓ Fehlende Informationen"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("✨ Prompt-Optimierung")).not.toBeInTheDocument();
+  });
+});
