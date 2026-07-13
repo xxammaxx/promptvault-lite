@@ -409,9 +409,11 @@ export const DetailsPanel: React.FC = () => {
       const store = useAppStore.getState();
       const session = store.missingInfoSessions[prompt.id];
       const skipped = store.gateSkippedItems[prompt.id] ?? [];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime key may be absent
+      const items = session?.items ?? [];
       const hasRequired =
-        session.items.length > 0 &&
-        session.items.some(
+        items.length > 0 &&
+        items.some(
           (item) => item.tier === "REQUIRED" && !skipped.includes(item.id),
         );
 
@@ -434,9 +436,11 @@ export const DetailsPanel: React.FC = () => {
       const store = useAppStore.getState();
       const session = store.missingInfoSessions[prompt.id];
       const skipped = store.gateSkippedItems[prompt.id] ?? [];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime key may be absent
+      const items = session?.items ?? [];
       const hasRequired =
-        session.items.length > 0 &&
-        session.items.some(
+        items.length > 0 &&
+        items.some(
           (item) => item.tier === "REQUIRED" && !skipped.includes(item.id),
         );
 

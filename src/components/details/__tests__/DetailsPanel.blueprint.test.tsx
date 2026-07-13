@@ -860,6 +860,49 @@ describe("DetailsPanel — Gate Trigger (Batch 6A)", () => {
 
     expect(screen.getByTestId("gate-actionbar-btn")).toBeTruthy();
   });
+
+  // -------------------------------------------------------------------------
+  // #289 — Null-safe gate session access in optimizer handlers
+  // -------------------------------------------------------------------------
+
+  it("handleOpenOptimizer does not crash when gateEnabled but no session exists", () => {
+    // Regression test for #289: handleOpenOptimizer used to read session.items
+    // without null-check when missingInfoSessions[prompt.id] was undefined.
+    mockIsGateEnabled.mockReturnValue(true);
+    const prompt = makePrompt({ id: "no-session-prompt" });
+    setupStore(prompt, makeDetection("PROMPT"));
+    // Explicitly ensure no missing info session exists for this prompt
+    useAppStore.setState({ missingInfoSessions: {} });
+
+    render(<DetailsPanel />);
+
+    // Clicking "✨ Optimieren" must NOT throw TypeError
+    const optimizeBtn = screen.getByText("✨ Optimieren");
+    expect(() => {
+      fireEvent.click(optimizeBtn);
+    }).not.toThrow();
+
+    // Optimizer should have opened (gate should NOT have opened)
+    expect(screen.getByText("✨ Prompt-Optimierung")).toBeInTheDocument();
+  });
+
+  it("handleBlueprintOptimize does not crash when gateEnabled but no session exists", () => {
+    mockIsGateEnabled.mockReturnValue(true);
+    const prompt = makePrompt({ id: "no-session-bp" });
+    setupStore(prompt, makeDetection("BLUEPRINT"));
+    useAppStore.setState({ missingInfoSessions: {} });
+
+    render(<DetailsPanel />);
+
+    // Clicking "🔷 BP optimieren" must NOT throw TypeError
+    const bpBtn = screen.getByText("🔷 BP optimieren");
+    expect(() => {
+      fireEvent.click(bpBtn);
+    }).not.toThrow();
+
+    // Blueprint optimizer should have opened
+    expect(screen.getByText("🔷 Blueprint-Optimierung")).toBeInTheDocument();
+  });
 });
 
 // =============================================================================

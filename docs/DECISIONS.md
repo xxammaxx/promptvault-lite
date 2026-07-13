@@ -208,7 +208,7 @@ Der `constraintChecker.ts` wird als **readonly shared-Infrastruktur** genutzt (b
 
 - **Positiv:** Nutzer kann gezielt Ergebnisrichtungen steuern, ohne den Original-Prompt zu verändern. 13 vordefinierte Profile + benutzerdefinierte Richtung. Volle Constraint-Transparenz.
 - **Negativ:** Keine Persistenz von Custom-Profilen in Phase 1. Kein Batch-Flow (nur Einzel-Prompt). Kein Varianten-Scoring/Ranking vor Phase 2.
-- **Risiko:** `handleOpenOptimizer` Null-Check-Bug existiert unabhängig von #215 und muss separat behandelt werden. Remote-CI (#154) weiterhin blockiert.
+- **Risiko:** `handleOpenOptimizer` Null-Check-Bug — behoben durch #289 (optional chaining + `?? []` Guard in `handleOpenOptimizer` und `handleBlueprintOptimize`, abgesichert durch Regressionstests in `DetailsPanel.blueprint.test.tsx`). Remote-CI (#154) weiterhin blockiert.
 
 ### Implementierte Batches
 
