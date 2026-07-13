@@ -12,6 +12,7 @@ import type {
   PromptItem,
   BlueprintDetectOutput,
   BlueprintContamination,
+  MissingInfoSession,
 } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -902,6 +903,93 @@ describe("DetailsPanel — Gate Trigger (Batch 6A)", () => {
 
     // Blueprint optimizer should have opened
     expect(screen.getByText("🔷 Blueprint-Optimierung")).toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // #289 — Handler-level: REQUIRED session → Gate opens (regression coverage)
+  // -------------------------------------------------------------------------
+
+  it("handleOpenOptimizer opens Gate when REQUIRED session with non-skipped items exists", () => {
+    mockIsGateEnabled.mockReturnValue(true);
+    const prompt = makePrompt({ id: "req-session-prompt" });
+    setupStore(prompt, makeDetection("PROMPT", "CLEAN"));
+
+    // Seed a session with a non-skipped REQUIRED item
+    const session: MissingInfoSession = {
+      sessionId: "test-session-req-1",
+      promptId: prompt.id,
+      startedAt: "2024-01-01T00:00:00Z",
+      items: [
+        {
+          id: "REQ_C_001",
+          source: "prompt_engineering",
+          label: "Zieldefinition",
+          question: "Was ist das Ziel des Prompts?",
+          rationale: "Ohne Zieldefinition keine zielgerichtete Optimierung.",
+          inputType: "free_text",
+          tier: "REQUIRED",
+          classificationReason: "Critical for optimization",
+        },
+      ],
+      answers: {},
+      status: "ACTIVE" as const,
+      outcome: null,
+      enrichedContent: null,
+    };
+    useAppStore.setState({
+      missingInfoSessions: { [prompt.id]: session },
+    });
+
+    render(<DetailsPanel />);
+
+    const optimizeBtn = screen.getByText("✨ Optimieren");
+    fireEvent.click(optimizeBtn);
+
+    // Gate must open, NOT the plain optimizer
+    expect(screen.getByText("❓ Fehlende Informationen")).toBeInTheDocument();
+    expect(screen.queryByText("✨ Prompt-Optimierung")).not.toBeInTheDocument();
+  });
+
+  it("handleBlueprintOptimize opens Gate when REQUIRED session with non-skipped items exists", () => {
+    mockIsGateEnabled.mockReturnValue(true);
+    const prompt = makePrompt({ id: "req-session-bp" });
+    setupStore(prompt, makeDetection("BLUEPRINT", "CLEAN"));
+
+    const session: MissingInfoSession = {
+      sessionId: "test-session-bp-req-1",
+      promptId: prompt.id,
+      startedAt: "2024-01-01T00:00:00Z",
+      items: [
+        {
+          id: "REQ_D_001",
+          source: "prompt_engineering",
+          label: "Zieldefinition",
+          question: "Was ist das Ziel des Prompts?",
+          rationale: "Ohne Zieldefinition keine zielgerichtete Optimierung.",
+          inputType: "free_text",
+          tier: "REQUIRED",
+          classificationReason: "Critical for optimization",
+        },
+      ],
+      answers: {},
+      status: "ACTIVE" as const,
+      outcome: null,
+      enrichedContent: null,
+    };
+    useAppStore.setState({
+      missingInfoSessions: { [prompt.id]: session },
+    });
+
+    render(<DetailsPanel />);
+
+    const bpBtn = screen.getByText("🔷 BP optimieren");
+    fireEvent.click(bpBtn);
+
+    // Gate must open, NOT the blueprint optimizer
+    expect(screen.getByText("❓ Fehlende Informationen")).toBeInTheDocument();
+    expect(
+      screen.queryByText("🔷 Blueprint-Optimierung"),
+    ).not.toBeInTheDocument();
   });
 });
 
