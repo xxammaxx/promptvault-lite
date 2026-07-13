@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { useAppStore } from "@/stores/appStore";
 import ReactMarkdown from "react-markdown";
 import { OptimizationPanel } from "@/components/optimization/OptimizationPanel";
@@ -372,6 +372,16 @@ export const DetailsPanel: React.FC = () => {
   const isBlocked =
     detection?.contamination_status === "BLOCKING_SENSITIVE_CONTENT";
 
+  // Clean up optimizer state when content becomes blocked.
+  // Prevents an open optimizer dialog from receiving blocked promptContent
+  // after the user switches from a CLEAN prompt to a BLOCKED prompt.
+  useEffect(() => {
+    if (isBlocked) {
+      setShowOptimizer(false);
+      setShowBlueprintOptimizer(false);
+    }
+  }, [isBlocked]);
+
   // Gate feature-flag check
   const gateEnabled = isMissingInfoGateEnabled(
     (typeof process !== "undefined" ? process.env : undefined) as
@@ -396,12 +406,15 @@ export const DetailsPanel: React.FC = () => {
   }, [prompt]);
 
   /** Gate completion callback: close gate, optionally auto-open optimizer. */
-  const handleGateComplete = useCallback((outcome: GateOutcome) => {
-    setShowGate(false);
-    if (outcome !== "SKIPPED") {
-      setShowOptimizer(true);
-    }
-  }, []);
+  const handleGateComplete = useCallback(
+    (outcome: GateOutcome) => {
+      setShowGate(false);
+      if (outcome !== "SKIPPED" && !isBlocked) {
+        setShowOptimizer(true);
+      }
+    },
+    [isBlocked],
+  );
 
   /** Gate closed by user (✕ button). */
   const handleGateClose = useCallback(() => {
@@ -527,7 +540,7 @@ export const DetailsPanel: React.FC = () => {
           onComplete={handleGateComplete}
         />
       )}
-      {showOptimizer && (
+      {showOptimizer && !isBlocked && (
         <OptimizationPanel
           promptContent={optimizerContent}
           onClose={() => {
@@ -535,7 +548,7 @@ export const DetailsPanel: React.FC = () => {
           }}
         />
       )}
-      {showBlueprintOptimizer && (
+      {showBlueprintOptimizer && !isBlocked && (
         <BlueprintOptimizationPanel
           content={optimizerContent}
           onClose={() => {
